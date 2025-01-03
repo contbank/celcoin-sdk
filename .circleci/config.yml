@@ -1,0 +1,54 @@
+    
+version: 2.1
+
+defaults: &defaults
+  working_directory: /go/src/github.com/contbank/celcoin-sdk
+commands:
+  autotag:
+    steps:
+      - run: |
+          make install-autotag
+jobs:
+  run-tests:
+    <<: *defaults
+    docker:
+    - image: circleci/golang:1.17
+    steps:
+      - checkout
+      - run:
+          name: Run Rebase
+          command: make run-rebase
+      - run:
+          name: Build Package
+          command: make build-package
+      - run:
+          name: Run Tests
+          command: make run-tests
+  release-vesion:
+    <<: *defaults
+    docker:
+    - image: circleci/golang:1.17
+    steps:
+      - add_ssh_keys:
+          fingerprints:
+            - SHA256:BUZQQQUVM2A5eOzRLV98vvSe+9y8iUUnAeE2i6Ll9BM
+      - checkout
+      - autotag
+      - run:
+          name: Tag Git Version
+          command: make tag-version
+
+workflows:
+  version: 2
+  build-deploy:
+    jobs:
+      - run-tests:
+          context: SANDBOX
+
+      - release-vesion:
+          requires:
+            - run-tests
+          filters:
+            branches:
+              only:
+                - master
