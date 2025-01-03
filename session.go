@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -130,34 +131,37 @@ func CreateMtlsHTTPClient(cert *Certificate) *http.Client {
 	return httpClient
 }
 
-// CreateOAuth2HTTPClient ... cria um cliente HTTP autenticado via OAuth2
+// CreateOAuth2HTTPClient ... cria um cliente HTTP autenticado via OAuth2 com renovação automática de token
 func CreateOAuth2HTTPClient(session *Session) *http.Client {
 	httpClient := &http.Client{}
 	httpClient.Timeout = 30 * time.Second
 
-	// Obter token de acesso
-	token, err := fetchAccessToken(httpClient, session)
+	// Obter token inicial
+	token, expiration, err := fetchAccessToken(httpClient, session)
 	if err != nil {
 		panic(fmt.Sprintf("Erro ao obter token de acesso: %v", err))
 	}
 
-	// Configurar transporte com cabeçalho de autenticação
+	// Configurar transporte com renovação automática do token
 	httpClient.Transport = &oauthTransport{
 		underlyingTransport: http.DefaultTransport,
-		accessToken:         token,
+		session:             session,
+		token:               token,
+		tokenExpiration:     expiration,
+		mutex:               &sync.Mutex{},
 	}
 
 	return httpClient
 }
 
-// fetchAccessToken ... realiza a requisição para obter o token de acesso
-func fetchAccessToken(client *http.Client, session *Session) (string, error) {
+// fetchAccessToken realiza a requisição para obter o token de acesso
+func fetchAccessToken(client *http.Client, session *Session) (string, time.Time, error) {
 	data := []byte(fmt.Sprintf("client_id=%s&client_secret=%s&grant_type=client_credentials",
 		session.ClientID, session.ClientSecret))
 
 	req, err := http.NewRequest("POST", session.LoginEndpoint, bytes.NewBuffer(data))
 	if err != nil {
-		return "", fmt.Errorf("erro ao criar a requisição de token: %w", err)
+		return "", time.Time{}, fmt.Errorf("erro ao criar a requisição de token: %w", err)
 	}
 
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -165,31 +169,48 @@ func fetchAccessToken(client *http.Client, session *Session) (string, error) {
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("erro ao fazer a requisição de token: %w", err)
+		return "", time.Time{}, fmt.Errorf("erro ao fazer a requisição de token: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := ioutil.ReadAll(resp.Body)
-		return "", fmt.Errorf("falha ao obter token: %s", body)
+		return "", time.Time{}, fmt.Errorf("falha ao obter token: %s", body)
 	}
 
 	var tokenResponse AuthenticationResponse
 	if err := json.NewDecoder(resp.Body).Decode(&tokenResponse); err != nil {
-		return "", fmt.Errorf("erro ao decodificar a resposta do token: %w", err)
+		return "", time.Time{}, fmt.Errorf("erro ao decodificar a resposta do token: %w", err)
 	}
 
-	return tokenResponse.AccessToken, nil
+	// Calcula a hora de expiração com base no tempo atual e no tempo de expiração do token
+	expiration := time.Now().Add(time.Duration(tokenResponse.ExpiresIn) * time.Second)
+	return tokenResponse.AccessToken, expiration, nil
 }
 
-// oauthTransport ... é um transporte customizado que adiciona o token de autenticação
+// oauthTransport ... é um transporte customizado que adiciona o token e o renova quando necessário
 type oauthTransport struct {
 	underlyingTransport http.RoundTripper
-	accessToken         string
+	session             *Session
+	token               string
+	tokenExpiration     time.Time
+	mutex               *sync.Mutex
 }
 
-// RoundTrip ... adiciona o cabeçalho Authorization com o token OAuth2
+// RoundTrip ... adiciona o cabeçalho Authorization e renova o token se necessário
 func (t *oauthTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", t.accessToken))
+	t.mutex.Lock()
+	if time.Now().After(t.tokenExpiration.Add(-1 * time.Minute)) { // Renova o token antes de expirar
+		newToken, newExpiration, err := fetchAccessToken(&http.Client{}, t.session)
+		if err != nil {
+			t.mutex.Unlock()
+			return nil, fmt.Errorf("falha ao renovar o token: %w", err)
+		}
+		t.token = newToken
+		t.tokenExpiration = newExpiration
+	}
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", t.token))
+	t.mutex.Unlock()
+
 	return t.underlyingTransport.RoundTrip(req)
 }

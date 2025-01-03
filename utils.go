@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
+	"net/http"
 	"os"
 	"strconv"
 	"strings"
@@ -209,4 +210,17 @@ func String(v string) *string {
 // Bool returns a pointer to the bool value passed in.
 func Bool(v bool) *bool {
 	return &v
+}
+
+// setRequestHeader Set header with Bankly requirements
+func setRequestHeader(request *http.Request, token string, apiVersion *string, headers *http.Header) *http.Request {
+	if headers != nil {
+		request.Header = *headers
+	}
+	request.Header.Add("Authorization", token)
+	request.Header.Add("Content-type", "application/json")
+	if apiVersion != nil {
+		request.Header.Add("api-version", *apiVersion)
+	}
+	return request
 }

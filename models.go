@@ -5,6 +5,8 @@ const (
 	LoginPath string = "v5/token"
 	// LoginMtlsPath ...
 	LoginMtlsPath string = "v5/token"
+	// BalancePath
+	BalancePath string = "/baas-walletreports/v1/wallet/balance"
 )
 
 // AuthenticationResponse ...
@@ -23,6 +25,7 @@ type Certificate struct {
 	Passphrase       string `json:"passphrase"`
 	UUID             string `json:"uuid"`
 	ClientID         string `json:"client_id"`
+	ClientSecret     string `json:"client_secret"`
 }
 
 // ErrorLoginResponse ...
@@ -56,4 +59,36 @@ type TransferErrorResponse struct {
 	ApplicationName string               `json:"applicationName,omitempty"`
 	Errors          []KeyValueErrorModel `json:"errors,omitempty"`
 	CodeMessageErrorResponse
+}
+
+// BalanceResponse ...
+type BalanceResponse struct {
+	Status  string `json:"status"`
+	Version string `json:"version"`
+	Body    struct {
+		Amount float64 `json:"amount"`
+	} `json:"body"`
+}
+
+// ErrorResponse ...
+type ErrorResponse struct {
+	Errors    []ErrorModel `json:"errors,omitempty"`
+	Title     string       `json:"title,omitempty"`
+	Status    int32        `json:"status,omitempty"`
+	TraceId   string       `json:"traceId,omitempty"`
+	Reference string       `json:"reference,omitempty"`
+	CodeMessageErrorResponse
+}
+
+// ErrorDefaultResponse ...
+type ErrorDefaultResponse struct {
+	Status  *string       `json:"status"`
+	Version *string       `json:"version"`
+	Error   *ErrorDefault `json:"error"`
+}
+
+// ErrorDefault ...
+type ErrorDefault struct {
+	ErrorCode *string `json:"errorCode"`
+	Message   *string `json:"message"`
 }
