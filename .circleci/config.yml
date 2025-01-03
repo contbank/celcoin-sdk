@@ -31,7 +31,7 @@ jobs:
     steps:
       - add_ssh_keys:
           fingerprints:
-            - SHA256:AJX62gB+PQikfdDL5if+fnUDBZI4qw/IzgyIgkpvzco
+            - SHA256:BUZQQQUVM2A5eOzRLV98vvSe+9y8iUUnAeE2i6Ll9BM
       - checkout
       - autotag
       - run:
