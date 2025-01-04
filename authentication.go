@@ -60,7 +60,6 @@ func (a *Authentication) login(ctx context.Context) (*AuthenticationResponse, er
 	req.Header.Add("Content-type", "application/x-www-form-urlencoded")
 
 	resp, err := a.httpClient.Do(req)
-
 	if err != nil {
 		return nil, err
 	}
