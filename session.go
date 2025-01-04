@@ -8,7 +8,9 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"os"
+	"path"
 	"sync"
 	"time"
 
@@ -51,6 +53,15 @@ type Session struct {
 	Scopes        string
 	Mtls          bool
 	Environment   string
+}
+
+// oauthTransport ... é um transporte customizado que adiciona o token e o renova quando necessário
+type oauthTransport struct {
+	underlyingTransport http.RoundTripper
+	session             *Session
+	token               string
+	tokenExpiration     time.Time
+	mutex               *sync.Mutex
 }
 
 // NewSession ...
@@ -159,7 +170,15 @@ func fetchAccessToken(client *http.Client, session *Session) (string, time.Time,
 	data := []byte(fmt.Sprintf("client_id=%s&client_secret=%s&grant_type=client_credentials",
 		session.ClientID, session.ClientSecret))
 
-	req, err := http.NewRequest("POST", session.LoginEndpoint, bytes.NewBuffer(data))
+	url, err := url.Parse(session.LoginEndpoint)
+	if err != nil {
+		return "", time.Time{}, err
+	}
+
+	url.Path = path.Join(url.Path, LoginPath)
+	endpoint := url.String()
+
+	req, err := http.NewRequest("POST", endpoint, bytes.NewBuffer(data))
 	if err != nil {
 		return "", time.Time{}, fmt.Errorf("erro ao criar a requisição de token: %w", err)
 	}
@@ -186,15 +205,6 @@ func fetchAccessToken(client *http.Client, session *Session) (string, time.Time,
 	// Calcula a hora de expiração com base no tempo atual e no tempo de expiração do token
 	expiration := time.Now().Add(time.Duration(tokenResponse.ExpiresIn) * time.Second)
 	return tokenResponse.AccessToken, expiration, nil
-}
-
-// oauthTransport ... é um transporte customizado que adiciona o token e o renova quando necessário
-type oauthTransport struct {
-	underlyingTransport http.RoundTripper
-	session             *Session
-	token               string
-	tokenExpiration     time.Time
-	mutex               *sync.Mutex
 }
 
 // RoundTrip ... adiciona o cabeçalho Authorization e renova o token se necessário

@@ -59,7 +59,7 @@ func (c *Balance) Balance(ctx context.Context, accountNumber string) (*BalanceRe
 		return nil, err
 	}
 
-	token, err := c.authentication.Token(ctx)
+	/*token, err := c.authentication.Token(ctx)
 	if err != nil {
 		logrus.
 			WithFields(fields).
@@ -68,13 +68,11 @@ func (c *Balance) Balance(ctx context.Context, accountNumber string) (*BalanceRe
 		return nil, err
 	}
 
-	req = setRequestHeader(req, token, &c.session.APIVersion, nil)
+	req = setRequestHeader(req, token, &c.session.APIVersion, nil)*/
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		logrus.
-			WithFields(fields).
-			WithError(err).
+		logrus.WithFields(fields).WithError(err).
 			Error("error http client")
 		return nil, err
 	}
@@ -107,7 +105,7 @@ func (c *Balance) Balance(ctx context.Context, accountNumber string) (*BalanceRe
 	}
 
 	if errResponse.Error != nil {
-		err = FindBalanceError(*errResponse.Error.ErrorCode, *errResponse.Error.Message)
+		err := FindBalanceError(*errResponse.Error.ErrorCode, *errResponse.Error.Message)
 		logrus.WithField("celcoin_error", errResponse.Error).
 			WithFields(fields).WithError(err).
 			Error("celcoin get balance error")
