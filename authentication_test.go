@@ -2,12 +2,13 @@ package celcoin_test
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"testing"
 	"time"
 
 	"github.com/contbank/celcoin-sdk"
-
+	"github.com/jarcoal/httpmock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 )
@@ -28,17 +29,20 @@ func (s *AuthenticationTestSuite) SetupTest() {
 	s.assert = assert.New(s.T())
 	s.ctx = context.Background()
 
-	clientID := celcoin.GetEnvCelcoinClientID()
-	clientSecret := celcoin.GetEnvCelcoinClientSecret()
+	clientID := "test-client-id"
+	clientSecret := "test-client-secret"
+	apiEndpoint := "https://sandbox.openfinance.celcoin.dev"
+	loginEndpoint := "https://sandbox.openfinance.celcoin.dev"
 
 	celcoinConfig := celcoin.Config{
-		ClientID:     clientID,
-		ClientSecret: clientSecret,
-		Mtls:         celcoin.Bool(false),
+		ClientID:      &clientID,
+		ClientSecret:  &clientSecret,
+		Mtls:          celcoin.Bool(false),
+		APIEndpoint:   &apiEndpoint,
+		LoginEndpoint: &loginEndpoint,
 	}
 
 	session, err := celcoin.NewSession(celcoinConfig)
-
 	s.assert.NoError(err)
 
 	httpClient := &http.Client{
@@ -47,11 +51,44 @@ func (s *AuthenticationTestSuite) SetupTest() {
 
 	s.session = session
 	s.authentication = celcoin.NewAuthentication(httpClient, *s.session)
+
+	// Initialize httpmock
+	httpmock.ActivateNonDefault(httpClient)
+}
+
+func (s *AuthenticationTestSuite) TearDownTest() {
+	httpmock.DeactivateAndReset()
 }
 
 func (s *AuthenticationTestSuite) TestToken() {
+	mockURL := fmt.Sprintf("%s/%s", s.session.LoginEndpoint, celcoin.LoginPath)
+
+	httpmock.RegisterResponder("POST", mockURL,
+		httpmock.NewStringResponder(200, `{
+            "access_token": "mock-access-token",
+            "expires_in": 3600
+        }`),
+	)
+
 	token, err := s.authentication.Token(s.ctx)
 
 	s.assert.NoError(err)
-	s.assert.Contains(token, "Bearer")
+	s.assert.Equal("Bearer mock-access-token", token)
+}
+
+func (s *AuthenticationTestSuite) TestTokenError() {
+	mockURL := fmt.Sprintf("%s/%s", s.session.LoginEndpoint, celcoin.LoginPath)
+
+	httpmock.RegisterResponder("POST", mockURL,
+		httpmock.NewStringResponder(400, `{
+			"error": "invalid_request",
+			"message": "Invalid client credentials."
+		}`),
+	)
+
+	token, err := s.authentication.Token(s.ctx)
+
+	s.assert.Error(err)
+	s.assert.Empty(token)
+	s.assert.Contains(err.Error(), "invalid_request")
 }
