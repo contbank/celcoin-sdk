@@ -177,15 +177,23 @@ func GenerateNewRequestID(ctx context.Context) context.Context {
 	return ctx
 }
 
+var GetClientID = func() string {
+	return os.Getenv("CELCOIN_CLIENT_ID")
+}
+
 // GetEnvCelcoinClientID ...
 func GetEnvCelcoinClientID() *string {
-	clientID := os.Getenv("CELCOIN_CLIENT_ID")
+	clientID := GetClientID()
 	return &clientID
+}
+
+var GetClientSecret = func() string {
+	return os.Getenv("CELCOIN_CLIENT_SECRET")
 }
 
 // GetEnvCelcoinClientSecret ...
 func GetEnvCelcoinClientSecret() *string {
-	clientSecret := os.Getenv("CELCOIN_CLIENT_SECRET")
+	clientSecret := GetClientSecret()
 	return &clientSecret
 }
 
