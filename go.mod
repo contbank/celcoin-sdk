@@ -4,18 +4,15 @@ go 1.19
 
 require (
 	github.com/aws/aws-sdk-go v1.55.5
-	github.com/contbank/celcoin-sdk/mock v0.0.0-00010101000000-000000000000
 	github.com/contbank/grok v0.0.104
 	github.com/google/uuid v1.6.0
+	github.com/jarcoal/httpmock v1.3.1
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/sirupsen/logrus v1.7.0
 	github.com/stretchr/testify v1.10.0
 	github.com/tidwall/gjson v1.12.1
 	github.com/tidwall/sjson v1.1.6
 )
-
-// Substituindo o módulo do GitHub pelo diretório local
-replace github.com/contbank/celcoin-sdk/mock => ./mock
 
 require (
 	github.com/KyleBanks/depth v1.2.1 // indirect

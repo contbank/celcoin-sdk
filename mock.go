@@ -1,6 +1,7 @@
 package celcoin
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -77,4 +78,20 @@ func handleCreateSubscription(w http.ResponseWriter, r *http.Request) {
 		Version: "1.0.0",
 		Status:  "SUCCESS",
 	})
+}
+
+type MockAuthentication struct {
+	TokenFunc func(ctx context.Context) (string, error)
+}
+
+func (m *MockAuthentication) Token(ctx context.Context) (string, error) {
+	return m.TokenFunc(ctx)
+}
+
+type MockRoundTripper struct {
+	RoundTripFunc func(req *http.Request) (*http.Response, error)
+}
+
+func (m *MockRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	return m.RoundTripFunc(req)
 }

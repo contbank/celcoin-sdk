@@ -367,6 +367,22 @@ func FindError(code string, messages ...string) *Error {
 	}
 }
 
+// FindBalanceError ... find errors for celcoin balance api
+func FindBalanceError(code string, messages string) *Error {
+	code = mapBalanceErrorCode(code, messages)
+
+	for _, v := range errorList {
+		if v.ErrorKey == code {
+			return &v
+		}
+	}
+
+	return &Error{
+		ErrorKey:  code,
+		GrokError: grok.NewError(http.StatusConflict, code, messages),
+	}
+}
+
 // FindErrorByErrorModel ..
 func FindErrorByErrorModel(response ErrorModel) *Error {
 	if response.Code != "" {
@@ -402,6 +418,42 @@ func verifyInvalidParameter(code string, messages []string) string {
 		}
 	}
 	return code
+}
+
+// mapBalanceErrorCode ... mapeia os códigos de erro para mensagens específicas para api balance da celcoin.
+func mapBalanceErrorCode(code string, message string) string {
+	lowerMessage := strings.ToLower(message)
+	switch code {
+	case "CBE073":
+		if strings.Contains(lowerMessage, "informar pelo menos um dos campos") {
+			return "MISSING_REQUIRED_FIELDS"
+		}
+	case "CBE039":
+		if strings.Contains(lowerMessage, "account invalido") {
+			return "INVALID_ACCOUNT"
+		}
+	case "CBE040":
+		if strings.Contains(lowerMessage, "documentnumber invalido") {
+			return "INVALID_DOCUMENT_NUMBER"
+		}
+	case "CBE041":
+		if strings.Contains(lowerMessage, "tamanho maximo de 20 caracteres") {
+			return "INVALID_ACCOUNT_LENGTH"
+		}
+	case "CBE042":
+		if strings.Contains(lowerMessage, "tamanho maximo de 14 caracteres") {
+			return "INVALID_DOCUMENT_NUMBER_LENGTH"
+		}
+	case "CBE089":
+		if strings.Contains(lowerMessage, "conta esta bloqueada") {
+			return "ACCOUNT_BLOCKED"
+		}
+	case "CBE090":
+		if strings.Contains(lowerMessage, "conta esta encerrada") {
+			return "ACCOUNT_CLOSED"
+		}
+	}
+	return code // Retorna o código original se nenhuma correspondência for encontrada.
 }
 
 // errorIncomeReportList ...
