@@ -103,6 +103,7 @@ type WebhookError struct {
 
 // WebhookSubscription representa os dados retornados na consulta de webhooks cadastrados
 type WebhookSubscription struct {
+	SubscriptionId string      `json:"subscriptionId"`
 	Entity         string      `json:"entity"`
 	WebhookURL     string      `json:"webhookUrl"`
 	Active         bool        `json:"active"`
