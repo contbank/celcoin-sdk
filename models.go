@@ -239,19 +239,19 @@ type CustomerResponse struct {
 
 // CustomerResponseBody ...
 type CustomerResponseBody struct {
-	StatusAccount              string    `json:"statusAccount"`
-	DocumentNumber             string    `json:"documentNumber"`
-	PhoneNumber                string    `json:"phoneNumber"`
-	Email                      string    `json:"email"`
-	ClientCode                 string    `json:"clientCode"`
-	MotherName                 string    `json:"motherName"`
-	FullName                   string    `json:"fullName"`
-	SocialName                 string    `json:"socialName"`
-	BirthDate                  string    `json:"birthDate"`
-	Address                    Address   `json:"address"`
-	IsPoliticallyExposedPerson bool      `json:"isPoliticallyExposedPerson"`
-	Account                    Account   `json:"account"`
-	CreateDate                 time.Time `json:"createDate"`
+	StatusAccount              string     `json:"statusAccount"`
+	DocumentNumber             string     `json:"documentNumber"`
+	PhoneNumber                string     `json:"phoneNumber"`
+	Email                      string     `json:"email"`
+	ClientCode                 string     `json:"clientCode"`
+	MotherName                 string     `json:"motherName"`
+	FullName                   string     `json:"fullName"`
+	SocialName                 string     `json:"socialName"`
+	BirthDate                  string     `json:"birthDate"`
+	Address                    Address    `json:"address"`
+	IsPoliticallyExposedPerson bool       `json:"isPoliticallyExposedPerson"`
+	Account                    Account    `json:"account"`
+	CreateDate                 CustomTime `json:"createDate"`
 }
 
 // Address ... representa o objeto "address"
@@ -287,7 +287,7 @@ type BusinessResponseBody struct {
 	ClientCode          string          `json:"clientCode"`
 	BusinessPhoneNumber string          `json:"businessPhoneNumber"`
 	BusinessEmail       string          `json:"businessEmail"`
-	CreateDate          time.Time       `json:"createDate"`
+	CreateDate          CustomTime      `json:"createDate"`
 	BusinessName        string          `json:"businessName"`
 	TradingName         string          `json:"tradingName"`
 	Owners              []Owner         `json:"owners"`
@@ -312,4 +312,9 @@ type Owner struct {
 type BusinessAccount struct {
 	Branch  string `json:"branch"`
 	Account string `json:"account"`
+}
+
+// CustomTime ... é um tipo customizado para lidar com datas no formato específico
+type CustomTime struct {
+	time.Time
 }
