@@ -11,6 +11,8 @@ const (
 	BalancePath string = "/baas-walletreports/v1/wallet/balance"
 	// CustomersPath ...
 	CustomersPath string = "/baas-accountmanager/v1/account/fetch"
+	// BusinessPath ...
+	BusinessPath string = "/baas-accountmanager/v1/account/fetch-business"
 )
 
 // AuthenticationResponse ...
@@ -237,19 +239,19 @@ type CustomerResponse struct {
 
 // CustomerResponseBody ...
 type CustomerResponseBody struct {
-	StatusAccount              string    `json:"statusAccount"`
-	DocumentNumber             string    `json:"documentNumber"`
-	PhoneNumber                string    `json:"phoneNumber"`
-	Email                      string    `json:"email"`
-	ClientCode                 string    `json:"clientCode"`
-	MotherName                 string    `json:"motherName"`
-	FullName                   string    `json:"fullName"`
-	SocialName                 string    `json:"socialName"`
-	BirthDate                  string    `json:"birthDate"`
-	Address                    Address   `json:"address"`
-	IsPoliticallyExposedPerson bool      `json:"isPoliticallyExposedPerson"`
-	Account                    Account   `json:"account"`
-	CreateDate                 time.Time `json:"createDate"`
+	StatusAccount              string     `json:"statusAccount"`
+	DocumentNumber             string     `json:"documentNumber"`
+	PhoneNumber                string     `json:"phoneNumber"`
+	Email                      string     `json:"email"`
+	ClientCode                 string     `json:"clientCode"`
+	MotherName                 string     `json:"motherName"`
+	FullName                   string     `json:"fullName"`
+	SocialName                 string     `json:"socialName"`
+	BirthDate                  string     `json:"birthDate"`
+	Address                    Address    `json:"address"`
+	IsPoliticallyExposedPerson bool       `json:"isPoliticallyExposedPerson"`
+	Account                    Account    `json:"account"`
+	CreateDate                 CustomTime `json:"createDate"`
 }
 
 // Address ... representa o objeto "address"
@@ -269,4 +271,50 @@ type Address struct {
 type Account struct {
 	Branch  string `json:"branch"`
 	Account string `json:"account"`
+}
+
+// BusinessResponse ...
+type BusinessResponse struct {
+	Body    BusinessResponseBody `json:"body"`
+	Version string               `json:"version"`
+	Status  string               `json:"status"`
+}
+
+// BusinessResponseBody ...
+type BusinessResponseBody struct {
+	StatusAccount       string          `json:"statusAccount"`
+	DocumentNumber      string          `json:"documentNumber"`
+	ClientCode          string          `json:"clientCode"`
+	BusinessPhoneNumber string          `json:"businessPhoneNumber"`
+	BusinessEmail       string          `json:"businessEmail"`
+	CreateDate          CustomTime      `json:"createDate"`
+	BusinessName        string          `json:"businessName"`
+	TradingName         string          `json:"tradingName"`
+	Owners              []Owner         `json:"owners"`
+	BusinessAccount     BusinessAccount `json:"businessAccount"`
+	BusinessAddress     Address         `json:"businessAddress"`
+}
+
+// Owner ...
+type Owner struct {
+	DocumentNumber             string  `json:"documentNumber"`
+	PhoneNumber                string  `json:"phoneNumber"`
+	Email                      string  `json:"email"`
+	FullName                   string  `json:"fullName"`
+	SocialName                 string  `json:"socialName"`
+	BirthDate                  string  `json:"birthDate"`
+	MotherName                 string  `json:"motherName"`
+	Address                    Address `json:"address"`
+	IsPoliticallyExposedPerson bool    `json:"isPoliticallyExposedPerson"`
+}
+
+// BusinessAccount ...
+type BusinessAccount struct {
+	Branch  string `json:"branch"`
+	Account string `json:"account"`
+}
+
+// CustomTime ... é um tipo customizado para lidar com datas no formato específico
+type CustomTime struct {
+	time.Time
 }

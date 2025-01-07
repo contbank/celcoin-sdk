@@ -232,3 +232,20 @@ func setRequestHeader(request *http.Request, token string, apiVersion *string, h
 	}
 	return request
 }
+
+// UnmarshalJSON ... define como desserializar o JSON para CustomTime
+func (ct *CustomTime) UnmarshalJSON(b []byte) error {
+	// Remove as aspas do valor
+	s := string(b)
+	s = s[1 : len(s)-1]
+
+	// Define o formato correto da data no JSON
+	const layout = "2006-01-02T15:04:05"
+	parsedTime, err := time.Parse(layout, s)
+	if err != nil {
+		return err
+	}
+
+	ct.Time = parsedTime
+	return nil
+}
