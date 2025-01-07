@@ -84,9 +84,15 @@ type WebhookAuth struct {
 
 // WebhookSubscriptionResponse representa a resposta da rota de cadastro de webhooks
 type WebhookSubscriptionResponse struct {
-	Version string        `json:"version"`         // Versão da API
-	Status  string        `json:"status"`          // Status da operação (SUCCESS ou ERROR)
-	Error   *WebhookError `json:"error,omitempty"` // Detalhes do erro, se houver
+	Version string                   `json:"version"` // Versão da API
+	Status  string                   `json:"status"`  // Status da operação (SUCCESS ou ERROR)
+	Body    *WebhookSubscriptionBody `json:"body,omitempty"`
+	Error   *WebhookError            `json:"error,omitempty"` // Detalhes do erro, se houver
+}
+
+// WebhookSubscriptionBody representa informações do cadastro
+type WebhookSubscriptionBody struct {
+	SubscriptionId string `json:"subscriptionId"` // Código do webhook
 }
 
 // WebhookError representa informações de erro em uma resposta da API
@@ -97,6 +103,7 @@ type WebhookError struct {
 
 // WebhookSubscription representa os dados retornados na consulta de webhooks cadastrados
 type WebhookSubscription struct {
+	SubscriptionId string      `json:"subscriptionId"`
 	Entity         string      `json:"entity"`
 	WebhookURL     string      `json:"webhookUrl"`
 	Active         bool        `json:"active"`
