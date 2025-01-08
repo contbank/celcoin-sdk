@@ -187,8 +187,8 @@ func fetchAccessToken(client *http.Client, session *Session) (string, time.Time,
 	var data []byte
 
 	if session.Mtls {
-		mtlsData := fmt.Sprintf("client_id=%s&grant_type=client_credentials",
-			session.ClientID)
+		mtlsData := fmt.Sprintf("client_id=%s&client_secret=%s&grant_type=client_credentials",
+			session.ClientID, session.ClientSecret)
 		data = []byte(mtlsData)
 	} else {
 		oauth2Data := fmt.Sprintf("client_id=%s&client_secret=%s&grant_type=client_credentials",
