@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"path"
+	"strings"
 
 	"github.com/sirupsen/logrus"
 )
@@ -105,6 +106,135 @@ func (c *Customers) FindAccounts(ctx context.Context,
 	logrus.WithFields(fields).
 		Error("error default customers accounts - FindAccounts")
 
+	return nil, ErrDefaultCustomersAccounts
+}
+
+// CreateAccount ... cria uma nova conta de cliente
+func (c *Customers) CreateAccount(ctx context.Context, customerData *Customer) (*CustomerOnboardingResponse, error) {
+	requestID, _ := ctx.Value("Request-Id").(string)
+	fields := logrus.Fields{
+		"request_id": requestID,
+	}
+
+	endpoint := c.session.APIEndpoint
+	reqBody, err := json.Marshal(customerData)
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).Error("error marshalling request body")
+		return nil, err
+	}
+
+	url, err := url.Parse(endpoint)
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).Error("error parsing endpoint")
+		return nil, err
+	}
+
+	url.Path = path.Join(url.Path, NaturalPersonOnboardingPath)
+
+	req, err := http.NewRequestWithContext(ctx, "POST", endpoint, strings.NewReader(string(reqBody)))
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).Error("error creating request")
+		return nil, err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).Error("error executing request")
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	respBody, _ := ioutil.ReadAll(resp.Body)
+
+	if resp.StatusCode == http.StatusOK {
+		var response CustomerOnboardingResponse
+		if err := json.Unmarshal(respBody, &response); err != nil {
+			logrus.WithFields(fields).WithError(err).Error("error unmarshalling response")
+			return nil, err
+		}
+
+		fields["response"] = response
+		logrus.WithFields(fields).Info("response with success")
+		return &response, nil
+	}
+
+	var bodyErr *ErrorResponse
+	if err := json.Unmarshal(respBody, &bodyErr); err != nil {
+		logrus.WithFields(fields).WithError(err).Error("error unmarshalling error response")
+		return nil, err
+	}
+
+	if len(bodyErr.Errors) > 0 {
+		errModel := bodyErr.Errors[0]
+		return nil, FindOnboardingError(errModel.Code, &resp.StatusCode)
+	}
+
+	logrus.WithFields(fields).Error("error default create account")
+	return nil, ErrDefaultCustomersAccounts
+}
+
+// GetOnboardingProposal ... consulta o proposalId
+func (c *Customers) GetOnboardingProposal(ctx context.Context, proposalId string) (*OnboardingProposalResponse, error) {
+	requestID, _ := ctx.Value("Request-Id").(string)
+	fields := logrus.Fields{
+		"request_id":  requestID,
+		"proposal_id": proposalId,
+	}
+
+	endpoint := c.session.APIEndpoint
+	u, err := url.Parse(endpoint)
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).Error("error parsing endpoint")
+		return nil, err
+	}
+
+	u.Path = path.Join(u.Path, ProposalsPath)
+
+	q := u.Query()
+	q.Set("proposalId", proposalId)
+	u.RawQuery = q.Encode()
+
+	req, err := http.NewRequestWithContext(ctx, "GET", u.String(), nil)
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).Error("error creating request")
+		return nil, err
+	}
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).Error("error executing request")
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	respBody, _ := ioutil.ReadAll(resp.Body)
+
+	if resp.StatusCode == http.StatusOK {
+		var response OnboardingProposalResponse
+		if err := json.Unmarshal(respBody, &response); err != nil {
+			logrus.WithFields(fields).WithError(err).Error("error unmarshalling response")
+			return nil, err
+		}
+
+		fields["response"] = response
+		logrus.WithFields(fields).Info("response with success")
+		return &response, nil
+	}
+
+	var bodyErr *ErrorResponse
+	if err := json.Unmarshal(respBody, &bodyErr); err != nil {
+		logrus.WithFields(fields).WithError(err).Error("error unmarshalling error response")
+		return nil, err
+	}
+
+	if len(bodyErr.Errors) > 0 {
+		errModel := bodyErr.Errors[0]
+		return nil, FindOnboardingError(errModel.Code, &resp.StatusCode)
+	}
+
+	logrus.WithFields(fields).Error("error default onboarding proposal")
 	return nil, ErrDefaultCustomersAccounts
 }
 
