@@ -161,11 +161,20 @@ func (s *Webhooks) GetSubscriptions(ctx context.Context, entity string, active *
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted {
+		var response WebhookQueryResponse
+		if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+			logrus.
+				WithFields(fields).
+				WithError(err).
+				Error("error unmarshal")
+			return nil, err
+		}
+
 		logrus.
 			WithFields(fields).
 			WithError(err).
 			Error("error http client status code")
-		return nil, errors.New("error http client status code")
+		return &response, errors.New("error http client status code")
 	}
 
 	var response WebhookQueryResponse
@@ -181,7 +190,7 @@ func (s *Webhooks) GetSubscriptions(ctx context.Context, entity string, active *
 }
 
 // UpdateSubscription faz a chamada à API para atualizar um webhook existente
-func (s *Webhooks) UpdateSubscription(ctx context.Context, req WebhookUpdateRequest) (*WebhookUpdateResponse, error) {
+func (s *Webhooks) UpdateSubscription(ctx context.Context, entity string, req WebhookUpdateRequest) (*WebhookUpdateResponse, error) {
 	fields := logrus.Fields{
 		"request": req,
 	}
@@ -198,7 +207,7 @@ func (s *Webhooks) UpdateSubscription(ctx context.Context, req WebhookUpdateRequ
 		return nil, grok.FromValidationErros(err)
 	}
 
-	endpoint := fmt.Sprintf("%s/baas-webhookmanager/v1/webhook/subscription/%s", s.session.APIEndpoint, req.SubscriptionID)
+	endpoint := fmt.Sprintf("%s/baas-webhookmanager/v1/webhook/subscription/%s", s.session.APIEndpoint, entity)
 
 	payload, err := json.Marshal(req)
 	if err != nil {
@@ -300,11 +309,19 @@ func (s *Webhooks) DeleteSubscription(ctx context.Context, subscriptionID string
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted {
+		var response WebhookDeleteResponse
+		if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+			logrus.
+				WithFields(fields).
+				WithError(err).
+				Error("error unmarshal")
+			return nil, err
+		}
 		logrus.
 			WithFields(fields).
 			WithError(err).
 			Error("error http client status code")
-		return nil, errors.New("error http client status code")
+		return &response, errors.New("error http client status code")
 	}
 	var response WebhookDeleteResponse
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
