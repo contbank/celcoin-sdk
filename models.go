@@ -1,6 +1,9 @@
 package celcoin
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 const (
 	// LoginPath ...
@@ -13,6 +16,24 @@ const (
 	CustomersPath string = "/baas-accountmanager/v1/account/fetch"
 	// BusinessPath ...
 	BusinessPath string = "/baas-accountmanager/v1/account/fetch-business"
+	// ProposalsPath ...
+	ProposalsPath string = "/onboarding/v1/onboarding-proposal"
+	//NaturalPersonOnboardingPath ...
+	NaturalPersonOnboardingPath string = "/onboarding/v1/onboarding-proposal/natural-person"
+
+	// OnboardingStatusProcessing ...
+	OnboardingStatusProcessing string = "PROCESSING"
+	// OnboardingStatusApproved ...
+	OnboardingStatusApproved string = "APPROVED"
+	// OnboardingStatusReproved ...
+	OnboardingStatusReproved string = "REPROVED"
+	// OnboardingStatusPending ...
+	OnboardingStatusPending string = "PENDING"
+
+	//ProposalTypeNaturalPerson ...
+	ProposalTypeNaturalPerson string = "NATURAL_PERSON"
+	// ProposalTypeLegalPerson ...
+	ProposalTypeLegalPerson string = "LEGAL_PERSON"
 )
 
 // AuthenticationResponse ...
@@ -326,4 +347,124 @@ type BusinessAccount struct {
 // CustomTime ... é um tipo customizado para lidar com datas no formato específico
 type CustomTime struct {
 	time.Time
+}
+
+/*
+// UnmarshalJSON ... define como desserializar o JSON para CustomTime
+func (ct *CustomTime) UnmarshalJSON(b []byte) error {
+	// Remove as aspas do valor
+	s := string(b)
+	s = s[1 : len(s)-1]
+
+	// Define o formato correto da data no JSON
+	const layout = "2006-01-02T15:04:05"
+	parsedTime, err := time.Parse(layout, s)
+	if err != nil {
+		return err
+	}
+
+	ct.Time = parsedTime
+	return nil
+}
+*/
+
+// UnmarshalJSON ... método para deserializar CustomTime
+func (ct *CustomTime) UnmarshalJSON(b []byte) error {
+	var s string
+	if err := json.Unmarshal(b, &s); err != nil {
+		return err
+	}
+
+	t, err := time.Parse("2006-01-02T15:04:05", s)
+	if err != nil {
+		return err
+	}
+
+	ct.Time = t
+	return nil
+}
+
+// MarshalJSON ... método para serializar CustomTime
+func (ct CustomTime) MarshalJSON() ([]byte, error) {
+	return json.Marshal(ct.Time.Format("2006-01-02T15:04:05"))
+}
+
+// CustomerAddress ... representa o endereço do cliente
+type CustomerAddress struct {
+	PostalCode        string `json:"postalCode"`
+	Street            string `json:"street"`
+	Number            string `json:"number"`
+	AddressComplement string `json:"addressComplement"`
+	Neighborhood      string `json:"neighborhood"`
+	City              string `json:"city"`
+	State             string `json:"state"`
+}
+
+// Customer ... representa o cliente
+type Customer struct {
+	ClientCode                 string          `json:"clientCode"`
+	DocumentNumber             string          `json:"documentNumber"`
+	PhoneNumber                string          `json:"phoneNumber"`
+	Email                      string          `json:"email"`
+	MotherName                 string          `json:"motherName"`
+	FullName                   string          `json:"fullName"`
+	SocialName                 string          `json:"socialName"`
+	BirthDate                  string          `json:"birthDate"`
+	Address                    CustomerAddress `json:"address"`
+	IsPoliticallyExposedPerson bool            `json:"isPoliticallyExposedPerson"`
+	OnboardingType             string          `json:"onboardingType"`
+}
+
+// CustomerOnboardingResponse ... representa a resposta do onboarding de customer
+type CustomerOnboardingResponse struct {
+	Body    CustomerOnboardingResponseBody `json:"body"`
+	Version string                         `json:"version"`
+	Status  string                         `json:"status"`
+}
+
+// CustomerOnboardingResponseBody ... representa o corpo da resposta do onboarding de customer
+type CustomerOnboardingResponseBody struct {
+	ProposalID     string `json:"proposalId"`
+	ClientCode     string `json:"clientCode"`
+	DocumentNumber string `json:"documentNumber"`
+}
+
+// OnboardingProposalResponse representa a resposta do método GetOnboardingProposal
+type OnboardingProposalResponse struct {
+	Body    OnboardingProposalResponseBody `json:"body"`
+	Version string                         `json:"version"`
+	Status  string                         `json:"status"`
+}
+
+// OnboardingProposalResponseBody representa o corpo da resposta do método GetOnboardingProposal
+type OnboardingProposalResponseBody struct {
+	Limit        int        `json:"limit"`
+	CurrentPage  int        `json:"currentPage"`
+	LimitPerPage int        `json:"limitPerPage"`
+	TotalPages   int        `json:"totalPages"`
+	TotalItems   int        `json:"totalItems"`
+	Proposals    []Proposal `json:"proposal"`
+}
+
+// Proposal representa uma proposta no corpo da resposta
+type Proposal struct {
+	ProposalID     string          `json:"proposalId"`
+	ClientCode     string          `json:"clientCode"`
+	DocumentNumber string          `json:"documentNumber"`
+	Status         string          `json:"status"`
+	ProposalType   string          `json:"proposalType"`
+	CreatedAt      string          `json:"createdAt"`
+	UpdatedAt      string          `json:"updatedAt"`
+	DocumentsCopys []DocumentsCopy `json:"documentscopys"`
+}
+
+// DocumentsCopy representa uma cópia de documento na proposta
+type DocumentsCopy struct {
+	ProposalID      string `json:"proposalId"`
+	DocumentNumber  string `json:"documentNumber"`
+	DocumentsCopyID string `json:"documentscopyId"`
+	Status          string `json:"status"`
+	URL             string `json:"url"`
+	CreatedAt       string `json:"createdAt"`
+	UpdatedAt       string `json:"updateAt"`
 }

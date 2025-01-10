@@ -233,19 +233,24 @@ func setRequestHeader(request *http.Request, token string, apiVersion *string, h
 	return request
 }
 
-// UnmarshalJSON ... define como desserializar o JSON para CustomTime
-func (ct *CustomTime) UnmarshalJSON(b []byte) error {
-	// Remove as aspas do valor
-	s := string(b)
-	s = s[1 : len(s)-1]
+// NewContextRequestID ...
+func NewContextRequestID(ctx context.Context) context.Context {
+	requestID := uuid.New().String()
+	ctx = context.WithValue(ctx, "Request-Id", requestID)
+	return ctx
+}
 
-	// Define o formato correto da data no JSON
-	const layout = "2006-01-02T15:04:05"
-	parsedTime, err := time.Parse(layout, s)
+// NewRequestID ...
+func NewRequestID() string {
+	return uuid.New().String()
+}
+
+// ParseStringToCelcoinTime ... faz o parse de uma string para time.Time
+func ParseStringToCelcoinTime(value string, layout string) (time.Time, error) {
+	cleanStr := strings.TrimSuffix(value, "Z")
+	t, err := time.Parse(layout, cleanStr)
 	if err != nil {
-		return err
+		return time.Time{}, fmt.Errorf("erro ao converter string para time.Time: %w", err)
 	}
-
-	ct.Time = parsedTime
-	return nil
+	return t, nil
 }

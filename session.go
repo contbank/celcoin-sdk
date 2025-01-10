@@ -120,9 +120,7 @@ func NewSession(config Config) (*Session, error) {
 }
 
 // CreateMtlsHTTPClient ...
-func CreateMtlsHTTPClient(cert *Certificate) *http.Client {
-	httpClient := &http.Client{}
-	httpClient.Timeout = 30 * time.Second
+func CreateMtlsHTTPClient(cert *Certificate, session *Session) *http.Client {
 
 	caCertPool := x509.NewCertPool()
 	caCertPool.AppendCertsFromPEM([]byte(cert.CertificateChain))
@@ -132,11 +130,29 @@ func CreateMtlsHTTPClient(cert *Certificate) *http.Client {
 		panic(err)
 	}
 
-	httpClient.Transport = &http.Transport{
+	mtlsTransport := &http.Transport{
 		TLSClientConfig: &tls.Config{
 			RootCAs:            caCertPool,
 			Certificates:       []tls.Certificate{*certificate},
 			InsecureSkipVerify: true,
+		},
+	}
+
+	// Obter o token inicial
+	token, expiration, err := fetchAccessToken(&http.Client{Transport: mtlsTransport}, session)
+	if err != nil {
+		panic(fmt.Sprintf("Erro ao obter token de acesso: %v", err))
+	}
+
+	// Configura o transporte com renovação automática de token
+	httpClient := &http.Client{
+		Timeout: 30 * time.Second,
+		Transport: &oauthTransport{
+			underlyingTransport: mtlsTransport,
+			session:             session,
+			token:               token,
+			tokenExpiration:     expiration,
+			mutex:               &sync.Mutex{},
 		},
 	}
 	return httpClient
@@ -167,8 +183,18 @@ func CreateOAuth2HTTPClient(session *Session) *http.Client {
 
 // fetchAccessToken realiza a requisição para obter o token de acesso
 func fetchAccessToken(client *http.Client, session *Session) (string, time.Time, error) {
-	data := []byte(fmt.Sprintf("client_id=%s&client_secret=%s&grant_type=client_credentials",
-		session.ClientID, session.ClientSecret))
+
+	var data []byte
+
+	if session.Mtls {
+		mtlsData := fmt.Sprintf("client_id=%s&client_secret=%s&grant_type=client_credentials",
+			session.ClientID, session.ClientSecret)
+		data = []byte(mtlsData)
+	} else {
+		oauth2Data := fmt.Sprintf("client_id=%s&client_secret=%s&grant_type=client_credentials",
+			session.ClientID, session.ClientSecret)
+		data = []byte(oauth2Data)
+	}
 
 	url, err := url.Parse(session.LoginEndpoint)
 	if err != nil {
