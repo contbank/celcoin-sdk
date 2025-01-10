@@ -53,6 +53,7 @@ require (
 	github.com/sendgrid/sendgrid-go v3.7.0+incompatible // indirect
 	github.com/spf13/cobra v1.1.1 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
+	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/swaggo/files v0.0.0-20210815190702-a29dd2bc99b2 // indirect
 	github.com/swaggo/gin-swagger v1.4.1 // indirect
 	github.com/swaggo/swag v1.8.0 // indirect
