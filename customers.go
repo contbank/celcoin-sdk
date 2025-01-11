@@ -238,6 +238,80 @@ func (c *Customers) GetOnboardingProposal(ctx context.Context, proposalId string
 	return nil, ErrDefaultCustomersAccounts
 }
 
+// GetOnboardingProposalFiles ... consulta os arquivos do proposalId
+func (c *Customers) GetOnboardingProposalFiles(ctx context.Context, proposalId string) (*OnboardingProposalFilesResponse, error) {
+	requestID, _ := ctx.Value("Request-Id").(string)
+	fields := logrus.Fields{
+		"request_id":  requestID,
+		"proposal_id": proposalId,
+	}
+
+	endpoint := c.session.APIEndpoint
+	u, err := url.Parse(endpoint)
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).
+			Error("error parsing endpoint")
+		return nil, err
+	}
+
+	u.Path = path.Join(u.Path, ProposalFilesPath)
+
+	q := u.Query()
+	q.Set("proposalId", proposalId)
+	u.RawQuery = q.Encode()
+
+	req, err := http.NewRequestWithContext(ctx, "GET", u.String(), nil)
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).
+			Error("error creating request")
+		return nil, err
+	}
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).
+			Error("error executing request")
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	respBody, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).
+			Error("error reading response body")
+		return nil, err
+	}
+
+	if resp.StatusCode == http.StatusOK {
+		var response OnboardingProposalFilesResponse
+		if err := json.Unmarshal(respBody, &response); err != nil {
+			logrus.WithFields(fields).WithError(err).
+				Error("error unmarshalling response")
+			return nil, err
+		}
+
+		fields["response"] = response
+		logrus.WithFields(fields).Info("response with success")
+		return &response, nil
+	}
+
+	var bodyErr *ErrorResponse
+	if err := json.Unmarshal(respBody, &bodyErr); err != nil {
+		logrus.WithFields(fields).WithError(err).
+			Error("error unmarshalling error response")
+		return nil, err
+	}
+
+	if len(bodyErr.Errors) > 0 {
+		errModel := bodyErr.Errors[0]
+		return nil, FindOnboardingError(errModel.Code, &resp.StatusCode)
+	}
+
+	logrus.WithFields(fields).
+		Error("error default onboarding proposal files")
+	return nil, ErrDefaultCustomersAccounts
+}
+
 // getCustomerAPIEndpoint
 func (c *Customers) getCustomerAPIEndpoint(requestID string, documentNumber *string,
 	accountNumber *string) (*string, error) {
