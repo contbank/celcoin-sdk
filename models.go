@@ -18,6 +18,8 @@ const (
 	BusinessPath string = "/baas-accountmanager/v1/account/fetch-business"
 	// ProposalsPath ...
 	ProposalsPath string = "/onboarding/v1/onboarding-proposal"
+	// ProposalFilesPath ...
+	ProposalFilesPath string = "/onboarding/v1/onboarding-proposal/files"
 	//NaturalPersonOnboardingPath ...
 	NaturalPersonOnboardingPath string = "/onboarding/v1/onboarding-proposal/natural-person"
 
@@ -347,25 +349,6 @@ type CustomTime struct {
 	time.Time
 }
 
-/*
-// UnmarshalJSON ... define como desserializar o JSON para CustomTime
-func (ct *CustomTime) UnmarshalJSON(b []byte) error {
-	// Remove as aspas do valor
-	s := string(b)
-	s = s[1 : len(s)-1]
-
-	// Define o formato correto da data no JSON
-	const layout = "2006-01-02T15:04:05"
-	parsedTime, err := time.Parse(layout, s)
-	if err != nil {
-		return err
-	}
-
-	ct.Time = parsedTime
-	return nil
-}
-*/
-
 // UnmarshalJSON ... método para deserializar CustomTime
 func (ct *CustomTime) UnmarshalJSON(b []byte) error {
 	var s string
@@ -427,14 +410,14 @@ type CustomerOnboardingResponseBody struct {
 	DocumentNumber string `json:"documentNumber"`
 }
 
-// OnboardingProposalResponse representa a resposta do método GetOnboardingProposal
+// OnboardingProposalResponse ... representa a resposta do método GetOnboardingProposal
 type OnboardingProposalResponse struct {
 	Body    OnboardingProposalResponseBody `json:"body"`
 	Version string                         `json:"version"`
 	Status  string                         `json:"status"`
 }
 
-// OnboardingProposalResponseBody representa o corpo da resposta do método GetOnboardingProposal
+// OnboardingProposalResponseBody ... representa o corpo da resposta do método GetOnboardingProposal
 type OnboardingProposalResponseBody struct {
 	Limit        int        `json:"limit"`
 	CurrentPage  int        `json:"currentPage"`
@@ -444,7 +427,7 @@ type OnboardingProposalResponseBody struct {
 	Proposals    []Proposal `json:"proposal"`
 }
 
-// Proposal representa uma proposta no corpo da resposta
+// Proposal ... representa uma proposta no corpo da resposta
 type Proposal struct {
 	ProposalID     string          `json:"proposalId"`
 	ClientCode     string          `json:"clientCode"`
@@ -456,7 +439,7 @@ type Proposal struct {
 	DocumentsCopys []DocumentsCopy `json:"documentscopys"`
 }
 
-// DocumentsCopy representa uma cópia de documento na proposta
+// DocumentsCopy ... representa uma cópia de documento na proposta
 type DocumentsCopy struct {
 	ProposalID      string `json:"proposalId"`
 	DocumentNumber  string `json:"documentNumber"`
@@ -465,4 +448,49 @@ type DocumentsCopy struct {
 	URL             string `json:"url"`
 	CreatedAt       string `json:"createdAt"`
 	UpdatedAt       string `json:"updateAt"`
+}
+
+// OnboardingProposalFilesResponse ... representa a resposta do método GetOnboardingProposalFiles
+type OnboardingProposalFilesResponse struct {
+	Body    OnboardingProposalFilesResponseBody `json:"body"`
+	Version string                              `json:"version"`
+	Status  string                              `json:"status"`
+}
+
+// OnboardingProposalFilesResponseBody ... representa o corpo da resposta do método GetOnboardingProposalFiles
+type OnboardingProposalFilesResponseBody struct {
+	Files          []OnboardingFile `json:"files"`
+	ClientCode     string           `json:"clientCode"`
+	DocumentNumber string           `json:"documentNumber"`
+	ProposalID     string           `json:"proposalId"`
+}
+
+// OnboardingFile ... representa um arquivo de onboarding
+type OnboardingFile struct {
+	Type           string    `json:"type"`
+	URL            string    `json:"url"`
+	ExpirationTime time.Time `json:"expirationTime"`
+}
+
+// UnmarshalJSON ... customizado para OnboardingFile para lidar com o formato de tempo
+func (f *OnboardingFile) UnmarshalJSON(data []byte) error {
+	type Alias OnboardingFile
+	aux := &struct {
+		ExpirationTime string `json:"expirationTime"`
+		*Alias
+	}{
+		Alias: (*Alias)(f),
+	}
+
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+
+	expirationTime, err := time.Parse(time.RFC3339, aux.ExpirationTime)
+	if err != nil {
+		return err
+	}
+
+	f.ExpirationTime = expirationTime
+	return nil
 }
