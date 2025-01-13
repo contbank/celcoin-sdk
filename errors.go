@@ -697,26 +697,6 @@ func ParseErr(err error) (*Error, bool) {
 	return celcoinErr, ok
 }
 
-// FindTransferError ..
-func FindTransferError(transferErrorResponse TransferErrorResponse) *grok.Error {
-	// get the error code if errors list is null
-	if len(transferErrorResponse.Errors) == 0 && transferErrorResponse.Code != "" {
-		transferErrorResponse.Errors = []KeyValueErrorModel{
-			{
-				Key: transferErrorResponse.Code,
-			},
-		}
-	}
-	// checking the errors list
-	errorModel := transferErrorResponse.Errors[0]
-	for _, v := range transferErrorList {
-		if v.celcoinTransferError.Key == errorModel.Key {
-			return v.grokError
-		}
-	}
-	return grok.NewError(http.StatusBadRequest, errorModel.Key, errorModel.Key+" - "+errorModel.Value)
-}
-
 func (e *Error) Error() string {
 	return fmt.Sprintf(
 		"Key: %s - Messages: %s",
