@@ -217,6 +217,8 @@ var (
 	ErrSimpleBusinessNotAllowed = grok.NewError(http.StatusMethodNotAllowed, "SIMPLE_BUSINESS_NOT_ALLOWED", "simple business not allowed")
 	// ErrCorporationBusinessNotAllowed ...
 	ErrCorporationBusinessNotAllowed = grok.NewError(http.StatusMethodNotAllowed, "CORPORATION_BUSINESS_NOT_ALLOWED", "corporation business not allowed")
+	// ErrDefaultWebhook ...
+	ErrDefaultWebhook = grok.NewError(http.StatusInternalServerError, "WEBHOOK_ERROR", "error balance")
 )
 
 // CelcoinError ...
@@ -374,6 +376,22 @@ func FindError(code string, messages ...string) *Error {
 // FindBalanceError ... find errors for celcoin balance api
 func FindBalanceError(code string, messages string) *Error {
 	code = mapBalanceErrorCode(code, messages)
+
+	for _, v := range errorList {
+		if v.ErrorKey == code {
+			return &v
+		}
+	}
+
+	return &Error{
+		ErrorKey:  code,
+		GrokError: grok.NewError(http.StatusConflict, code, messages),
+	}
+}
+
+// FindWebhookError ... find errors for celcoin balance api
+func FindWebhookError(code string, messages string) *Error {
+	code = mapWebhookErrorCode(code, messages)
 
 	for _, v := range errorList {
 		if v.ErrorKey == code {
@@ -950,4 +968,56 @@ func FindOnboardingError(code string, responseStatus *int) *grok.Error {
 		return grok.NewError(*responseStatus, mapping.ContbankCode, mapping.Description)
 	}
 	return grok.NewError(http.StatusInternalServerError, "UNKNOWN_ERROR", "unknown error")
+}
+
+// mapWebhookErrorCode ... mapeia os códigos de erro para mensagens específicas para api webhook da celcoin.
+func mapWebhookErrorCode(code string, message string) string {
+	lowerMessage := strings.ToLower(message)
+	switch code {
+	case "CBE205":
+		if strings.Contains(lowerMessage, "cliente já possui webhook cadastrado com esse evento") {
+			return "WEBHOOK_ALREADY_REGISTERED"
+		}
+	case "CBE206":
+		if strings.Contains(lowerMessage, "entity é obrigatório") {
+			return "ENTITY_REQUIRED"
+		}
+	case "CBE207":
+		if strings.Contains(lowerMessage, "webhookUrl é obrigatorio e deve ser uma url valida") {
+			return "INVALID_WEBHOOK_URL"
+		}
+	case "CBE208":
+		if strings.Contains(lowerMessage, "esse tipo de autenticação não está disponível no momento") {
+			return "AUTHENTICATION_TYPE_NOT_AVAILABLE"
+		}
+	case "CBE209":
+		if strings.Contains(lowerMessage, "esse tipo de autenticação não existe") {
+			return "AUTHENTICATION_TYPE_DOES_NOT_EXIST"
+		}
+	case "CBE211":
+		if strings.Contains(lowerMessage, "conta esta bloqueada") {
+			return "ACCOUNT_BLOCKED"
+		}
+	case "CBE212":
+		if strings.Contains(lowerMessage, "auth.login é obrigatorio") {
+			return "AUTH_LOGIN_REQUIRED"
+		}
+	case "CBE213":
+		if strings.Contains(lowerMessage, "auth.pwd é obrigatorio") {
+			return "AUTH_PASSWORD_REQUIRED"
+		}
+	case "CBE214":
+		if strings.Contains(lowerMessage, "não é permitido cadastrar esse webhook para Virtual BaaS") {
+			return "VIRTUAL_BAAS_WEBHOOK_NOT_ALLOWED"
+		}
+	case "CBE216":
+		if strings.Contains(lowerMessage, "auth.type é obrigatorio") {
+			return "AUTH_TYPE_REQUIRED"
+		}
+	case "CBE354":
+		if strings.Contains(lowerMessage, "Operação não permitida. Limite de webhooks cadastrados para o mesmo evento atingido.") {
+			return "AUTH_TYPE_REQUIRED"
+		}
+	}
+	return code // Retorna o código original se nenhuma correspondência for encontrada.
 }
