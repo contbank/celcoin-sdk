@@ -234,3 +234,53 @@ func (s *CustomersTestSuite) TestGetOnboardingProposalPROCESSING() {
 	s.assert.NotNil(response)
 	s.assert.Equal(expectedResponse, response)
 }
+
+// TestGetOnboardingProposalFiles ...
+func (s *CustomersTestSuite) TestGetOnboardingProposalFiles() {
+	proposalID := "d92fffcf-6d39-4b89-bc63-bdd2e3077a23"
+	requestID := NewRequestID()
+
+	expectedResponse := &OnboardingProposalFilesResponse{
+		Body: OnboardingProposalFilesResponseBody{
+			Files: []OnboardingFile{
+				{
+					Type:           "CNH_BACK",
+					URL:            "https://example.com/document1.jpg",
+					ExpirationTime: time.Date(2025, 1, 11, 18, 8, 10, 0, time.UTC),
+				},
+				{
+					Type:           "CNH_FRONT",
+					URL:            "https://example.com/document2.jpg",
+					ExpirationTime: time.Date(2025, 1, 11, 18, 8, 10, 0, time.UTC),
+				},
+				{
+					Type:           "SELFIE",
+					URL:            "https://example.com/document3.png",
+					ExpirationTime: time.Date(2025, 1, 11, 18, 8, 11, 0, time.UTC),
+				},
+			},
+			ClientCode:     "c150d3ea-8ad6-4d2f-89da-d2ad5c316527",
+			DocumentNumber: "99999999999",
+			ProposalID:     proposalID,
+		},
+		Version: "1.0.0",
+		Status:  "SUCCESS",
+	}
+
+	mockResponseBody, err := json.Marshal(expectedResponse)
+	s.assert.NoError(err)
+
+	mockResponse := &http.Response{
+		StatusCode: http.StatusOK,
+		Body:       ioutil.NopCloser(bytes.NewReader(mockResponseBody)),
+	}
+
+	s.mockClient.On("Do", mock.Anything).Return(mockResponse, nil)
+
+	ctx := context.WithValue(s.ctx, requestIDKey("Request-Id"), requestID)
+	response, err := s.customers.GetOnboardingProposalFiles(ctx, proposalID)
+
+	s.assert.NoError(err)
+	s.assert.NotNil(response)
+	s.assert.Equal(expectedResponse, response)
+}
