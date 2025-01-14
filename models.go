@@ -137,10 +137,12 @@ type WebhookSubscription struct {
 
 // WebhookQueryResponse representa a resposta da API ao consultar webhooks cadastrados
 type WebhookQueryResponse struct {
-	Version string                `json:"version"`
-	Status  string                `json:"status"`
-	Body    []WebhookSubscription `json:"body,omitempty"`
-	Error   *WebhookError         `json:"error,omitempty"`
+	Version string `json:"version"`
+	Status  string `json:"status"`
+	Body    struct {
+		Subscriptions []WebhookSubscription `json:"subscriptions"`
+	} `json:"body"`
+	Error *WebhookError `json:"error,omitempty"`
 }
 
 // WebhookUpdateRequest representa o payload para atualizar um webhook existente

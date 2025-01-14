@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 
@@ -89,24 +90,39 @@ func (s *Webhooks) CreateSubscription(ctx context.Context, req WebhookSubscripti
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted {
-		logrus.
-			WithFields(fields).
-			WithError(err).
-			Error("error http client status code")
-		return nil, errors.New("error http client status code")
+	respBody, _ := ioutil.ReadAll(resp.Body)
+
+	if resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusAccepted {
+		var response WebhookSubscriptionResponse
+		if err := json.Unmarshal(respBody, &response); err != nil {
+			logrus.WithFields(fields).WithError(err).
+				Error("error decoding json response")
+			return nil, ErrDefaultWebhook
+		}
+		return &response, nil
 	}
 
-	var response WebhookSubscriptionResponse
-	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-		logrus.
-			WithFields(fields).
-			WithError(err).
-			Error("error unmarshal")
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, ErrEntryNotFound
+	}
+
+	var errResponse *ErrorDefaultResponse
+	if err := json.Unmarshal(respBody, &errResponse); err != nil {
+		logrus.WithFields(fields).WithError(err).
+			Error("error decoding json response")
+		return nil, ErrDefaultWebhook
+	}
+
+	if errResponse.Error != nil {
+		err := FindWebhookError(*errResponse.Error.ErrorCode, *errResponse.Error.Message)
+		logrus.WithField("celcoin_error", errResponse.Error).
+			WithFields(fields).WithError(err).
+			Error("celcoin create subscription error")
 		return nil, err
 	}
 
-	return &response, nil
+	return nil, ErrDefaultWebhook
+
 }
 
 // GetSubscriptions faz a chamada à API para consultar os webhooks cadastrados
@@ -160,28 +176,42 @@ func (s *Webhooks) GetSubscriptions(ctx context.Context, entity string, active *
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted {
-		logrus.
-			WithFields(fields).
-			WithError(err).
-			Error("error http client status code")
-		return nil, errors.New("error http client status code")
+	respBody, _ := ioutil.ReadAll(resp.Body)
+
+	if resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusAccepted {
+		var response WebhookQueryResponse
+		if err := json.Unmarshal(respBody, &response); err != nil {
+			logrus.WithFields(fields).WithError(err).
+				Error("error decoding json response")
+			return nil, ErrDefaultWebhook
+		}
+		return &response, nil
 	}
 
-	var response WebhookQueryResponse
-	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-		logrus.
-			WithFields(fields).
-			WithError(err).
-			Error("error unmarshal")
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, ErrEntryNotFound
+	}
+
+	var errResponse *ErrorDefaultResponse
+	if err := json.Unmarshal(respBody, &errResponse); err != nil {
+		logrus.WithFields(fields).WithError(err).
+			Error("error decoding json response")
+		return nil, ErrDefaultWebhook
+	}
+
+	if errResponse.Error != nil {
+		err := FindWebhookError(*errResponse.Error.ErrorCode, *errResponse.Error.Message)
+		logrus.WithField("celcoin_error", errResponse.Error).
+			WithFields(fields).WithError(err).
+			Error("celcoin get balance error")
 		return nil, err
 	}
 
-	return &response, nil
+	return nil, ErrDefaultWebhook
 }
 
 // UpdateSubscription faz a chamada à API para atualizar um webhook existente
-func (s *Webhooks) UpdateSubscription(ctx context.Context, req WebhookUpdateRequest) (*WebhookUpdateResponse, error) {
+func (s *Webhooks) UpdateSubscription(ctx context.Context, entity string, req WebhookUpdateRequest) (*WebhookUpdateResponse, error) {
 	fields := logrus.Fields{
 		"request": req,
 	}
@@ -198,7 +228,7 @@ func (s *Webhooks) UpdateSubscription(ctx context.Context, req WebhookUpdateRequ
 		return nil, grok.FromValidationErros(err)
 	}
 
-	endpoint := fmt.Sprintf("%s/baas-webhookmanager/v1/webhook/subscription/%s", s.session.APIEndpoint, req.SubscriptionID)
+	endpoint := fmt.Sprintf("%s/baas-webhookmanager/v1/webhook/subscription/%s", s.session.APIEndpoint, entity)
 
 	payload, err := json.Marshal(req)
 	if err != nil {
@@ -236,36 +266,51 @@ func (s *Webhooks) UpdateSubscription(ctx context.Context, req WebhookUpdateRequ
 		return nil, err
 	}
 	defer resp.Body.Close()
+	respBody, _ := ioutil.ReadAll(resp.Body)
 
-	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted {
-		logrus.
-			WithFields(fields).
-			WithError(err).
-			Error("error http client status code")
-		return nil, errors.New("error http client status code")
+	if resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusAccepted {
+		var response WebhookUpdateResponse
+		if err := json.Unmarshal(respBody, &response); err != nil {
+			logrus.WithFields(fields).WithError(err).
+				Error("error decoding json response")
+			return nil, ErrDefaultWebhook
+		}
+		return &response, nil
 	}
 
-	var response WebhookUpdateResponse
-	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-		logrus.
-			WithFields(fields).
-			WithError(err).
-			Error("error unmarshal")
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, ErrEntryNotFound
+	}
+
+	var errResponse *ErrorDefaultResponse
+	if err := json.Unmarshal(respBody, &errResponse); err != nil {
+		logrus.WithFields(fields).WithError(err).
+			Error("error decoding json response")
+		return nil, ErrDefaultWebhook
+	}
+
+	if errResponse.Error != nil {
+		err := FindWebhookError(*errResponse.Error.ErrorCode, *errResponse.Error.Message)
+		logrus.WithField("celcoin_error", errResponse.Error).
+			WithFields(fields).WithError(err).
+			Error("celcoin create subscription error")
 		return nil, err
 	}
-	return &response, nil
+
+	return nil, ErrDefaultWebhook
 }
 
 // DeleteSubscription faz a chamada à API para excluir um webhook existente
-func (s *Webhooks) DeleteSubscription(ctx context.Context, subscriptionID string) (*WebhookDeleteResponse, error) {
+func (s *Webhooks) DeleteSubscription(ctx context.Context, entity string, subscriptionID string) (*WebhookDeleteResponse, error) {
 	fields := logrus.Fields{
+		"entity":          entity,
 		"subscription_id": subscriptionID,
 	}
 	logrus.
 		WithFields(fields).
 		Info("Delete Subscription")
 
-	endpoint := fmt.Sprintf("%s/baas-webhookmanager/v1/webhook/subscription/pix-payment-out?SubscriptionId=%s", s.session.APIEndpoint, subscriptionID)
+	endpoint := fmt.Sprintf("%s/baas-webhookmanager/v1/webhook/subscription/%s?SubscriptionId=%s", s.session.APIEndpoint, entity, subscriptionID)
 
 	httpReq, err := http.NewRequest("DELETE", endpoint, nil)
 	if err != nil {
@@ -298,24 +343,39 @@ func (s *Webhooks) DeleteSubscription(ctx context.Context, subscriptionID string
 		return nil, err
 	}
 	defer resp.Body.Close()
+	respBody, _ := ioutil.ReadAll(resp.Body)
 
-	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted {
-		logrus.
-			WithFields(fields).
-			WithError(err).
-			Error("error http client status code")
-		return nil, errors.New("error http client status code")
+	if resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusAccepted {
+		var response WebhookDeleteResponse
+		if err := json.Unmarshal(respBody, &response); err != nil {
+			logrus.WithFields(fields).WithError(err).
+				Error("error decoding json response")
+			return nil, ErrDefaultWebhook
+		}
+		return &response, nil
 	}
-	var response WebhookDeleteResponse
-	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-		logrus.
-			WithFields(fields).
-			WithError(err).
-			Error("error unmarshal")
+
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, ErrEntryNotFound
+	}
+
+	var errResponse *ErrorDefaultResponse
+	if err := json.Unmarshal(respBody, &errResponse); err != nil {
+		logrus.WithFields(fields).WithError(err).
+			Error("error decoding json response")
+		return nil, ErrDefaultWebhook
+	}
+
+	if errResponse.Error != nil {
+		err := FindWebhookError(*errResponse.Error.ErrorCode, *errResponse.Error.Message)
+		logrus.WithField("celcoin_error", errResponse.Error).
+			WithFields(fields).WithError(err).
+			Error("celcoin create subscription error")
 		return nil, err
 	}
 
-	return &response, nil
+	return nil, ErrDefaultWebhook
+
 }
 
 // GetWebhookReplayCount realiza a consulta de quantidade de webhooks enviados
@@ -377,25 +437,38 @@ func (s *Webhooks) GetWebhookReplayCount(ctx context.Context, entity, dateFrom, 
 		return nil, err
 	}
 	defer resp.Body.Close()
+	respBody, _ := ioutil.ReadAll(resp.Body)
 
-	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted {
-		logrus.
-			WithFields(fields).
-			WithError(err).
-			Error("error http client status code")
-		return nil, errors.New("error http client status code")
+	if resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusAccepted {
+		var response WebhookReplayResponse
+		if err := json.Unmarshal(respBody, &response); err != nil {
+			logrus.WithFields(fields).WithError(err).
+				Error("error decoding json response")
+			return nil, ErrDefaultWebhook
+		}
+		return &response, nil
 	}
 
-	var response WebhookReplayResponse
-	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-		logrus.
-			WithFields(fields).
-			WithError(err).
-			Error("error unmarshal")
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, ErrEntryNotFound
+	}
+
+	var errResponse *ErrorDefaultResponse
+	if err := json.Unmarshal(respBody, &errResponse); err != nil {
+		logrus.WithFields(fields).WithError(err).
+			Error("error decoding json response")
+		return nil, ErrDefaultWebhook
+	}
+
+	if errResponse.Error != nil {
+		err := FindWebhookError(*errResponse.Error.ErrorCode, *errResponse.Error.Message)
+		logrus.WithField("celcoin_error", errResponse.Error).
+			WithFields(fields).WithError(err).
+			Error("celcoin create subscription error")
 		return nil, err
 	}
 
-	return &response, nil
+	return nil, ErrDefaultWebhook
 }
 
 // GetWebhookReplay realiza a consulta para recuperar os detalhes dos webhooks enviados
@@ -451,24 +524,38 @@ func (s *Webhooks) GetWebhookReplay(ctx context.Context, entity, dateFrom, dateT
 
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted {
-		logrus.
-			WithFields(fields).
-			WithError(err).
-			Error("error http client status code")
-		return nil, errors.New("error http client status code")
+	respBody, _ := ioutil.ReadAll(resp.Body)
+
+	if resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusAccepted {
+		var response WebhookReplayResponse
+		if err := json.Unmarshal(respBody, &response); err != nil {
+			logrus.WithFields(fields).WithError(err).
+				Error("error decoding json response")
+			return nil, ErrDefaultWebhook
+		}
+		return &response, nil
 	}
 
-	var response WebhookReplayResponse
-	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-		logrus.
-			WithFields(fields).
-			WithError(err).
-			Error("error unmarshal")
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, ErrEntryNotFound
+	}
+
+	var errResponse *ErrorDefaultResponse
+	if err := json.Unmarshal(respBody, &errResponse); err != nil {
+		logrus.WithFields(fields).WithError(err).
+			Error("error decoding json response")
+		return nil, ErrDefaultWebhook
+	}
+
+	if errResponse.Error != nil {
+		err := FindWebhookError(*errResponse.Error.ErrorCode, *errResponse.Error.Message)
+		logrus.WithField("celcoin_error", errResponse.Error).
+			WithFields(fields).WithError(err).
+			Error("celcoin create subscription error")
 		return nil, err
 	}
 
-	return &response, nil
+	return nil, ErrDefaultWebhook
 }
 
 // GetWebhookReplaySendCount realiza a consulta para recuperar a quantidade de webhooks enviados
@@ -522,24 +609,38 @@ func (s *Webhooks) GetWebhookReplaySendCount(ctx context.Context, entity, dateFr
 	}
 
 	defer resp.Body.Close()
+	respBody, _ := ioutil.ReadAll(resp.Body)
 
-	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted {
-		logrus.
-			WithFields(fields).
-			WithError(err).
-			Error("error http client status code")
-		return nil, errors.New("error http client status code")
+	if resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusAccepted {
+		var response WebhookReplayCountResponse
+		if err := json.Unmarshal(respBody, &response); err != nil {
+			logrus.WithFields(fields).WithError(err).
+				Error("error decoding json response")
+			return nil, ErrDefaultWebhook
+		}
+		return &response, nil
 	}
-	var response WebhookReplayCountResponse
-	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-		logrus.
-			WithFields(fields).
-			WithError(err).
-			Error("error unmarshal")
+
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, ErrEntryNotFound
+	}
+
+	var errResponse *ErrorDefaultResponse
+	if err := json.Unmarshal(respBody, &errResponse); err != nil {
+		logrus.WithFields(fields).WithError(err).
+			Error("error decoding json response")
+		return nil, ErrDefaultWebhook
+	}
+
+	if errResponse.Error != nil {
+		err := FindWebhookError(*errResponse.Error.ErrorCode, *errResponse.Error.Message)
+		logrus.WithField("celcoin_error", errResponse.Error).
+			WithFields(fields).WithError(err).
+			Error("celcoin create subscription error")
 		return nil, err
 	}
 
-	return &response, nil
+	return nil, ErrDefaultWebhook
 }
 
 // ReplayMessageFromWebhook reenvia o webhook com base nos parâmetros fornecidos
@@ -604,22 +705,36 @@ func (s *Webhooks) ReplayMessageFromWebhook(ctx context.Context, entity, webhook
 	}
 
 	defer resp.Body.Close()
+	respBody, _ := ioutil.ReadAll(resp.Body)
 
-	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted {
-		logrus.
-			WithFields(fields).
-			WithError(err).
-			Error("error http client status code")
-		return nil, errors.New("error http client status code")
+	if resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusAccepted {
+		var response WebhookReplayResponse
+		if err := json.Unmarshal(respBody, &response); err != nil {
+			logrus.WithFields(fields).WithError(err).
+				Error("error decoding json response")
+			return nil, ErrDefaultWebhook
+		}
+		return &response, nil
 	}
-	var response WebhookReplayResponse
-	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-		logrus.
-			WithFields(fields).
-			WithError(err).
-			Error("error unmarshal")
+
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, ErrEntryNotFound
+	}
+
+	var errResponse *ErrorDefaultResponse
+	if err := json.Unmarshal(respBody, &errResponse); err != nil {
+		logrus.WithFields(fields).WithError(err).
+			Error("error decoding json response")
+		return nil, ErrDefaultWebhook
+	}
+
+	if errResponse.Error != nil {
+		err := FindWebhookError(*errResponse.Error.ErrorCode, *errResponse.Error.Message)
+		logrus.WithField("celcoin_error", errResponse.Error).
+			WithFields(fields).WithError(err).
+			Error("celcoin create subscription error")
 		return nil, err
 	}
 
-	return &response, nil
+	return nil, ErrDefaultWebhook
 }
