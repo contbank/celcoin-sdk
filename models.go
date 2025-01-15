@@ -57,6 +57,12 @@ type Certificate struct {
 	ClientSecret     string `json:"client_secret"`
 }
 
+// WebhookCredential ...
+type WebhookCredential struct {
+	Login    string `json:"celcoin_webhook_login"`
+	Password string `json:"celcoin_webhook_password"`
+}
+
 // ErrorLoginResponse ...
 type ErrorLoginResponse struct {
 	Message string `json:"error"`
