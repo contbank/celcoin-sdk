@@ -14,16 +14,28 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// Webhooks define a interface para operações relacionadas a webhooks.
+type Webhooks interface {
+	CreateSubscription(ctx context.Context, req WebhookSubscriptionRequest) (*WebhookSubscriptionResponse, error)
+	GetSubscriptions(ctx context.Context, entity string, active *bool) (*WebhookQueryResponse, error)
+	UpdateSubscription(ctx context.Context, entity string, req WebhookUpdateRequest) (*WebhookUpdateResponse, error)
+	DeleteSubscription(ctx context.Context, entity string, subscriptionID string) (*WebhookDeleteResponse, error)
+	GetWebhookReplayCount(ctx context.Context, entity, dateFrom, dateTo string, optionalParams map[string]string) (*WebhookReplayResponse, error)
+	GetWebhookReplay(ctx context.Context, entity, dateFrom, dateTo string, onlyPending bool) (*WebhookReplayResponse, error)
+	GetWebhookReplaySendCount(ctx context.Context, entity, dateFrom, dateTo string) (*WebhookReplayCountResponse, error)
+	ReplayMessageFromWebhook(ctx context.Context, entity, webhookID, dateFrom, dateTo string, onlyPending bool, filter WebhookReplayRequest) (*WebhookReplayResponse, error)
+}
+
 // Webhooks ...
-type Webhooks struct {
+type WebhooksService struct {
 	session        Session
 	httpClient     *http.Client
 	authentication *Authentication
 }
 
-// NewWebhooks ...
-func NewWebhooks(httpClient *http.Client, session Session) *Webhooks {
-	return &Webhooks{
+// NewWebhooks cria uma nova instância de WebhooksService.
+func NewWebhooks(httpClient *http.Client, session Session) Webhooks {
+	return &WebhooksService{
 		session:        session,
 		httpClient:     httpClient,
 		authentication: NewAuthentication(httpClient, session),
@@ -31,7 +43,7 @@ func NewWebhooks(httpClient *http.Client, session Session) *Webhooks {
 }
 
 // CreateSubscription faz a chamada à API para cadastrar um webhook
-func (s *Webhooks) CreateSubscription(ctx context.Context, req WebhookSubscriptionRequest) (*WebhookSubscriptionResponse, error) {
+func (s *WebhooksService) CreateSubscription(ctx context.Context, req WebhookSubscriptionRequest) (*WebhookSubscriptionResponse, error) {
 	fields := logrus.Fields{
 		"request": req,
 	}
@@ -126,7 +138,7 @@ func (s *Webhooks) CreateSubscription(ctx context.Context, req WebhookSubscripti
 }
 
 // GetSubscriptions faz a chamada à API para consultar os webhooks cadastrados
-func (s *Webhooks) GetSubscriptions(ctx context.Context, entity string, active *bool) (*WebhookQueryResponse, error) {
+func (s *WebhooksService) GetSubscriptions(ctx context.Context, entity string, active *bool) (*WebhookQueryResponse, error) {
 	fields := logrus.Fields{
 		"entity": entity,
 		"active": active,
@@ -211,7 +223,7 @@ func (s *Webhooks) GetSubscriptions(ctx context.Context, entity string, active *
 }
 
 // UpdateSubscription faz a chamada à API para atualizar um webhook existente
-func (s *Webhooks) UpdateSubscription(ctx context.Context, entity string, req WebhookUpdateRequest) (*WebhookUpdateResponse, error) {
+func (s *WebhooksService) UpdateSubscription(ctx context.Context, entity string, req WebhookUpdateRequest) (*WebhookUpdateResponse, error) {
 	fields := logrus.Fields{
 		"request": req,
 	}
@@ -301,7 +313,7 @@ func (s *Webhooks) UpdateSubscription(ctx context.Context, entity string, req We
 }
 
 // DeleteSubscription faz a chamada à API para excluir um webhook existente
-func (s *Webhooks) DeleteSubscription(ctx context.Context, entity string, subscriptionID string) (*WebhookDeleteResponse, error) {
+func (s *WebhooksService) DeleteSubscription(ctx context.Context, entity string, subscriptionID string) (*WebhookDeleteResponse, error) {
 	fields := logrus.Fields{
 		"entity":          entity,
 		"subscription_id": subscriptionID,
@@ -379,7 +391,7 @@ func (s *Webhooks) DeleteSubscription(ctx context.Context, entity string, subscr
 }
 
 // GetWebhookReplayCount realiza a consulta de quantidade de webhooks enviados
-func (s *Webhooks) GetWebhookReplayCount(ctx context.Context, entity, dateFrom, dateTo string, optionalParams map[string]string) (*WebhookReplayResponse, error) {
+func (s *WebhooksService) GetWebhookReplayCount(ctx context.Context, entity, dateFrom, dateTo string, optionalParams map[string]string) (*WebhookReplayResponse, error) {
 	fields := logrus.Fields{
 		"entity":          entity,
 		"date_from":       dateFrom,
@@ -472,7 +484,7 @@ func (s *Webhooks) GetWebhookReplayCount(ctx context.Context, entity, dateFrom, 
 }
 
 // GetWebhookReplay realiza a consulta para recuperar os detalhes dos webhooks enviados
-func (s *Webhooks) GetWebhookReplay(ctx context.Context, entity, dateFrom, dateTo string, onlyPending bool) (*WebhookReplayResponse, error) {
+func (s *WebhooksService) GetWebhookReplay(ctx context.Context, entity, dateFrom, dateTo string, onlyPending bool) (*WebhookReplayResponse, error) {
 	fields := logrus.Fields{
 		"entity":       entity,
 		"date_from":    dateFrom,
@@ -559,7 +571,7 @@ func (s *Webhooks) GetWebhookReplay(ctx context.Context, entity, dateFrom, dateT
 }
 
 // GetWebhookReplaySendCount realiza a consulta para recuperar a quantidade de webhooks enviados
-func (s *Webhooks) GetWebhookReplaySendCount(ctx context.Context, entity, dateFrom, dateTo string) (*WebhookReplayCountResponse, error) {
+func (s *WebhooksService) GetWebhookReplaySendCount(ctx context.Context, entity, dateFrom, dateTo string) (*WebhookReplayCountResponse, error) {
 	fields := logrus.Fields{
 		"entity":    entity,
 		"date_from": dateFrom,
@@ -644,7 +656,7 @@ func (s *Webhooks) GetWebhookReplaySendCount(ctx context.Context, entity, dateFr
 }
 
 // ReplayMessageFromWebhook reenvia o webhook com base nos parâmetros fornecidos
-func (s *Webhooks) ReplayMessageFromWebhook(ctx context.Context, entity, webhookID, dateFrom, dateTo string, onlyPending bool, filter WebhookReplayRequest) (*WebhookReplayResponse, error) {
+func (s *WebhooksService) ReplayMessageFromWebhook(ctx context.Context, entity, webhookID, dateFrom, dateTo string, onlyPending bool, filter WebhookReplayRequest) (*WebhookReplayResponse, error) {
 
 	fields := logrus.Fields{
 		"entity":     entity,
