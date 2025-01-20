@@ -126,7 +126,7 @@ func (s *WebhooksService) CreateSubscription(ctx context.Context, req WebhookSub
 	}
 
 	if errResponse.Error != nil {
-		err := FindWebhookError(*errResponse.Error.ErrorCode, *errResponse.Error.Message)
+		err := FindWebhookError(*errResponse.Error.ErrorCode, &resp.StatusCode)
 		logrus.WithField("celcoin_error", errResponse.Error).
 			WithFields(fields).WithError(err).
 			Error("celcoin create subscription error")
@@ -212,7 +212,7 @@ func (s *WebhooksService) GetSubscriptions(ctx context.Context, entity string, a
 	}
 
 	if errResponse.Error != nil {
-		err := FindWebhookError(*errResponse.Error.ErrorCode, *errResponse.Error.Message)
+		err := FindWebhookError(*errResponse.Error.ErrorCode, &resp.StatusCode)
 		logrus.WithField("celcoin_error", errResponse.Error).
 			WithFields(fields).WithError(err).
 			Error("celcoin get balance error")
@@ -302,7 +302,7 @@ func (s *WebhooksService) UpdateSubscription(ctx context.Context, entity string,
 	}
 
 	if errResponse.Error != nil {
-		err := FindWebhookError(*errResponse.Error.ErrorCode, *errResponse.Error.Message)
+		err := FindWebhookError(*errResponse.Error.ErrorCode, &resp.StatusCode)
 		logrus.WithField("celcoin_error", errResponse.Error).
 			WithFields(fields).WithError(err).
 			Error("celcoin create subscription error")
@@ -379,7 +379,7 @@ func (s *WebhooksService) DeleteSubscription(ctx context.Context, entity string,
 	}
 
 	if errResponse.Error != nil {
-		err := FindWebhookError(*errResponse.Error.ErrorCode, *errResponse.Error.Message)
+		err := FindWebhookError(*errResponse.Error.ErrorCode, &resp.StatusCode)
 		logrus.WithField("celcoin_error", errResponse.Error).
 			WithFields(fields).WithError(err).
 			Error("celcoin create subscription error")
@@ -473,7 +473,7 @@ func (s *WebhooksService) GetWebhookReplayCount(ctx context.Context, entity, dat
 	}
 
 	if errResponse.Error != nil {
-		err := FindWebhookError(*errResponse.Error.ErrorCode, *errResponse.Error.Message)
+		err := FindWebhookError(*errResponse.Error.ErrorCode, &resp.StatusCode)
 		logrus.WithField("celcoin_error", errResponse.Error).
 			WithFields(fields).WithError(err).
 			Error("celcoin create subscription error")
@@ -560,7 +560,7 @@ func (s *WebhooksService) GetWebhookReplay(ctx context.Context, entity, dateFrom
 	}
 
 	if errResponse.Error != nil {
-		err := FindWebhookError(*errResponse.Error.ErrorCode, *errResponse.Error.Message)
+		err := FindWebhookError(*errResponse.Error.ErrorCode, &resp.StatusCode)
 		logrus.WithField("celcoin_error", errResponse.Error).
 			WithFields(fields).WithError(err).
 			Error("celcoin create subscription error")
@@ -645,7 +645,7 @@ func (s *WebhooksService) GetWebhookReplaySendCount(ctx context.Context, entity,
 	}
 
 	if errResponse.Error != nil {
-		err := FindWebhookError(*errResponse.Error.ErrorCode, *errResponse.Error.Message)
+		err := FindWebhookError(*errResponse.Error.ErrorCode, &resp.StatusCode)
 		logrus.WithField("celcoin_error", errResponse.Error).
 			WithFields(fields).WithError(err).
 			Error("celcoin create subscription error")
@@ -741,7 +741,7 @@ func (s *WebhooksService) ReplayMessageFromWebhook(ctx context.Context, entity, 
 	}
 
 	if errResponse.Error != nil {
-		err := FindWebhookError(*errResponse.Error.ErrorCode, *errResponse.Error.Message)
+		err := FindWebhookError(*errResponse.Error.ErrorCode, &resp.StatusCode)
 		logrus.WithField("celcoin_error", errResponse.Error).
 			WithFields(fields).WithError(err).
 			Error("celcoin create subscription error")

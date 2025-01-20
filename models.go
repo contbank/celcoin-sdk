@@ -502,3 +502,94 @@ func (f *OnboardingFile) UnmarshalJSON(data []byte) error {
 	f.ExpirationTime = expirationTime
 	return nil
 }
+
+/* PIX */
+// PixKeyRequest representa o payload para criação de uma chave Pix.
+type PixKeyRequest struct {
+	Account string `json:"account" validate:"required"`
+	KeyType string `json:"keyType" validate:"required,oneof=EVP CPF CNPJ EMAIL PHONE"`
+	Key     string `json:"key,omitempty"`
+}
+
+// PixKeyResponse representa a resposta principal para uma operação relacionada a Pix Keys.
+type PixKeyResponse struct {
+	Body    PixKeyResponseBody `json:"body"`
+	Version string             `json:"version"`
+	Status  string             `json:"status"`
+}
+
+// PixKeyResponseBody representa o corpo da resposta para uma operação relacionada a Pix Keys.
+type PixKeyResponseBody struct {
+	KeyType string        `json:"keyType"`
+	Key     string        `json:"key"`
+	Account PixKeyAccount `json:"account"`
+	Owner   PixKeyOwner   `json:"owner"`
+}
+
+// PixKeyAccount representa os detalhes da conta vinculada a uma Pix Key.
+type PixKeyAccount struct {
+	Participant string    `json:"participant"`
+	Branch      string    `json:"branch"`
+	Account     string    `json:"account"`
+	AccountType string    `json:"accountType"`
+	CreateDate  time.Time `json:"createDate"`
+}
+
+// PixKeyOwner representa as informações do proprietário da Pix Key.
+type PixKeyOwner struct {
+	Type           string `json:"type"` // NATURAL_PERSON ou LEGAL_PERSON
+	DocumentNumber string `json:"documentNumber"`
+	Name           string `json:"name"`
+}
+
+// PixKeyListResponse representa a resposta ao consultar todas as chaves Pix de uma conta.
+type PixKeyListResponse struct {
+	Version string                 `json:"version"`
+	Status  string                 `json:"status"`
+	Body    PixKeyListResponseBody `json:"body"`
+}
+
+// PixKeyListResponseBody representa o corpo da resposta ao consultar todas as chaves Pix de uma conta.
+type PixKeyListResponseBody struct {
+	ListKeys []PixKeyListItem `json:"listKeys"`
+}
+
+// PixKeyListItem representa uma chave Pix na lista de chaves retornada.
+type PixKeyListItem struct {
+	KeyType string        `json:"keyType"`
+	Key     string        `json:"key"`
+	Account PixKeyAccount `json:"account"`
+	Owner   PixKeyOwner   `json:"owner"`
+}
+
+// PixExternalKeyRequest representa os parâmetros para consulta de uma chave Pix externa (DICT).
+type PixExternalKeyRequest struct {
+	Key        string `json:"key" validate:"required"`
+	OwnerTaxID string `json:"ownerTaxId"`
+}
+
+// PixExternalKeyResponse representa a resposta de uma consulta de chave Pix externa (DICT).
+type PixExternalKeyResponse struct {
+	Status  string                       `json:"status"`
+	Version string                       `json:"version"`
+	Body    PixExternalKeyResponseBody   `json:"body,omitempty"`
+	Error   *PixExternalKeyErrorResponse `json:"error,omitempty"`
+}
+
+// PixExternalKeyResponseBody representa o corpo da resposta para a consulta de chave Pix externa.
+type PixExternalKeyResponseBody struct {
+	KeyType          string        `json:"keyType"`
+	Key              string        `json:"key"`
+	Account          PixKeyAccount `json:"account"`
+	Owner            PixKeyOwner   `json:"owner"`
+	EndToEndId       string        `json:"endtoEndId"`
+	CreationDate     time.Time     `json:"creationDate"`
+	KeyOwnershipDate time.Time     `json:"keyOwnershipDate"`
+	IsSameTaxId      bool          `json:"isSameTaxId"`
+}
+
+// PixExternalKeyErrorResponse representa os detalhes de erro em caso de falha na consulta de chave Pix externa.
+type PixExternalKeyErrorResponse struct {
+	ErrorCode string `json:"errorCode"`
+	Message   string `json:"message"`
+}
