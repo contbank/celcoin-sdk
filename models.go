@@ -109,6 +109,12 @@ type Certificate struct {
 	ClientSecret     string `json:"client_secret"`
 }
 
+// WebhookCredential ...
+type WebhookCredential struct {
+	Login    string `json:"celcoin_webhook_login"`
+	Password string `json:"celcoin_webhook_password"`
+}
+
 // ErrorLoginResponse ...
 type ErrorLoginResponse struct {
 	Message string `json:"error"`
@@ -189,10 +195,12 @@ type WebhookSubscription struct {
 
 // WebhookQueryResponse representa a resposta da API ao consultar webhooks cadastrados
 type WebhookQueryResponse struct {
-	Version string                `json:"version"`
-	Status  string                `json:"status"`
-	Body    []WebhookSubscription `json:"body,omitempty"`
-	Error   *WebhookError         `json:"error,omitempty"`
+	Version string `json:"version"`
+	Status  string `json:"status"`
+	Body    struct {
+		Subscriptions []WebhookSubscription `json:"subscriptions"`
+	} `json:"body"`
+	Error *WebhookError `json:"error,omitempty"`
 }
 
 // WebhookUpdateRequest representa o payload para atualizar um webhook existente

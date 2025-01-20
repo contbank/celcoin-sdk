@@ -22,7 +22,7 @@ type WebhookTestSuite struct {
 	assert         *assert.Assertions
 	ctx            context.Context
 	session        *celcoin.Session
-	webhooks       *celcoin.Webhooks
+	webhooks       celcoin.Webhooks
 	mockServer     *httptest.Server
 	authentication *celcoin.Authentication
 	httpClient     *http.Client

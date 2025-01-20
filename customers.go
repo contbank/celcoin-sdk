@@ -114,6 +114,8 @@ func (c *Customers) CreateAccount(ctx context.Context, customerData *Customer) (
 	requestID, _ := ctx.Value("Request-Id").(string)
 	fields := logrus.Fields{
 		"request_id": requestID,
+		"service":    "celcoin_customers.CreateAccount",
+		"context":    "celcoin_customers",
 	}
 
 	endpoint := c.session.APIEndpoint
@@ -123,6 +125,8 @@ func (c *Customers) CreateAccount(ctx context.Context, customerData *Customer) (
 		return nil, err
 	}
 
+	logrus.WithFields(fields).Info("request body marshalled successfully")
+
 	url, err := url.Parse(endpoint)
 	if err != nil {
 		logrus.WithFields(fields).WithError(err).Error("error parsing endpoint")
@@ -131,13 +135,15 @@ func (c *Customers) CreateAccount(ctx context.Context, customerData *Customer) (
 
 	url.Path = path.Join(url.Path, NaturalPersonOnboardingPath)
 
-	req, err := http.NewRequestWithContext(ctx, "POST", endpoint, strings.NewReader(string(reqBody)))
+	req, err := http.NewRequestWithContext(ctx, "POST", url.String(), strings.NewReader(string(reqBody)))
 	if err != nil {
 		logrus.WithFields(fields).WithError(err).Error("error creating request")
 		return nil, err
 	}
 
 	req.Header.Set("Content-Type", "application/json")
+
+	logrus.WithFields(fields).Info("request created successfully")
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -146,7 +152,11 @@ func (c *Customers) CreateAccount(ctx context.Context, customerData *Customer) (
 	}
 	defer resp.Body.Close()
 
+	logrus.WithFields(fields).Info("request executed successfully")
+
 	respBody, _ := ioutil.ReadAll(resp.Body)
+
+	logrus.WithFields(fields).Infof("response received with status code %d", resp.StatusCode)
 
 	if resp.StatusCode == http.StatusOK {
 		var response CustomerOnboardingResponse
