@@ -33,8 +33,8 @@ var (
 	ErrInvalidAmount = grok.NewError(http.StatusBadRequest, "INVALID_AMOUNT", "invalid amount")
 	// ErrInsufficientBalance ...
 	ErrInsufficientBalance = grok.NewError(http.StatusBadRequest, "INSUFFICIENT_BALANCE", "insufficient balance")
-	// ErrInvalidAuthenticationCodeOrAccount ...
-	ErrInvalidAuthenticationCodeOrAccount = grok.NewError(http.StatusBadRequest, "INVALID_AUTHENTICATION_CODE_OR_ACCOUNT_NUMBER", "invalid authentication code or account number")
+	// ErrInvalidTransferAuthenticationCode ...
+	ErrInvalidTransferAuthenticationCode = grok.NewError(http.StatusBadRequest, "INVALID_TRANSFER_AUTHENTICATION_CODE", "invalid authentication code or transfer request id")
 	// ErrInvalidAccountNumber ...
 	ErrInvalidAccountNumber = grok.NewError(http.StatusBadRequest, "INVALID_ACCOUNT_NUMBER", "invalid account number")
 	// ErrOutOfServicePeriod ...
@@ -713,26 +713,6 @@ func FindPixError(code string, messages ...string) *grok.Error {
 func ParseErr(err error) (*Error, bool) {
 	celcoinErr, ok := err.(*Error)
 	return celcoinErr, ok
-}
-
-// FindTransferError ..
-func FindTransferError(transferErrorResponse TransferErrorResponse) *grok.Error {
-	// get the error code if errors list is null
-	if len(transferErrorResponse.Errors) == 0 && transferErrorResponse.Code != "" {
-		transferErrorResponse.Errors = []KeyValueErrorModel{
-			{
-				Key: transferErrorResponse.Code,
-			},
-		}
-	}
-	// checking the errors list
-	errorModel := transferErrorResponse.Errors[0]
-	for _, v := range transferErrorList {
-		if v.celcoinTransferError.Key == errorModel.Key {
-			return v.grokError
-		}
-	}
-	return grok.NewError(http.StatusBadRequest, errorModel.Key, errorModel.Key+" - "+errorModel.Value)
 }
 
 func (e *Error) Error() string {

@@ -6,6 +6,9 @@ import (
 )
 
 const (
+	// ISPBBankCode ...
+	ISPBBankCode string = "13935893"
+
 	// LoginPath ...
 	LoginPath string = "v5/token"
 	// LoginMtlsPath ...
@@ -22,6 +25,8 @@ const (
 	ProposalFilesPath string = "/onboarding/v1/onboarding-proposal/files"
 	//NaturalPersonOnboardingPath ...
 	NaturalPersonOnboardingPath string = "/onboarding/v1/onboarding-proposal/natural-person"
+	// Transfers TED
+	TransfersPath string = "/baas-wallet-transactions-webservice/v1/spb/transfer"
 
 	// OnboardingStatusProcessing ...
 	OnboardingStatusProcessing string = "PROCESSING"
@@ -36,6 +41,53 @@ const (
 	ProposalTypeNaturalPerson string = "NATURAL_PERSON"
 	// ProposalTypeLegalPerson ...
 	ProposalTypeLegalPerson string = "LEGAL_PERSON"
+)
+
+type PersonType string
+
+const (
+	// NaturalPersonType Pessoa Fisica
+	NaturalPersonType PersonType = "F"
+	// LegalPersonType Pessoa Juridica
+	LegalPersonType PersonType = "J"
+)
+
+type AccountType string
+
+const (
+	// AccountTypeCC Conta corrente
+	AccountTypeCC AccountType = "CC"
+	// AccountTypeCI Conta de investimento
+	AccountTypeCI AccountType = "CI"
+	// AccountTypePG Conta de pagamento
+	AccountTypePG AccountType = "PG"
+	// AccountTypePP Conta poupança
+	AccountTypePP AccountType = "PP"
+)
+
+type ClientFinality string
+
+const (
+	// TaxesLeviesAndFees 1 - Pagamento de Impostos, Tributos e Taxas
+	TaxesLeviesAndFeesClientFinality ClientFinality = "1"
+	// Dividends 3 - Pagamentos de Dividendos
+	DividendsClientFinality ClientFinality = "3"
+	// Salaries 4 - Pagamento de Salários
+	SalariesClientFinality ClientFinality = "4"
+	// Suppliers 5 - Pagamento de Fornecedores
+	SuppliersClientFinality ClientFinality = "5"
+	// RentAndCondominiumFees 7 - Pagamento de Aluguéis e Taxas de Condomínio
+	RentAndCondominiumFeesClientFinality ClientFinality = "7"
+	// SchoolTuition 9 - Pagamento de Mensalidade Escolar
+	SchoolTuitionClientFinality ClientFinality = "9"
+	// AccountCredit 10 - Crédito em Conta
+	AccountCreditClientFinality ClientFinality = "10"
+	// JudicialDeposit 100 - Depósito Judicial
+	JudicialDepositClientFinality ClientFinality = "100"
+	// TransfersBetweenSameOwnership 110 - Transferência entre contas de mesma titularidade
+	TransfersBetweenSameOwnershipClientFinality ClientFinality = "110"
+	// Others 99999 - Outros
+	OthersClientFinality ClientFinality = "99999"
 )
 
 // AuthenticationResponse ...
@@ -501,4 +553,70 @@ func (f *OnboardingFile) UnmarshalJSON(data []byte) error {
 
 	f.ExpirationTime = expirationTime
 	return nil
+}
+
+/* TRANSFERS */
+// TransfersRequest ...
+type TransfersRequest struct {
+	Amount         int64                       `validate:"required" json:"amount"`
+	ClientCode     string                      `validate:"required" json:"clientCode"`
+	DebitParty     TransfersDebitPartyRequest  `validate:"required,dive" json:"debitParty"`
+	CreditParty    TransfersCreditPartyRequest `validate:"required,dive" json:"creditParty"`
+	ClientFinality ClientFinality              `json:"clientFinality"`
+	Description    string                      `json:"description"`
+}
+
+// TransfersDebitPartyRequest ...
+type TransfersDebitPartyRequest struct {
+	AccountNumber string `validate:"required" json:"account"`
+}
+
+// TransfersDebitPartyResponse ...
+type TransfersDebitPartyResponse struct {
+	AccountNumber string      `json:"account"`
+	AccountBranch string      `json:"branch"`
+	Identifier    string      `json:"taxId"`
+	AccountName   string      `json:"name"`
+	AccountType   AccountType `json:"accountType"`
+	PersonType    PersonType  `json:"personType"`
+	BankISPB      string      `json:"bank"`
+}
+
+// TransfersCreditPartyRequest ...
+type TransfersCreditPartyRequest struct {
+	BankISPB      string      `validate:"required" json:"bank"`
+	AccountNumber string      `validate:"required" json:"account"`
+	AccountBranch string      `validate:"required" json:"branch"`
+	Identifier    string      `validate:"required,cnpjcpf" json:"taxId"`
+	AccountName   string      `validate:"required" json:"name"`
+	AccountType   AccountType `validate:"required" json:"accountType"`
+	PersonType    PersonType  `validate:"required" json:"personType"`
+}
+
+// TransfersCreditPartyResponse ...
+type TransfersCreditPartyResponse struct {
+	TransfersCreditPartyRequest
+}
+
+// TransfersBodyResponse ...
+type TransfersBodyResponse struct {
+	ID          string                       `json:"id"`
+	Amount      int64                        `json:"amount"`
+	ClientCode  string                       `json:"clientCode"`
+	DebitParty  TransfersDebitPartyResponse  `json:"debitParty"`
+	CreditParty TransfersCreditPartyResponse `json:"creditParty"`
+}
+
+// TransfersResponse representa a resposta da rota de cadastro de webhooks
+type TransfersResponse struct {
+	Version string                 `json:"version"` // Versão da API
+	Status  string                 `json:"status"`  // Status da operação (SUCCESS ou ERROR)
+	Body    *TransfersBodyResponse `json:"body,omitempty"`
+	Error   *TransfersError        `json:"error,omitempty"` // Detalhes do erro, se houver
+}
+
+// TransfersError representa informações de erro em uma resposta da API
+type TransfersError struct {
+	ErrorCode string `json:"errorCode"` // Código do erro
+	Message   string `json:"message"`   // Mensagem do erro
 }
