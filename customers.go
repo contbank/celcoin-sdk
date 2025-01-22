@@ -170,15 +170,14 @@ func (c *Customers) CreateAccount(ctx context.Context, customerData *Customer) (
 		return &response, nil
 	}
 
-	var bodyErr *ErrorResponse
-	if err := json.Unmarshal(respBody, &bodyErr); err != nil {
+	var errResponse *ErrorDefaultResponse
+	if err := json.Unmarshal(respBody, &errResponse); err != nil {
 		logrus.WithFields(fields).WithError(err).Error("error unmarshalling error response")
 		return nil, err
 	}
 
-	if len(bodyErr.Errors) > 0 {
-		errModel := bodyErr.Errors[0]
-		return nil, FindOnboardingError(errModel.Code, &resp.StatusCode)
+	if errResponse != nil && errResponse.Error != nil && len(*errResponse.Error.ErrorCode) > 0 {
+		return nil, FindOnboardingError(*errResponse.Error.ErrorCode, &resp.StatusCode)
 	}
 
 	logrus.WithFields(fields).Error("error default create account")
@@ -233,15 +232,14 @@ func (c *Customers) GetOnboardingProposal(ctx context.Context, proposalId string
 		return &response, nil
 	}
 
-	var bodyErr *ErrorResponse
-	if err := json.Unmarshal(respBody, &bodyErr); err != nil {
+	var errResponse *ErrorDefaultResponse
+	if err := json.Unmarshal(respBody, &errResponse); err != nil {
 		logrus.WithFields(fields).WithError(err).Error("error unmarshalling error response")
 		return nil, err
 	}
 
-	if len(bodyErr.Errors) > 0 {
-		errModel := bodyErr.Errors[0]
-		return nil, FindOnboardingError(errModel.Code, &resp.StatusCode)
+	if errResponse != nil && errResponse.Error != nil && len(*errResponse.Error.ErrorCode) > 0 {
+		return nil, FindOnboardingError(*errResponse.Error.ErrorCode, &resp.StatusCode)
 	}
 
 	logrus.WithFields(fields).Error("error default onboarding proposal")
@@ -305,16 +303,14 @@ func (c *Customers) GetOnboardingProposalFiles(ctx context.Context, proposalId s
 		return &response, nil
 	}
 
-	var bodyErr *ErrorResponse
-	if err := json.Unmarshal(respBody, &bodyErr); err != nil {
-		logrus.WithFields(fields).WithError(err).
-			Error("error unmarshalling error response")
+	var errResponse *ErrorDefaultResponse
+	if err := json.Unmarshal(respBody, &errResponse); err != nil {
+		logrus.WithFields(fields).WithError(err).Error("error unmarshalling error response")
 		return nil, err
 	}
 
-	if len(bodyErr.Errors) > 0 {
-		errModel := bodyErr.Errors[0]
-		return nil, FindOnboardingError(errModel.Code, &resp.StatusCode)
+	if errResponse != nil && errResponse.Error != nil && len(*errResponse.Error.ErrorCode) > 0 {
+		return nil, FindOnboardingError(*errResponse.Error.ErrorCode, &resp.StatusCode)
 	}
 
 	logrus.WithFields(fields).

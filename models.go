@@ -6,6 +6,9 @@ import (
 )
 
 const (
+	// ISPBBankCode ...
+	ISPBBankCode string = "13935893"
+
 	// LoginPath ...
 	LoginPath string = "v5/token"
 	// LoginMtlsPath ...
@@ -22,6 +25,16 @@ const (
 	ProposalFilesPath string = "/onboarding/v1/onboarding-proposal/files"
 	//NaturalPersonOnboardingPath ...
 	NaturalPersonOnboardingPath string = "/onboarding/v1/onboarding-proposal/natural-person"
+	// Transfers TED
+	TransfersPath string = "/baas-wallet-transactions-webservice/v1/spb/transfer"
+
+	// PixPath ...
+	PixDictPath         string = "/celcoin-baas-pix-dict-webservice/v1/pix/dict/entry"
+	PixCashOutPath      string = "/baas-wallet-transactions-webservice/v1/pix/payment"
+	PixCashInPath       string = "/pix/v2/receivement/v2"
+	PixEmvPath          string = "/pix/v1/emv"
+	PixStaticPath       string = "/pix/v1/brcode/static"
+	PixCashInStatusPath string = "/pix/v2/receivement/v2/devolution/status"
 
 	// OnboardingStatusProcessing ...
 	OnboardingStatusProcessing string = "PROCESSING"
@@ -36,6 +49,53 @@ const (
 	ProposalTypeNaturalPerson string = "NATURAL_PERSON"
 	// ProposalTypeLegalPerson ...
 	ProposalTypeLegalPerson string = "LEGAL_PERSON"
+)
+
+type PersonType string
+
+const (
+	// NaturalPersonType Pessoa Fisica
+	NaturalPersonType PersonType = "F"
+	// LegalPersonType Pessoa Juridica
+	LegalPersonType PersonType = "J"
+)
+
+type AccountType string
+
+const (
+	// AccountTypeCC Conta corrente
+	AccountTypeCC AccountType = "CC"
+	// AccountTypeCI Conta de investimento
+	AccountTypeCI AccountType = "CI"
+	// AccountTypePG Conta de pagamento
+	AccountTypePG AccountType = "PG"
+	// AccountTypePP Conta poupança
+	AccountTypePP AccountType = "PP"
+)
+
+type ClientFinality string
+
+const (
+	// TaxesLeviesAndFees 1 - Pagamento de Impostos, Tributos e Taxas
+	TaxesLeviesAndFeesClientFinality ClientFinality = "1"
+	// Dividends 3 - Pagamentos de Dividendos
+	DividendsClientFinality ClientFinality = "3"
+	// Salaries 4 - Pagamento de Salários
+	SalariesClientFinality ClientFinality = "4"
+	// Suppliers 5 - Pagamento de Fornecedores
+	SuppliersClientFinality ClientFinality = "5"
+	// RentAndCondominiumFees 7 - Pagamento de Aluguéis e Taxas de Condomínio
+	RentAndCondominiumFeesClientFinality ClientFinality = "7"
+	// SchoolTuition 9 - Pagamento de Mensalidade Escolar
+	SchoolTuitionClientFinality ClientFinality = "9"
+	// AccountCredit 10 - Crédito em Conta
+	AccountCreditClientFinality ClientFinality = "10"
+	// JudicialDeposit 100 - Depósito Judicial
+	JudicialDepositClientFinality ClientFinality = "100"
+	// TransfersBetweenSameOwnership 110 - Transferência entre contas de mesma titularidade
+	TransfersBetweenSameOwnershipClientFinality ClientFinality = "110"
+	// Others 99999 - Outros
+	OthersClientFinality ClientFinality = "99999"
 )
 
 // AuthenticationResponse ...
@@ -592,4 +652,237 @@ type PixExternalKeyResponseBody struct {
 type PixExternalKeyErrorResponse struct {
 	ErrorCode string `json:"errorCode"`
 	Message   string `json:"message"`
+}
+
+// PixCashOutRequest representa os dados para realizar um Pix Cash-Out.
+type PixCashOutRequest struct {
+	Amount                    float64     `json:"amount" description:"O valor da transação (required)"`
+	VlcpAmount                float64     `json:"vlcpAmount" description:"O valor da compra (Pix Troco)"`
+	VldnAmount                float64     `json:"vldnAmount" description:"O valor em dinheiro disponibilizado (Pix Troco)"`
+	WithdrawalServiceProvider string      `json:"withdrawalServiceProvider" description:"O Identificador ISPB do serviço de saque (Pix Saque/Troco)"`
+	WithdrawalAgentMode       string      `json:"withdrawalAgentMode" description:"Modo do agente de retirada. AGTEC: Estabelecimento Comercial, AGTOT: Entidade Jurídica cuja atividade é a prestação de serviços auxiliares de serviços financeiros, AGPSS: Participante Pix que presta diretamente o serviço de saque."`
+	ClientCode                string      `json:"clientCode" description:"A identificação única da transacção dada pelo lado do cliente. Este valor não pode ser repetido (required)"`
+	TransactionIdentification string      `json:"transactionIdentification" description:"Identificador do QRCode a ser pago (ver regras de preenchimento)"`
+	EndToEndId                string      `json:"endToEndId" description:"Identificador de ponta a ponta associado a este pedido de iniciação de pagamento. Deve ser o mesmo da consulta ao DICT, quando aplicável."`
+	DebitParty                DebitParty  `json:"debitParty" description:"Dados bancários da conta do pagador na Celcoin"`
+	CreditParty               CreditParty `json:"creditParty" description:"Dados bancários da conta do recebedor"`
+	InitiationType            string      `json:"initiationType" description:"Representa o tipo de pagamento que será iniciado (required)"`
+	TaxIdPaymentInitiator     string      `json:"taxIdPaymentInitiator" description:"CNPJ do iniciador de pagamentos. Utilizado apenas se o campo 'initiationType' for igual a 'PAYMENT_INITIATOR'."`
+	RemittanceInformation     string      `json:"remittanceInformation" description:"Texto a ser apresentado ao pagador para informação correlacionada, em formato livre."`
+	PaymentType               string      `json:"paymentType" description:"Representa o tipo de pagamento: IMMEDIATE (padrão), FRAUD (suspeita de fraude), SCHEDULED (programado)."`
+	Urgency                   string      `json:"urgency" description:"Define a urgência do pagamento: HIGH (padrão), NORMAL (programado)."`
+	TransactionType           string      `json:"transactionType" description:"Tipo de transação: TRANSFER (padrão), CHANGE (Pix Troco), WITHDRAWAL (Pix Saque)."`
+}
+
+// DebitParty representa os dados do pagador.
+type DebitParty struct {
+	Account     string `json:"account" description:"Conta bancária do pagador"`
+	Bank        string `json:"bank" description:"Banco do pagador"`
+	Branch      string `json:"branch" description:"Agência do pagador"`
+	PersonType  string `json:"personType" description:"Tipo de pessoa do pagador (Física/Jurídica)"`
+	TaxId       string `json:"taxId" description:"CPF/CNPJ do pagador"`
+	AccountType string `json:"accountType" description:"Tipo de conta do pagador CACC, TRAN, SLRY, SVGS"`
+	Key         string `json:"key,omitempty"`
+	Name        string `json:"name,omitempty"`
+}
+
+// CreditParty representa os dados do recebedor.
+type CreditParty struct {
+	Account     string `json:"account" description:"Conta bancária do recebedor"`
+	Bank        string `json:"bank" description:"Banco do recebedor"`
+	Branch      string `json:"branch" description:"Agência do recebedor"`
+	PersonType  string `json:"personType" description:"Tipo de pessoa do recebedor (Física/Jurídica)"`
+	TaxId       string `json:"taxId" description:"CPF/CNPJ do recebedor"`
+	AccountType string `json:"accountType" description:"Tipo de conta do recebedor CACC, TRAN, SLRY, SVGS "`
+	Name        string `json:"name" description:"Nome do recebedor"`
+	Key         string `json:"key" description:"Chave Pix do recebedor"`
+}
+
+// PixCashOutResponse ...
+type PixCashOutResponse struct {
+	Status  string                   `json:"status"`
+	Version string                   `json:"version"`
+	Body    PixCashOutResponseBody   `json:"body,omitempty"`
+	Error   *PixCashOutErrorResponse `json:"error,omitempty"`
+}
+
+// PixCashOutErrorResponse...
+type PixCashOutErrorResponse struct {
+	ErrorCode string `json:"errorCode"`
+	Message   string `json:"message"`
+}
+
+// PixCashOutResponseBody...
+type PixCashOutResponseBody struct {
+	InitiationType            string                 `json:"initiationType" `
+	TransactionIdentification *string                `json:"transactionIdentification,omitempty" `
+	Status                    string                 `json:"status"`
+	Amount                    float64                `json:"amount"`
+	Currency                  string                 `json:"currency"`
+	CreationDate              string                 `json:"creationDate"`
+	CompletionDate            *string                `json:"completionDate,omitempty"`
+	ErrorDetails              *ErrorDetails          `json:"errorDetails,omitempty"`
+	AdditionalInfo            map[string]interface{} `json:"additionalInfo,omitempty"`
+}
+
+// ErrorDetails ...
+type ErrorDetails struct {
+	Code        string `json:"code" validate:"required"`
+	Description string `json:"description" validate:"required"`
+}
+
+// QRCodeResponse representa a resposta decodificada do QR Code.
+type QRCodeResponse struct {
+	Type                       string                     `json:"type"`
+	Collection                 interface{}                `json:"collection"`
+	PayloadFormatIndicator     string                     `json:"payloadFormatIndicator"`
+	MerchantAccountInformation MerchantAccountInformation `json:"merchantAccountInformation"`
+	MerchantCategoryCode       int                        `json:"merchantCategoryCode"`
+	TransactionCurrency        int                        `json:"transactionCurrency"`
+	TransactionAmount          float64                    `json:"transactionAmount"`
+	CountryCode                string                     `json:"countryCode"`
+	MerchantName               string                     `json:"merchantName"`
+	MerchantCity               string                     `json:"merchantCity"`
+	PostalCode                 string                     `json:"postalCode"`
+	InitiationMethod           interface{}                `json:"initiationMethod"`
+	TransactionIdentification  string                     `json:"transactionIdentification"`
+}
+
+// MerchantAccountInformation representa as informações da conta do comerciante.
+type MerchantAccountInformation struct {
+	URL                       interface{} `json:"url"`
+	GUI                       string      `json:"gui"`
+	Key                       string      `json:"key"`
+	AdditionalInformation     string      `json:"additionalInformation"`
+	WithdrawalServiceProvider interface{} `json:"withdrawalServiceProvider"`
+}
+
+// PixTransactionResponse representa os dados para uma transação Pix.
+type PixCashoutStatusTransactionResponse struct {
+	Status  string                          `json:"status"`
+	Version string                          `json:"version"`
+	Body    PixCashoutStatusTransactionBody `json:"body"`
+	Error   *PixCashOutErrorResponse        `json:"error,omitempty"`
+}
+
+// PixTransactionBody representa o corpo da transação Pix.
+type PixCashoutStatusTransactionBody struct {
+	ID                        string        `json:"id"`
+	Amount                    float64       `json:"amount"`
+	ClientCode                string        `json:"clientCode"`
+	TransactionIdentification *string       `json:"transactionIdentification,omitempty"`
+	EndToEndID                string        `json:"endToEndId"`
+	InitiationType            string        `json:"initiationType"`
+	PaymentType               string        `json:"paymentType"`
+	Urgency                   string        `json:"urgency"`
+	TransactionType           string        `json:"transactionType"`
+	DebitParty                DebitParty    `json:"debitParty"`
+	CreditParty               CreditParty   `json:"creditParty"`
+	RemittanceInformation     string        `json:"remittanceInformation"`
+	Error                     *ErrorDetails `json:"error,omitempty"`
+}
+
+// PixCashInTransactionResponse representa a resposta para a consulta de uma devolução de pagamento ou transferência Pix (Cash-In).
+type PixCashinStatusTransactionResponse struct {
+	Status               string  `json:"status"`               // Status da transação
+	ReturnIdentification string  `json:"returnIdentification"` // Identificação de devolução
+	TransactionId        int64   `json:"transactionId"`        // Identificador da transação
+	TransactionIdPayment int64   `json:"transactionIdPayment"` // Identificador do pagamento
+	TransactionType      string  `json:"transactionType"`      // Tipo da transação (e.g., REVERTED)
+	Amount               float64 `json:"amount"`               // Valor da transação
+	Reason               string  `json:"reason"`               // Motivo da devolução
+	ReversalDescription  string  `json:"reversalDescription"`  // Descrição da reversão (se houver)
+	CreatedAt            string  `json:"createdAt"`            // Data de criação da transação
+}
+
+// PixCashInStaticRequest representa o request necessário para solicitar um pix estático
+type PixCashInStaticRequest struct {
+	Key                       string      `json:"key" validate:"required"`
+	Amount                    float64     `json:"amount" validate:"required"`
+	TransactionIdentification string      `json:"transactionIdentification" validate:"required"`
+	Merchant                  PixMerchant `json:"merchant" validate:"required"`
+	Tags                      []string    `json:"tags,omitempty"`
+	AdditionalInformation     string      `json:"additionalInformation,omitempty"`
+	Withdrawal                bool        `json:"withdrawal"`
+}
+
+// PixMerchant representa as informações do comerciante no Pix Cash-in.
+type PixMerchant struct {
+	PostalCode           string `json:"postalCode" validate:"required"`
+	City                 string `json:"city" validate:"required"`
+	MerchantCategoryCode int    `json:"merchantCategoryCode"`
+	Name                 string `json:"name" validate:"required"`
+}
+
+// PixCashInStaticResponse representa a resposta ao realizar um Pix Cash-in por Cobrança Estática.
+type PixCashInStaticResponse struct {
+	TransactionId             int    `json:"transactionId"`
+	EMVQRCode                 string `json:"emvqrcps"`
+	TransactionIdentification string `json:"transactionIdentification"`
+}
+
+/* TRANSFERS */
+// TransfersRequest ...
+type TransfersRequest struct {
+	Amount         int64                       `validate:"required" json:"amount"`
+	ClientCode     string                      `validate:"required" json:"clientCode"`
+	DebitParty     TransfersDebitPartyRequest  `validate:"required,dive" json:"debitParty"`
+	CreditParty    TransfersCreditPartyRequest `validate:"required,dive" json:"creditParty"`
+	ClientFinality ClientFinality              `json:"clientFinality"`
+	Description    string                      `json:"description"`
+}
+
+// TransfersDebitPartyRequest ...
+type TransfersDebitPartyRequest struct {
+	AccountNumber string `validate:"required" json:"account"`
+}
+
+// TransfersDebitPartyResponse ...
+type TransfersDebitPartyResponse struct {
+	AccountNumber string      `json:"account"`
+	AccountBranch string      `json:"branch"`
+	Identifier    string      `json:"taxId"`
+	AccountName   string      `json:"name"`
+	AccountType   AccountType `json:"accountType"`
+	PersonType    PersonType  `json:"personType"`
+	BankISPB      string      `json:"bank"`
+}
+
+// TransfersCreditPartyRequest ...
+type TransfersCreditPartyRequest struct {
+	BankISPB      string      `validate:"required" json:"bank"`
+	AccountNumber string      `validate:"required" json:"account"`
+	AccountBranch string      `validate:"required" json:"branch"`
+	Identifier    string      `validate:"required,cnpjcpf" json:"taxId"`
+	AccountName   string      `validate:"required" json:"name"`
+	AccountType   AccountType `validate:"required" json:"accountType"`
+	PersonType    PersonType  `validate:"required" json:"personType"`
+}
+
+// TransfersCreditPartyResponse ...
+type TransfersCreditPartyResponse struct {
+	TransfersCreditPartyRequest
+}
+
+// TransfersBodyResponse ...
+type TransfersBodyResponse struct {
+	ID          string                       `json:"id"`
+	Amount      int64                        `json:"amount"`
+	ClientCode  string                       `json:"clientCode"`
+	DebitParty  TransfersDebitPartyResponse  `json:"debitParty"`
+	CreditParty TransfersCreditPartyResponse `json:"creditParty"`
+}
+
+// TransfersResponse representa a resposta da rota de cadastro de webhooks
+type TransfersResponse struct {
+	Version string                 `json:"version"` // Versão da API
+	Status  string                 `json:"status"`  // Status da operação (SUCCESS ou ERROR)
+	Body    *TransfersBodyResponse `json:"body,omitempty"`
+	Error   *TransfersError        `json:"error,omitempty"` // Detalhes do erro, se houver
+}
+
+// TransfersError representa informações de erro em uma resposta da API
+type TransfersError struct {
+	ErrorCode string `json:"errorCode"` // Código do erro
+	Message   string `json:"message"`   // Mensagem do erro
 }

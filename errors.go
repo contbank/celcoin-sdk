@@ -33,8 +33,8 @@ var (
 	ErrInvalidAmount = grok.NewError(http.StatusBadRequest, "INVALID_AMOUNT", "invalid amount")
 	// ErrInsufficientBalance ...
 	ErrInsufficientBalance = grok.NewError(http.StatusBadRequest, "INSUFFICIENT_BALANCE", "insufficient balance")
-	// ErrInvalidAuthenticationCodeOrAccount ...
-	ErrInvalidAuthenticationCodeOrAccount = grok.NewError(http.StatusBadRequest, "INVALID_AUTHENTICATION_CODE_OR_ACCOUNT_NUMBER", "invalid authentication code or account number")
+	// ErrInvalidTransferAuthenticationCode ...
+	ErrInvalidTransferAuthenticationCode = grok.NewError(http.StatusBadRequest, "INVALID_TRANSFER_AUTHENTICATION_CODE", "invalid authentication code or transfer request id")
 	// ErrInvalidAccountNumber ...
 	ErrInvalidAccountNumber = grok.NewError(http.StatusBadRequest, "INVALID_ACCOUNT_NUMBER", "invalid account number")
 	// ErrOutOfServicePeriod ...
@@ -670,26 +670,6 @@ func ParseErr(err error) (*Error, bool) {
 	return celcoinErr, ok
 }
 
-// FindTransferError ..
-func FindTransferError(transferErrorResponse TransferErrorResponse) *grok.Error {
-	// get the error code if errors list is null
-	if len(transferErrorResponse.Errors) == 0 && transferErrorResponse.Code != "" {
-		transferErrorResponse.Errors = []KeyValueErrorModel{
-			{
-				Key: transferErrorResponse.Code,
-			},
-		}
-	}
-	// checking the errors list
-	errorModel := transferErrorResponse.Errors[0]
-	for _, v := range transferErrorList {
-		if v.celcoinTransferError.Key == errorModel.Key {
-			return v.grokError
-		}
-	}
-	return grok.NewError(http.StatusBadRequest, errorModel.Key, errorModel.Key+" - "+errorModel.Value)
-}
-
 func (e *Error) Error() string {
 	return fmt.Sprintf(
 		"Key: %s - Messages: %s",
@@ -925,7 +905,6 @@ func FindOnboardingError(code string, responseStatus *int) *grok.Error {
 	return grok.NewError(http.StatusInternalServerError, "UNKNOWN_ERROR", "unknown error")
 }
 
-// PixErrorMappings ... mapeia os códigos de erro do parceiro Celcoin para os códigos de erro do Contbank com descrição
 var PixErrorMappings = map[string]struct {
 	ContbankCode string
 	Description  string
@@ -956,6 +935,52 @@ var PixErrorMappings = map[string]struct {
 	"CBE410": {"OPERATION_NOT_COMPLETED", "Não foi possível realizar essa operação."},
 	"CBE179": {"MISSING_KEY_FIELD", "É necessário informar o campo: key."},
 	"CBE190": {"KEY_NOT_LINKED_TO_ACCOUNT", "Operação não permitida. Chave não está vinculada a essa conta."},
+	// Novos erros
+	"CBE001":  {"MISSING_CLIENT_CODE", "ClientCode é obrigatório."},
+	"CBE093":  {"CLIENT_CODE_MAX_LENGTH_EXCEEDED", "ClientCode possui tamanho máximo de 200 caracteres."},
+	"CBE094":  {"MISSING_AMOUNT_FIELD", "amount é obrigatório."},
+	"CBE095":  {"INVALID_AMOUNT_FORMAT", "amount invalido.Favor verificar a formatação do campo e deve ser maior que 0."},
+	"CBE100":  {"PENDING_DUPLICATE_TRANSACTION", "Existe um lançamento idêntico pendente.Favor aguarde para realizar esta operação para evitar duplicidade."},
+	"CBE101":  {"DUPLICATE_TRANSACTION", "Já existe um lançamento com o mesmo clientCode. Favor realizar uma nova operação."},
+	"CBE102":  {"DEBIT_LIMIT_EXCEEDED", "Lançamento de debito não permitido.Valor ultrapassa o limite máximo permitido por operação."},
+	"CBE107":  {"MISSING_DEBIT_PARTY", "debitParty é obrigatório."},
+	"CBE108":  {"MISSING_DEBIT_ACCOUNT", "debitparty.account é obrigatório."},
+	"CBE109":  {"INVALID_DEBIT_ACCOUNT", "debitparty.account invalido."},
+	"CBE110":  {"DEBIT_ACCOUNT_MAX_LENGTH_EXCEEDED", "debitparty.account possui tamanho máximo de 20 caracteres."},
+	"CBE115":  {"MISSING_CREDIT_PARTY", "creditParty é obrigatório."},
+	"CBE116":  {"MISSING_CREDIT_ACCOUNT", "creditparty.account é obrigatório."},
+	"CBE117":  {"INVALID_CREDIT_ACCOUNT", "creditparty.account invalido."},
+	"CBE118":  {"CREDIT_ACCOUNT_MAX_LENGTH_EXCEEDED", "creditparty.account possui tamanho máximo de 20 caracteres."},
+	"CBE119":  {"MISSING_CREDIT_BRANCH", "creditParty.branch é obrigatório."},
+	"CBE120":  {"INVALID_CREDIT_BRANCH", "creditParty.branch invalido."},
+	"CBE121":  {"MISSING_CREDIT_TAX_ID", "creditParty.taxId é obrigatório."},
+	"CBE122":  {"INVALID_CREDIT_TAX_ID", "creditParty.taxId invalido."},
+	"CBE123":  {"INSUFFICIENT_BALANCE", "Transação não permitida.Conta com saldo insuficiente."},
+	"CBE124":  {"DEBIT_ACCOUNT_CLOSED", "Lançamento não permitido.debit.account esta encerrada."},
+	"CBE126":  {"MISSING_CREDIT_BANK", "creditParty.bank é obrigatório e deve existir na lista de participantes Pix."},
+	"CBE127":  {"MISSING_CREDIT_NAME", "creditParty.name é obrigatório e possui tamanho máximo de 120 caracteres."},
+	"CBE128":  {"INVALID_CREDIT_ACCOUNT_TYPE", "creditParty.accountType não foi informado ou é invalido."},
+	"CBE129":  {"INVALID_REMITTANCE_INFORMATION", "remittanceInformation possui tamanho máximo de 140 caracteres."},
+	"CBE130":  {"INVALID_INITIATION_TYPE", "initiationType invalido."},
+	"CBE131":  {"INVALID_PAYMENT_TYPE", "paymentType invalido."},
+	"CBE132":  {"INVALID_URGENCY", "urgency invalido."},
+	"CBE133":  {"INVALID_TRANSACTION_TYPE", "transactionType invalido."},
+	"CBE134":  {"INVALID_TRANSACTION_IDENTIFICATION_STATIC", "Campo transactionIdentification é de uso exclusivo para pagamentos de QRCodes. InitiationType STATIC_QRCODE ou DYNAMIC_QRCODE."},
+	"CBE135":  {"MISSING_TRANSACTION_IDENTIFICATION_DYNAMIC", "Campo transactionIdentification é de preenchimento obrigatório para pagamentos de QRCodes. InitiationType DYNAMIC_QRCODE."},
+	"CBE136":  {"TRANSACTION_IDENTIFICATION_LENGTH_STATIC", "Quando initiationType igual a STATIC_QRCODE o campo transactionIdentification não pode ultrapassar 25 caracteres."},
+	"CBE137":  {"TRANSACTION_IDENTIFICATION_LENGTH_DYNAMIC", "Quando initiationType igual a DYNAMIC_QRCODE o campo transactionIdentification não pode ultrapassar 35 caracteres."},
+	"CBE138":  {"DUPLICATE_END_TO_END_ID", "Já existe uma transação com o mesmo endToEndId. Favor realizar uma nova operação."},
+	"CBE139":  {"MISSING_END_TO_END_ID_AND_KEY", "Quando initiationType igual a DICT os campos endToEndId e credityParty.key se tornam obrigatórios."},
+	"CBE140":  {"MISSING_CREDIT_KEY_STATIC", "Quando initiationType igual a STATIC_QRCODE o campo credityParty.key se torna obrigatório."},
+	"CBE141":  {"MISSING_CREDIT_KEY_DYNAMIC", "Quando initiationType igual a DYNAMIC_QRCODE o campo credityParty.key se torna obrigatório."},
+	"CBE142":  {"INVALID_CREDIT_KEY_MANUAL", "Quando initiationType igual a MANUAL o campo credityParty.key não deve ser informado."},
+	"CBE143":  {"INVALID_URGENCY_SCHEDULED", "Quando paymentType está preenchido com Valor SCHEDULED, o campo urgency deve ser preenchido com valor NORMAL."},
+	"CBE144":  {"INVALID_URGENCY_IMMEDIATE", "Quando paymentType está preenchido com Valor IMMEDIATE ou FRAUD, o campo urgency deve ser preenchido com valor HIGH."},
+	"CBE145":  {"INVALID_PAYMENT_INITIATION_TYPE", "Tipo de iniciação de pagamento não permitido.Para mais informações, entre em contato com o nosso suporte."},
+	"CBE146":  {"INVALID_END_TO_END_ID", "endToEndId invalido."},
+	"CBE159":  {"BLOCKED_ACCOUNT", "Lançamento não permitido.Sua conta esta bloqueada."},
+	"PBE7055": {"RECEIVER_INSTITUTION_NOT_RESPONDING", "Instituição recebedora não está respondendo"},
+	"CBE150":  {"INVALID_PARAMETERS", "É necessário informar pelo menos um dos campos: id, clientCode, ou endtoendId."},
 }
 
 // FindPixError ... retorna a mensagem de erro correspondente ao código de erro de Pix
