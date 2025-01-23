@@ -14,22 +14,6 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-// MockHTTPClient ... é um mock da interface http.RoundTripper
-type MockHTTPClient struct {
-	mock.Mock
-}
-
-// Do ...
-func (m *MockHTTPClient) Do(req *http.Request) (*http.Response, error) {
-	args := m.Called(req)
-	return args.Get(0).(*http.Response), args.Error(1)
-}
-
-// RoundTrip ...
-func (m *MockHTTPClient) RoundTrip(req *http.Request) (*http.Response, error) {
-	return m.Do(req)
-}
-
 // CustomersTestSuite ...
 type CustomersTestSuite struct {
 	suite.Suite
@@ -196,7 +180,7 @@ func (s *CustomersTestSuite) TestGetOnboardingProposalPROCESSING() {
 					ClientCode:     clientCode,
 					DocumentNumber: documentNumber,
 					Status:         OnboardingStatusProcessing,
-					ProposalType:   ProposalTypeNaturalPerson,
+					ProposalType:   ProposalTypePF,
 					CreatedAt:      "2023-01-01T00:00:00Z",
 					UpdatedAt:      "2023-01-01T00:00:00Z",
 					DocumentsCopys: []DocumentsCopy{
