@@ -16,6 +16,7 @@ import (
 
 // Pixs define a interface para operações relacionadas ao serviço de Pix.
 type Pixs interface {
+	BuildEndpoint(basePath string, queryParams map[string]string, pathParams ...string) (*string, error)
 	CreatePixKey(ctx context.Context, req PixKeyRequest) (*PixKeyResponse, error)
 	GetPixKeys(ctx context.Context, account string) (*PixKeyListResponse, error)
 	GetExternalPixKey(ctx context.Context, account string, key string, ownerTaxId string) (*PixExternalKeyResponse, error)
@@ -44,7 +45,7 @@ func NewPixs(httpClient *http.Client, session Session) Pixs {
 }
 
 // Método genérico para construir URLs
-func (s *PixsService) buildEndpoint(basePath string, queryParams map[string]string, pathParams ...string) (*string, error) {
+func (s *PixsService) BuildEndpoint(basePath string, queryParams map[string]string, pathParams ...string) (*string, error) {
 	u, err := url.Parse(s.session.APIEndpoint)
 	if err != nil {
 		logrus.WithError(err).Error("Error parsing API endpoint")
@@ -83,7 +84,7 @@ func (s *PixsService) CreatePixKey(ctx context.Context, req PixKeyRequest) (*Pix
 	}
 
 	// Construção do endpoint
-	endpoint, err := s.buildEndpoint(PixDictPath, nil)
+	endpoint, err := s.BuildEndpoint(PixDictPath, nil)
 	if err != nil {
 		logrus.WithFields(fields).WithError(err).Error("Error building endpoint for CreatePixKey")
 		return nil, err
@@ -112,7 +113,7 @@ func (s *PixsService) CreatePixKey(ctx context.Context, req PixKeyRequest) (*Pix
 
 	respBody, _ := ioutil.ReadAll(resp.Body)
 
-	if resp.StatusCode == http.StatusOK {
+	if resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusAccepted || resp.StatusCode == http.StatusCreated {
 		var response *PixKeyResponse
 
 		if err := json.Unmarshal(respBody, &response); err != nil {
@@ -151,7 +152,7 @@ func (s *PixsService) GetPixKeys(ctx context.Context, account string) (*PixKeyLi
 	logrus.WithFields(fields).Info("Get Pix Keys")
 
 	// Construção do endpoint
-	endpoint, err := s.buildEndpoint(PixDictPath, nil, account)
+	endpoint, err := s.BuildEndpoint(PixDictPath, nil, account)
 	if err != nil {
 		logrus.WithFields(fields).WithError(err).Error("Error building endpoint for GetPixKeys")
 		return nil, err
@@ -174,7 +175,7 @@ func (s *PixsService) GetPixKeys(ctx context.Context, account string) (*PixKeyLi
 
 	respBody, _ := ioutil.ReadAll(resp.Body)
 
-	if resp.StatusCode == http.StatusOK {
+	if resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusAccepted || resp.StatusCode == http.StatusCreated {
 		var response *PixKeyListResponse
 
 		if err := json.Unmarshal(respBody, &response); err != nil {
@@ -220,7 +221,7 @@ func (s *PixsService) DeletePixKey(ctx context.Context, account, key string) err
 	}
 
 	// Construção do endpoint
-	endpoint, err := s.buildEndpoint(PixDictPath, nil, key)
+	endpoint, err := s.BuildEndpoint(PixDictPath, nil, key)
 	if err != nil {
 		logrus.WithFields(fields).WithError(err).Error("Error building endpoint for DeletePixKey")
 		return err
@@ -253,7 +254,7 @@ func (s *PixsService) DeletePixKey(ctx context.Context, account, key string) err
 
 	respBody, _ := ioutil.ReadAll(resp.Body)
 
-	if resp.StatusCode == http.StatusOK {
+	if resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusAccepted || resp.StatusCode == http.StatusCreated {
 		logrus.WithFields(fields).Info("Pix key deleted successfully")
 		return nil
 	}
@@ -278,16 +279,24 @@ func (s *PixsService) DeletePixKey(ctx context.Context, account, key string) err
 
 // GetExternalPixKey consulta uma chave Pix externa (DICT).
 func (s *PixsService) GetExternalPixKey(ctx context.Context, account string, key string, ownerTaxId string) (*PixExternalKeyResponse, error) {
-	fields := logrus.Fields{"account": account, "key": key, "ownerTaxId": ownerTaxId}
+	fields := logrus.Fields{
+		"key":        key,
+		"ownerTaxId": ownerTaxId,
+		"account":    account,
+	}
 	logrus.WithFields(fields).Info("Get External Pix Key")
 
+	// Parâmetros para a query string
 	params := map[string]string{
 		"key":        key,
 		"ownerTaxId": ownerTaxId,
 	}
 
-	endpoint, err := s.buildEndpoint(PixDictPath+"/external/%s", params, ownerTaxId)
+	// Construção do endpoint com account como parte do caminho
+	endpoint, err := s.BuildEndpoint(PixDictPath, params, "external", account)
+
 	if err != nil {
+		logrus.WithFields(fields).WithError(err).Error("Error building endpoint")
 		return nil, err
 	}
 
@@ -308,7 +317,7 @@ func (s *PixsService) GetExternalPixKey(ctx context.Context, account string, key
 
 	respBody, _ := ioutil.ReadAll(resp.Body)
 
-	if resp.StatusCode == http.StatusOK {
+	if resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusAccepted || resp.StatusCode == http.StatusCreated {
 		var response *PixExternalKeyResponse
 
 		if err := json.Unmarshal(respBody, &response); err != nil {
@@ -356,7 +365,7 @@ func (s *PixsService) PaymentPixCashOut(ctx context.Context, req PixCashOutReque
 		return nil, err
 	}
 
-	endpoint, err := s.buildEndpoint(PixCashOutPath, nil)
+	endpoint, err := s.BuildEndpoint(PixCashOutPath, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -384,7 +393,7 @@ func (s *PixsService) PaymentPixCashOut(ctx context.Context, req PixCashOutReque
 
 	respBody, _ := ioutil.ReadAll(resp.Body)
 
-	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted {
+	if resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusAccepted || resp.StatusCode == http.StatusCreated {
 		var response *PixCashOutResponse
 		if err := json.Unmarshal(respBody, &response); err != nil {
 			logrus.WithFields(fields).WithError(err).Error("error decoding json response")
@@ -419,7 +428,7 @@ func (s *PixsService) DecodeEmvQRCode(ctx context.Context, emv string) (*QRCodeR
 	fields := logrus.Fields{"emv": emv}
 	logrus.WithFields(fields).Info("Decoding QR Code")
 
-	endpoint, err := s.buildEndpoint(PixEmvPath, nil)
+	endpoint, err := s.BuildEndpoint(PixEmvPath, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -450,7 +459,7 @@ func (s *PixsService) DecodeEmvQRCode(ctx context.Context, emv string) (*QRCodeR
 
 	respBody, _ := ioutil.ReadAll(resp.Body)
 
-	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted && resp.StatusCode != http.StatusCreated {
+	if resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusAccepted || resp.StatusCode == http.StatusCreated {
 		var response *QRCodeResponse
 
 		if err := json.Unmarshal(respBody, &response); err != nil {
@@ -500,7 +509,7 @@ func (s *PixsService) GetPixCashoutStatus(ctx context.Context, id, endtoendId, c
 		"clientCode": clientCode,
 	}
 
-	endpoint, err := s.buildEndpoint(PixCashOutPath+"/status", params)
+	endpoint, err := s.BuildEndpoint(PixCashOutPath, params, "status")
 	if err != nil {
 		return nil, err
 	}
@@ -526,7 +535,7 @@ func (s *PixsService) GetPixCashoutStatus(ctx context.Context, id, endtoendId, c
 		return nil, err
 	}
 
-	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted {
+	if resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusAccepted || resp.StatusCode == http.StatusCreated {
 		var response *PixCashoutStatusTransactionResponse
 
 		if err := json.Unmarshal(respBody, &response); err != nil {
@@ -580,7 +589,7 @@ func (s *PixsService) GetPixCashinStatus(ctx context.Context, returnIdentificati
 		"clientCode":           clientCode,
 	}
 
-	endpoint, err := s.buildEndpoint(PixCashInStatusPath, params)
+	endpoint, err := s.BuildEndpoint(PixCashInStatusPath, params)
 	if err != nil {
 		return nil, err
 	}
@@ -606,7 +615,7 @@ func (s *PixsService) GetPixCashinStatus(ctx context.Context, returnIdentificati
 		return nil, err
 	}
 
-	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted {
+	if resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusAccepted || resp.StatusCode == http.StatusCreated {
 		var response *PixCashinStatusTransactionResponse
 
 		if err := json.Unmarshal(respBody, &response); err != nil {
@@ -651,7 +660,7 @@ func (s *PixsService) PixCashInStatic(ctx context.Context, req PixCashInStaticRe
 		return nil, grok.FromValidationErros(err)
 	}
 
-	endpoint, err := s.buildEndpoint(PixStaticPath, nil)
+	endpoint, err := s.BuildEndpoint(PixStaticPath, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -683,7 +692,7 @@ func (s *PixsService) PixCashInStatic(ctx context.Context, req PixCashInStaticRe
 		return nil, err
 	}
 
-	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted {
+	if resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusAccepted || resp.StatusCode == http.StatusCreated {
 		var response *PixCashInStaticResponse
 
 		if err := json.Unmarshal(respBody, &response); err != nil {

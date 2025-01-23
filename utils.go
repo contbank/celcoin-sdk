@@ -281,7 +281,7 @@ func validatePixCashOut(req PixCashOutRequest) error {
 	// Validação adicional por InitiationType
 	switch req.InitiationType {
 	case "MANUAL":
-		if req.TransactionIdentification != "" || req.CreditParty.Key != "" || req.EndToEndId == "" {
+		if req.TransactionIdentification != "" || req.CreditParty.Key != "" || req.EndToEndId != "" || req.DebitParty.Account == "" {
 			return fmt.Errorf("invalid fields for InitiationType MANUAL")
 		}
 	case "DICT":

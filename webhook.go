@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"path"
 
 	"github.com/contbank/grok"
 	"github.com/sirupsen/logrus"
@@ -42,6 +43,34 @@ func NewWebhooks(httpClient *http.Client, session Session) Webhooks {
 	}
 }
 
+// Método genérico para construir URLs
+func (s *WebhooksService) buildEndpoint(basePath string, queryParams map[string]string, pathParams ...string) (*string, error) {
+	u, err := url.Parse(s.session.APIEndpoint)
+	if err != nil {
+		logrus.WithError(err).Error("Error parsing API endpoint")
+		return nil, err
+	}
+
+	// Construção do caminho completo
+	fullPath := path.Join(basePath, path.Join(pathParams...))
+	u.Path = path.Join(u.Path, fullPath)
+
+	// Adição de query parameters
+	if queryParams != nil {
+		q := u.Query()
+		for key, value := range queryParams {
+			if value != "" {
+				q.Set(key, value)
+			}
+		}
+		u.RawQuery = q.Encode()
+	}
+
+	endpoint := u.String()
+	logrus.WithField("endpoint", endpoint).Info("Endpoint built successfully")
+	return &endpoint, nil
+}
+
 // CreateSubscription faz a chamada à API para cadastrar um webhook
 func (s *WebhooksService) CreateSubscription(ctx context.Context, req WebhookSubscriptionRequest) (*WebhookSubscriptionResponse, error) {
 	fields := logrus.Fields{
@@ -59,8 +88,13 @@ func (s *WebhooksService) CreateSubscription(ctx context.Context, req WebhookSub
 			Error("error validating model")
 		return nil, grok.FromValidationErros(err)
 	}
+	endpoint, err := s.buildEndpoint(WebhookPath, nil, "subscription")
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).Error("Error building endpoint for CreateSubscription")
+		return nil, err
+	}
 
-	endpoint := fmt.Sprintf("%s/baas-webhookmanager/v1/webhook/subscription", s.session.APIEndpoint)
+	logrus.WithField("endpoint", *endpoint).Info("Calling CreatePixKey")
 
 	payload, err := json.Marshal(req)
 	if err != nil {
@@ -71,7 +105,7 @@ func (s *WebhooksService) CreateSubscription(ctx context.Context, req WebhookSub
 
 		return nil, fmt.Errorf("error serializing request: %v", err)
 	}
-	httpReq, err := http.NewRequestWithContext(ctx, "POST", endpoint, bytes.NewReader(payload))
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", *endpoint, bytes.NewReader(payload))
 	if err != nil {
 		logrus.
 			WithFields(fields).
@@ -79,17 +113,6 @@ func (s *WebhooksService) CreateSubscription(ctx context.Context, req WebhookSub
 			Error("error creating http request")
 		return nil, fmt.Errorf("error creating http request: %v", err)
 	}
-	token, err := s.authentication.Token(ctx)
-	if err != nil {
-		logrus.
-			WithFields(fields).
-			WithError(err).
-			Error("error authentication")
-		return nil, err
-	}
-
-	httpReq.Header.Add("Authorization", token)
-	httpReq.Header.Add("Content-type", "application/json")
 	httpReq.Header.Add("api-version", s.session.APIVersion)
 
 	resp, err := s.httpClient.Do(httpReq)
@@ -143,20 +166,27 @@ func (s *WebhooksService) GetSubscriptions(ctx context.Context, entity string, a
 		"entity": entity,
 		"active": active,
 	}
-	logrus.
-		WithFields(fields).
-		Info("Get Subscription")
+	logrus.WithFields(fields).Info("Get Subscription")
 
-	queryParams := url.Values{}
+	// Configuração dos parâmetros da query string
+	queryParams := map[string]string{}
 	if entity != "" {
-		queryParams.Add("entity", entity)
+		queryParams["entity"] = entity
 	}
 	if active != nil {
-		queryParams.Add("active", fmt.Sprintf("%t", *active))
+		queryParams["active"] = fmt.Sprintf("%t", *active)
 	}
-	endpoint := fmt.Sprintf("%s/baas-webhookmanager/v1/webhook/subscription?%s", s.session.APIEndpoint, queryParams.Encode())
 
-	httpReq, err := http.NewRequest("GET", endpoint, nil)
+	// Construção do endpoint com o método buildEndpoint
+	endpoint, err := s.buildEndpoint(WebhookPath, queryParams, "subscription")
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).Error("Error building endpoint")
+		return nil, err
+	}
+
+	logrus.WithField("endpoint", *endpoint).Info("Endpoint built successfully")
+
+	httpReq, err := http.NewRequest("GET", *endpoint, nil)
 	if err != nil {
 		logrus.
 			WithFields(fields).
@@ -165,17 +195,6 @@ func (s *WebhooksService) GetSubscriptions(ctx context.Context, entity string, a
 		return nil, fmt.Errorf("error creating http request: %v", err)
 	}
 
-	token, err := s.authentication.Token(ctx)
-	if err != nil {
-		logrus.
-			WithFields(fields).
-			WithError(err).
-			Error("error authentication")
-		return nil, err
-	}
-
-	httpReq.Header.Add("Authorization", token)
-	httpReq.Header.Add("Content-type", "application/json")
 	httpReq.Header.Add("api-version", s.session.APIVersion)
 
 	resp, err := s.httpClient.Do(httpReq)
@@ -225,22 +244,29 @@ func (s *WebhooksService) GetSubscriptions(ctx context.Context, entity string, a
 // UpdateSubscription faz a chamada à API para atualizar um webhook existente
 func (s *WebhooksService) UpdateSubscription(ctx context.Context, entity string, req WebhookUpdateRequest) (*WebhookUpdateResponse, error) {
 	fields := logrus.Fields{
+		"entity":  entity,
 		"request": req,
 	}
-	logrus.
-		WithFields(fields).
-		Info("Update Subscription")
+	logrus.WithFields(fields).Info("Update Subscription")
 
+	// Validação do modelo de requisição
 	err := grok.Validator.Struct(req)
 	if err != nil {
 		logrus.
 			WithFields(fields).
 			WithError(err).
-			Error("error validating model")
+			Error("Error validating model")
 		return nil, grok.FromValidationErros(err)
 	}
 
-	endpoint := fmt.Sprintf("%s/baas-webhookmanager/v1/webhook/subscription/%s", s.session.APIEndpoint, entity)
+	// Construção do endpoint com buildEndpoint
+	endpoint, err := s.buildEndpoint(WebhookPath, nil, "subscription", entity)
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).Error("Error building endpoint")
+		return nil, err
+	}
+
+	logrus.WithField("endpoint", *endpoint).Info("Endpoint built successfully")
 
 	payload, err := json.Marshal(req)
 	if err != nil {
@@ -251,22 +277,11 @@ func (s *WebhooksService) UpdateSubscription(ctx context.Context, entity string,
 		return nil, fmt.Errorf("error serializing request: %v", err)
 	}
 
-	httpReq, err := http.NewRequest("PUT", endpoint, bytes.NewBuffer(payload))
+	httpReq, err := http.NewRequest("PUT", *endpoint, bytes.NewBuffer(payload))
 	if err != nil {
 		return nil, fmt.Errorf("erro ao criar a requisição HTTP: %v", err)
 	}
 
-	token, err := s.authentication.Token(ctx)
-	if err != nil {
-		logrus.
-			WithFields(fields).
-			WithError(err).
-			Error("error authentication")
-		return nil, err
-	}
-
-	httpReq.Header.Add("Authorization", token)
-	httpReq.Header.Add("Content-type", "application/json")
 	httpReq.Header.Add("api-version", s.session.APIVersion)
 
 	resp, err := s.httpClient.Do(httpReq)
@@ -318,13 +333,23 @@ func (s *WebhooksService) DeleteSubscription(ctx context.Context, entity string,
 		"entity":          entity,
 		"subscription_id": subscriptionID,
 	}
-	logrus.
-		WithFields(fields).
-		Info("Delete Subscription")
+	logrus.WithFields(fields).Info("Delete Subscription")
 
-	endpoint := fmt.Sprintf("%s/baas-webhookmanager/v1/webhook/subscription/%s?SubscriptionId=%s", s.session.APIEndpoint, entity, subscriptionID)
+	// Parâmetros de consulta (query params)
+	queryParams := map[string]string{
+		"SubscriptionId": subscriptionID,
+	}
 
-	httpReq, err := http.NewRequest("DELETE", endpoint, nil)
+	// Construção do endpoint com buildEndpoint
+	endpoint, err := s.buildEndpoint(WebhookPath, queryParams, "subscription", entity)
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).Error("Error building endpoint")
+		return nil, err
+	}
+
+	logrus.WithField("endpoint", *endpoint).Info("Endpoint built successfully")
+
+	httpReq, err := http.NewRequest("DELETE", *endpoint, nil)
 	if err != nil {
 		logrus.
 			WithFields(fields).
@@ -333,17 +358,6 @@ func (s *WebhooksService) DeleteSubscription(ctx context.Context, entity string,
 		return nil, fmt.Errorf("error creating http request: %v", err)
 	}
 
-	token, err := s.authentication.Token(ctx)
-	if err != nil {
-		logrus.
-			WithFields(fields).
-			WithError(err).
-			Error("error authentication")
-		return nil, err
-	}
-
-	httpReq.Header.Add("Authorization", token)
-	httpReq.Header.Add("Content-type", "application/json")
 	httpReq.Header.Add("api-version", s.session.APIVersion)
 
 	resp, err := s.httpClient.Do(httpReq)
@@ -398,10 +412,9 @@ func (s *WebhooksService) GetWebhookReplayCount(ctx context.Context, entity, dat
 		"date_to":         dateTo,
 		"optional_params": optionalParams,
 	}
-	logrus.
-		WithFields(fields).
-		Info("Get Webhook Replay Count")
+	logrus.WithFields(fields).Info("Get Webhook Replay Count")
 
+	// Validação dos parâmetros obrigatórios
 	if entity == "" || dateFrom == "" || dateTo == "" {
 		logrus.
 			WithFields(fields).
@@ -409,17 +422,29 @@ func (s *WebhooksService) GetWebhookReplayCount(ctx context.Context, entity, dat
 		return nil, errors.New("the parameters (entity, dateFrom, dateTo) must be provided")
 	}
 
-	endpoint := fmt.Sprintf("%s/baas-webhookmanager/v1/webhook/replay/%s?DateFrom=%s&DateTo=%s", s.session.APIEndpoint, entity, url.QueryEscape(dateFrom), url.QueryEscape(dateTo))
-
-	if optionalParams != nil {
-		queryParams := url.Values{}
-		for key, value := range optionalParams {
-			queryParams.Add(key, value)
-		}
-		endpoint += "&" + queryParams.Encode()
+	// Adiciona os parâmetros obrigatórios e opcionais como query params
+	queryParams := map[string]string{
+		"DateFrom": url.QueryEscape(dateFrom),
+		"DateTo":   url.QueryEscape(dateTo),
 	}
 
-	httpReq, err := http.NewRequest("GET", endpoint, nil)
+	// Inclui parâmetros opcionais, se presentes
+	for key, value := range optionalParams {
+		if value != "" {
+			queryParams[key] = value
+		}
+	}
+
+	// Construção do endpoint utilizando buildEndpoint
+	endpoint, err := s.buildEndpoint(WebhookPath, queryParams, "replay", entity)
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).Error("Error building endpoint")
+		return nil, err
+	}
+
+	logrus.WithField("endpoint", *endpoint).Info("Endpoint built successfully")
+
+	httpReq, err := http.NewRequest("GET", *endpoint, nil)
 	if err != nil {
 		logrus.
 			WithFields(fields).
@@ -427,17 +452,7 @@ func (s *WebhooksService) GetWebhookReplayCount(ctx context.Context, entity, dat
 			Error("error creating http request")
 		return nil, fmt.Errorf("error creating http request: %v", err)
 	}
-	token, err := s.authentication.Token(ctx)
-	if err != nil {
-		logrus.
-			WithFields(fields).
-			WithError(err).
-			Error("error authentication")
-		return nil, err
-	}
 
-	httpReq.Header.Add("Authorization", token)
-	httpReq.Header.Add("Content-type", "application/json")
 	httpReq.Header.Add("api-version", s.session.APIVersion)
 
 	resp, err := s.httpClient.Do(httpReq)
@@ -491,10 +506,9 @@ func (s *WebhooksService) GetWebhookReplay(ctx context.Context, entity, dateFrom
 		"date_to":      dateTo,
 		"only_pending": onlyPending,
 	}
-	logrus.
-		WithFields(fields).
-		Info("Get Webhook Replay")
+	logrus.WithFields(fields).Info("Get Webhook Replay")
 
+	// Validação dos parâmetros obrigatórios
 	if entity == "" || dateFrom == "" || dateTo == "" {
 		logrus.
 			WithFields(fields).
@@ -502,9 +516,23 @@ func (s *WebhooksService) GetWebhookReplay(ctx context.Context, entity, dateFrom
 		return nil, errors.New("the parameters (entity, dateFrom, dateTo) must be provided")
 	}
 
-	endpoint := fmt.Sprintf("%s/baas-webhookmanager/v1/webhook/replay/%s?DateFrom=%s&DateTo=%s&OnlyPending=%t", s.session.APIEndpoint, entity, url.QueryEscape(dateFrom), url.QueryEscape(dateTo), onlyPending)
+	// Construção dos parâmetros de consulta
+	queryParams := map[string]string{
+		"DateFrom":    url.QueryEscape(dateFrom),
+		"DateTo":      url.QueryEscape(dateTo),
+		"OnlyPending": fmt.Sprintf("%t", onlyPending),
+	}
 
-	httpReq, err := http.NewRequest("GET", endpoint, nil)
+	// Construção do endpoint usando buildEndpoint
+	endpoint, err := s.buildEndpoint(WebhookPath, queryParams, "replay", entity)
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).Error("Error building endpoint")
+		return nil, err
+	}
+
+	logrus.WithField("endpoint", *endpoint).Info("Endpoint built successfully")
+
+	httpReq, err := http.NewRequest("GET", *endpoint, nil)
 	if err != nil {
 		logrus.
 			WithFields(fields).
@@ -512,17 +540,7 @@ func (s *WebhooksService) GetWebhookReplay(ctx context.Context, entity, dateFrom
 			Error("error creating http request")
 		return nil, fmt.Errorf("error creating http request: %v", err)
 	}
-	token, err := s.authentication.Token(ctx)
-	if err != nil {
-		logrus.
-			WithFields(fields).
-			WithError(err).
-			Error("error authentication")
-		return nil, err
-	}
 
-	httpReq.Header.Add("Authorization", token)
-	httpReq.Header.Add("Content-type", "application/json")
 	httpReq.Header.Add("api-version", s.session.APIVersion)
 
 	resp, err := s.httpClient.Do(httpReq)
@@ -577,10 +595,9 @@ func (s *WebhooksService) GetWebhookReplaySendCount(ctx context.Context, entity,
 		"date_from": dateFrom,
 		"date_to":   dateTo,
 	}
-	logrus.
-		WithFields(fields).
-		Info("Get Webhook Replay")
+	logrus.WithFields(fields).Info("Get Webhook Replay Send Count")
 
+	// Validação dos parâmetros obrigatórios
 	if entity == "" || dateFrom == "" || dateTo == "" {
 		logrus.
 			WithFields(fields).
@@ -588,9 +605,22 @@ func (s *WebhooksService) GetWebhookReplaySendCount(ctx context.Context, entity,
 		return nil, errors.New("the parameters (entity, dateFrom, dateTo) must be provided")
 	}
 
-	endpoint := fmt.Sprintf("%s/baas-webhookmanager/v1/webhook/replay/%s/count?DateFrom=%s&DateTo=%s", s.session.APIEndpoint, entity, url.QueryEscape(dateFrom), url.QueryEscape(dateTo))
+	// Construção dos parâmetros de consulta
+	queryParams := map[string]string{
+		"DateFrom": url.QueryEscape(dateFrom),
+		"DateTo":   url.QueryEscape(dateTo),
+	}
 
-	httpReq, err := http.NewRequest("GET", endpoint, nil)
+	// Construção do endpoint usando buildEndpoint
+	endpoint, err := s.buildEndpoint(WebhookPath, queryParams, "replay", entity, "count")
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).Error("Error building endpoint")
+		return nil, err
+	}
+
+	logrus.WithField("endpoint", *endpoint).Info("Endpoint built successfully")
+
+	httpReq, err := http.NewRequest("GET", *endpoint, nil)
 	if err != nil {
 		logrus.
 			WithFields(fields).
@@ -598,17 +628,7 @@ func (s *WebhooksService) GetWebhookReplaySendCount(ctx context.Context, entity,
 			Error("error creating http request")
 		return nil, fmt.Errorf("error creating http request: %v", err)
 	}
-	token, err := s.authentication.Token(ctx)
-	if err != nil {
-		logrus.
-			WithFields(fields).
-			WithError(err).
-			Error("error authentication")
-		return nil, err
-	}
 
-	httpReq.Header.Add("Authorization", token)
-	httpReq.Header.Add("Content-type", "application/json")
 	httpReq.Header.Add("api-version", s.session.APIVersion)
 
 	resp, err := s.httpClient.Do(httpReq)
@@ -657,36 +677,39 @@ func (s *WebhooksService) GetWebhookReplaySendCount(ctx context.Context, entity,
 
 // ReplayMessageFromWebhook reenvia o webhook com base nos parâmetros fornecidos
 func (s *WebhooksService) ReplayMessageFromWebhook(ctx context.Context, entity, webhookID, dateFrom, dateTo string, onlyPending bool, filter WebhookReplayRequest) (*WebhookReplayResponse, error) {
-
 	fields := logrus.Fields{
-		"entity":     entity,
-		"webhook_id": webhookID,
-		"date_from":  dateFrom,
-		"date_to":    dateTo,
+		"entity":       entity,
+		"webhook_id":   webhookID,
+		"date_from":    dateFrom,
+		"date_to":      dateTo,
+		"only_pending": onlyPending,
 	}
-	logrus.
-		WithFields(fields).
-		Info("Replay Message from Webhook")
+	logrus.WithFields(fields).Info("Replay Message from Webhook")
 
+	// Validação dos parâmetros obrigatórios
 	if entity == "" || webhookID == "" {
-		logrus.
-			WithFields(fields).
-			Error("the parameters (entity, webhookID) must be provided")
+		logrus.WithFields(fields).Error("the parameters (entity, webhookID) must be provided")
 		return nil, errors.New("the parameters (entity, webhookID) must be provided")
 	}
 
-	endpoint := fmt.Sprintf("%s/baas-webhookmanager/v1/webhook/replay/%s?webhookId=%s", s.session.APIEndpoint, entity, webhookID)
-	if dateFrom != "" {
-		endpoint += "&DateFrom=" + url.QueryEscape(dateFrom)
-	}
-	if dateTo != "" {
-		endpoint += "&DateTo=" + url.QueryEscape(dateTo)
-	}
-	if onlyPending {
-		endpoint += "&OnlyPending=true"
+	// Criação dos parâmetros de consulta
+	queryParams := map[string]string{
+		"webhookId":   webhookID,
+		"DateFrom":    url.QueryEscape(dateFrom),
+		"DateTo":      url.QueryEscape(dateTo),
+		"OnlyPending": fmt.Sprintf("%t", onlyPending),
 	}
 
-	httpReq, err := http.NewRequest("PUT", endpoint, nil)
+	// Construção do endpoint utilizando buildEndpoint
+	endpoint, err := s.buildEndpoint(WebhookPath, queryParams, "replay", entity)
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).Error("Error building endpoint")
+		return nil, err
+	}
+
+	logrus.WithField("endpoint", *endpoint).Info("Endpoint built successfully")
+
+	httpReq, err := http.NewRequest("PUT", *endpoint, nil)
 	if err != nil {
 		logrus.
 			WithFields(fields).
@@ -694,17 +717,7 @@ func (s *WebhooksService) ReplayMessageFromWebhook(ctx context.Context, entity, 
 			Error("error creating http request")
 		return nil, fmt.Errorf("error creating http request: %v", err)
 	}
-	token, err := s.authentication.Token(ctx)
-	if err != nil {
-		logrus.
-			WithFields(fields).
-			WithError(err).
-			Error("error authentication")
-		return nil, err
-	}
 
-	httpReq.Header.Add("Authorization", token)
-	httpReq.Header.Add("Content-type", "application/json")
 	httpReq.Header.Add("api-version", s.session.APIVersion)
 
 	resp, err := s.httpClient.Do(httpReq)

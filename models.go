@@ -28,13 +28,16 @@ const (
 	// Transfers TED
 	TransfersPath string = "/baas-wallet-transactions-webservice/v1/spb/transfer"
 
-	// PixPath ...
+	// Pix ...
 	PixDictPath         string = "/celcoin-baas-pix-dict-webservice/v1/pix/dict/entry"
 	PixCashOutPath      string = "/baas-wallet-transactions-webservice/v1/pix/payment"
 	PixCashInPath       string = "/pix/v2/receivement/v2"
 	PixEmvPath          string = "/pix/v1/emv"
 	PixStaticPath       string = "/pix/v1/brcode/static"
 	PixCashInStatusPath string = "/pix/v2/receivement/v2/devolution/status"
+
+	// Webhook
+	WebhookPath string = "/baas-webhookmanager/v1/webhook"
 
 	// OnboardingStatusProcessing ...
 	OnboardingStatusProcessing string = "PROCESSING"
