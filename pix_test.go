@@ -17,7 +17,6 @@ import (
 	"github.com/contbank/celcoin-sdk"
 )
 
-// PixsTestSuite é a suite de testes para PixsService
 type PixsTestSuite struct {
 	suite.Suite
 	assert        *assert.Assertions
@@ -28,12 +27,10 @@ type PixsTestSuite struct {
 	client        *http.Client
 }
 
-// TestPixsTestSuite inicializa a suite de testes
 func TestPixsTestSuite(t *testing.T) {
 	suite.Run(t, new(PixsTestSuite))
 }
 
-// SetupTest configura o ambiente para os testes
 func (s *PixsTestSuite) SetupTest() {
 	s.assert = assert.New(s.T())
 	s.ctx = context.Background()
@@ -61,19 +58,16 @@ func (s *PixsTestSuite) SetupTest() {
 	s.pixService = celcoin.NewPixs(s.client, *s.session)
 }
 
-// TestCreatePixKey testa o método CreatePixKey
+// TestCreatePixKey testa o método de criação de chave pix
 func (s *PixsTestSuite) TestCreatePixKey() {
-	// Request que será enviado
 	request := celcoin.PixKeyRequest{
 		Key:     "test-key",
 		KeyType: "CPF",
 		Account: "123456",
 	}
 
-	// Data fixa para evitar diferenças de tempo
 	fixedTime := time.Date(2025, 1, 17, 19, 43, 52, 0, time.UTC)
 
-	// Response esperado com base no novo layout
 	expectedResponse := &celcoin.PixKeyResponse{
 		Body: celcoin.PixKeyResponseBody{
 			KeyType: request.KeyType,
@@ -95,26 +89,21 @@ func (s *PixsTestSuite) TestCreatePixKey() {
 		Status:  "ACTIVE",
 	}
 
-	// Serializar o expectedResponse para simular o corpo da resposta do mock
 	mockResponseBody, err := json.Marshal(expectedResponse)
 	s.assert.NoError(err)
 
-	// Simular a resposta HTTP do cliente mockado
 	mockResponse := &http.Response{
 		StatusCode: http.StatusOK,
 		Body:       ioutil.NopCloser(bytes.NewReader(mockResponseBody)),
 	}
 
-	// Configurar o mock do cliente HTTP
 	s.mockTransport.
 		On("RoundTrip", mock.Anything).
 		Return(mockResponse, nil).
 		Once()
 
-	// Chamar o serviço sendo testado
 	response, err := s.pixService.CreatePixKey(s.ctx, request)
 
-	// Validar o comportamento e o resultado
 	s.assert.NoError(err, "Erro inesperado na criação da chave PIX")
 	s.assert.NotNil(response, "A resposta não deve ser nula")
 	s.assert.Equal("CPF", response.Body.KeyType, "Tipo de chave incorreto")
@@ -123,7 +112,7 @@ func (s *PixsTestSuite) TestCreatePixKey() {
 	s.mockTransport.AssertExpectations(s.T())
 }
 
-// TestGetPixKeys testa o método GetPixKeys
+// TestGetPixKeys testa o método de pesquisa de chave pix
 func (s *PixsTestSuite) TestGetPixKeys() {
 	// Cenário: Resposta bem-sucedida
 	account := "123456"
@@ -151,11 +140,9 @@ func (s *PixsTestSuite) TestGetPixKeys() {
 		},
 	}
 
-	// Serializar o expectedResponse para simular o corpo da resposta do mock
 	mockResponseBody, err := json.Marshal(expectedResponse)
 	s.assert.NoError(err)
 
-	// Configurar o mock para uma resposta HTTP bem-sucedida
 	mockResponse := &http.Response{
 		StatusCode: http.StatusOK,
 		Body:       ioutil.NopCloser(bytes.NewReader(mockResponseBody)),
@@ -166,10 +153,8 @@ func (s *PixsTestSuite) TestGetPixKeys() {
 		Return(mockResponse, nil).
 		Once()
 
-	// Chamar o serviço
 	response, err := s.pixService.GetPixKeys(s.ctx, account)
 
-	// Verificar resultados
 	s.assert.NoError(err, "Erro inesperado ao obter as chaves Pix")
 	s.assert.NotNil(response, "A resposta não deve ser nula")
 	s.assert.Equal("1.0", response.Version, "Versão incorreta")
@@ -178,7 +163,6 @@ func (s *PixsTestSuite) TestGetPixKeys() {
 	s.assert.Equal("EMAIL", response.Body.ListKeys[0].KeyType, "Tipo de chave incorreto")
 	s.assert.Equal("test@example.com", response.Body.ListKeys[0].Key, "Chave incorreta")
 
-	// Cenário: Erro na requisição HTTP
 	s.mockTransport.ExpectedCalls = nil
 
 	s.pixService = celcoin.NewPixs(s.client, *s.session) // Resetando o serviço
@@ -282,7 +266,6 @@ func (s *PixsTestSuite) TestPaymentPixCashOut() {
 
 	response, err := s.pixService.PaymentPixCashOut(s.ctx, *dynamicQRCodeRequest)
 
-	// Verificar resultados para sucesso
 	s.Assert().NoError(err, "Erro inesperado ao processar PixCashOut por QR Code Dinâmico")
 	s.Assert().NotNil(response, "A resposta não deve ser nula")
 	s.Assert().Equal("SUCCESS", response.Status, "O status esperado era SUCCESS")
@@ -343,7 +326,6 @@ func (s *PixsTestSuite) TestPaymentPixCashOut() {
 
 	response, err = s.pixService.PaymentPixCashOut(s.ctx, *staticQRCodeRequest)
 
-	// Verificar resultados para sucesso
 	s.Assert().NoError(err, "Erro inesperado ao processar PixCashOut por QR Code Estático")
 	s.Assert().NotNil(response, "A resposta não deve ser nula")
 	s.Assert().Equal("SUCCESS", response.Status, "O status esperado era SUCCESS")
@@ -400,7 +382,6 @@ func (s *PixsTestSuite) TestPaymentPixCashOut() {
 
 	response, err = s.pixService.PaymentPixCashOut(s.ctx, *pixKeysRequest)
 
-	// Verificar resultados para sucesso
 	s.Assert().NoError(err, "Erro inesperado ao processar PixCashOut por Chaves Pix")
 	s.Assert().NotNil(response, "A resposta não deve ser nula")
 	s.Assert().Equal("SUCCESS", response.Status, "O status esperado era SUCCESS")
@@ -458,7 +439,6 @@ func (s *PixsTestSuite) TestPaymentPixCashOut() {
 
 	response, err = s.pixService.PaymentPixCashOut(s.ctx, *bankDetailsRequest)
 
-	// Verificar resultados para sucesso
 	s.Assert().NoError(err, "Erro inesperado ao processar PixCashOut por dados bancários")
 	s.Assert().NotNil(response, "A resposta não deve ser nula")
 	s.Assert().Equal("SUCCESS", response.Status, "O status esperado era SUCCESS")
@@ -516,7 +496,6 @@ func (s *PixsTestSuite) TestGetPixCashoutStatus() {
 
 	response, err := s.pixService.GetPixCashoutStatus(s.ctx, id, endtoendId, clientCode)
 
-	// Verificar resultados para sucesso
 	s.Assert().NoError(err, "Erro inesperado ao obter status do Pix Cashout")
 	s.Assert().NotNil(response, "A resposta não deve ser nula")
 	s.Assert().Equal("CONFIRMED", response.Status, "O status esperado era CONFIRMED")

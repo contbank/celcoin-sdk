@@ -83,7 +83,6 @@ func (s *PixsService) CreatePixKey(ctx context.Context, req PixKeyRequest) (*Pix
 		return nil, grok.FromValidationErros(err)
 	}
 
-	// Construção do endpoint
 	endpoint, err := s.BuildEndpoint(PixDictPath, nil)
 	if err != nil {
 		logrus.WithFields(fields).WithError(err).Error("Error building endpoint for CreatePixKey")
@@ -151,7 +150,6 @@ func (s *PixsService) GetPixKeys(ctx context.Context, account string) (*PixKeyLi
 	fields := logrus.Fields{"account": account}
 	logrus.WithFields(fields).Info("Get Pix Keys")
 
-	// Construção do endpoint
 	endpoint, err := s.BuildEndpoint(PixDictPath, nil, account)
 	if err != nil {
 		logrus.WithFields(fields).WithError(err).Error("Error building endpoint for GetPixKeys")
@@ -220,7 +218,6 @@ func (s *PixsService) DeletePixKey(ctx context.Context, account, key string) err
 		return err
 	}
 
-	// Construção do endpoint
 	endpoint, err := s.BuildEndpoint(PixDictPath, nil, key)
 	if err != nil {
 		logrus.WithFields(fields).WithError(err).Error("Error building endpoint for DeletePixKey")
@@ -292,7 +289,6 @@ func (s *PixsService) GetExternalPixKey(ctx context.Context, account string, key
 		"ownerTaxId": ownerTaxId,
 	}
 
-	// Construção do endpoint com account como parte do caminho
 	endpoint, err := s.BuildEndpoint(PixDictPath, params, "external", account)
 
 	if err != nil {
