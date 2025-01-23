@@ -15,9 +15,26 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/contbank/grok"
+	"github.com/stretchr/testify/mock"
 
 	"github.com/google/uuid"
 )
+
+// MockHTTPClient ... é um mock da interface http.RoundTripper
+type MockHTTPClient struct {
+	mock.Mock
+}
+
+// Do ...
+func (m *MockHTTPClient) Do(req *http.Request) (*http.Response, error) {
+	args := m.Called(req)
+	return args.Get(0).(*http.Response), args.Error(1)
+}
+
+// RoundTrip ...
+func (m *MockHTTPClient) RoundTrip(req *http.Request) (*http.Response, error) {
+	return m.Do(req)
+}
 
 type requestIDKey string
 

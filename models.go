@@ -25,6 +25,8 @@ const (
 	ProposalFilesPath string = "/onboarding/v1/onboarding-proposal/files"
 	//NaturalPersonOnboardingPath ...
 	NaturalPersonOnboardingPath string = "/onboarding/v1/onboarding-proposal/natural-person"
+	// LegalPersonOnboardingPath ...
+	LegalPersonOnboardingPath string = "/onboarding/v1/onboarding-proposal/legal-person"
 	// Transfers TED
 	TransfersPath string = "/baas-wallet-transactions-webservice/v1/spb/transfer"
 
@@ -52,6 +54,18 @@ const (
 	ProposalTypeNaturalPerson string = "NATURAL_PERSON"
 	// ProposalTypeLegalPerson ...
 	ProposalTypeLegalPerson string = "LEGAL_PERSON"
+
+	// LegalPersonOwnerTypeSocio ...
+	LegalPersonOwnerTypeSocio string = "SOCIO"
+	// LegalPersonOwnerTypeRepresentante ...
+	LegalPersonOwnerTypeRepresentante string = "REPRESENTANTE"
+	// LegalPersonOwnerTypeDemaisSocios...
+	LegalPersonOwnerTypeDemaisSocios string = "DEMAIS_SOCIOS"
+
+	// ProposalTypePF...
+	ProposalTypePF string = "PF"
+	// ProposalTypePJ...
+	ProposalTypePJ string = "PJ"
 )
 
 type PersonType string
@@ -396,8 +410,37 @@ type BusinessResponseBody struct {
 	BusinessAddress     Address         `json:"businessAddress"`
 }
 
+// BusinessOnboardingResponse ... representa a resposta do onboarding de customer
+type BusinessOnboardingResponse struct {
+	Body    BusinessOnboardingResponseBody `json:"body"`
+	Version string                         `json:"version"`
+	Status  string                         `json:"status"`
+}
+
+// BusinessOnboardingResponseBody ... representa o corpo da resposta do onboarding de customer
+type BusinessOnboardingResponseBody struct {
+	ProposalID     string `json:"proposalId"`
+	ClientCode     string `json:"clientCode"`
+	DocumentNumber string `json:"documentNumber"`
+}
+
+// BusinessOnboardingRequest ... representa o payload para o onboarding de uma empresa.
+type BusinessOnboardingRequest struct {
+	ClientCode      string  `json:"clientCode"`
+	ContactNumber   string  `json:"contactNumber"`
+	DocumentNumber  string  `json:"documentNumber"`
+	BusinessEmail   string  `json:"businessEmail"`
+	BusinessName    string  `json:"businessName"`
+	TradingName     string  `json:"tradingName"`
+	CompanyType     string  `json:"companyType"`
+	Owner           []Owner `json:"owner"`
+	BusinessAddress Address `json:"businessAddress"`
+	OnboardingType  string  `json:"onboardingType"`
+}
+
 // Owner ...
 type Owner struct {
+	OwnerType                  string  `json:"ownerType"`
 	DocumentNumber             string  `json:"documentNumber"`
 	PhoneNumber                string  `json:"phoneNumber"`
 	Email                      string  `json:"email"`
