@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+
 	//"io"
 	"io/ioutil"
 	"net/http"
@@ -13,7 +14,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/contbank/celcoin-sdk" 
+	"github.com/contbank/celcoin-sdk"
 )
 
 // MockRoundTripper implements http.RoundTripper (and thus can be used by http.Client).
@@ -24,21 +25,27 @@ type MockRoundTripper struct {
 // RoundTrip mocks the actual HTTP round trip.
 func (m *MockRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	args := m.Called(req)
-	// Return the *http.Response and error from .On(...).Return(...)
+
+	// Verifica se o primeiro argumento é nil antes de converter
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+
+	// Retorna a resposta convertida e o erro
 	return args.Get(0).(*http.Response), args.Error(1)
 }
 
 // BoletoTestSuite ...
 type BoletoTestSuite struct {
 	suite.Suite
-	assert     *assert.Assertions
-	ctx        context.Context
+	assert        *assert.Assertions
+	ctx           context.Context
 	mockTransport *MockRoundTripper
-	client     *http.Client
-	boleto     *celcoin.Boleto
+	client        *http.Client
+	boleto        *celcoin.Boleto
 }
 
-// TestBoletoTestSuite 
+// TestBoletoTestSuite
 func TestBoletoTestSuite(t *testing.T) {
 	suite.Run(t, new(BoletoTestSuite))
 }
@@ -66,10 +73,10 @@ func (s *BoletoTestSuite) SetupTest() {
 func (s *BoletoTestSuite) TestCreateQueryDownloadCancel() {
 	// 1) CREATE mock
 	createReq := celcoin.CreateBoletoRequest{
-		ExternalID:            "TesteSandbox_123",
+		ExternalID:             "TesteSandbox_123",
 		ExpirationAfterPayment: 1,
-		DueDate:               "2025-01-30",
-		Amount:                10,
+		DueDate:                "2025-01-30",
+		Amount:                 10,
 		Debtor: celcoin.Debtor{
 			Number:       "123",
 			Neighborhood: "Alphaville Residencial Um",
@@ -210,4 +217,3 @@ func (s *BoletoTestSuite) TestCreateQueryDownloadCancel() {
 	err = s.boleto.Cancel(s.ctx, result.TransactionID, "Cancelamento do contrato com o cliente.")
 	s.assert.NoError(err)
 }
-

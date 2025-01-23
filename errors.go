@@ -389,22 +389,6 @@ func FindBalanceError(code string, messages string) *Error {
 	}
 }
 
-// FindWebhookError ... find errors for celcoin balance api
-func FindWebhookError(code string, messages string) *Error {
-	code = mapWebhookErrorCode(code, messages)
-
-	for _, v := range errorList {
-		if v.ErrorKey == code {
-			return &v
-		}
-	}
-
-	return &Error{
-		ErrorKey:  code,
-		GrokError: grok.NewError(http.StatusConflict, code, messages),
-	}
-}
-
 // FindErrorByErrorModel ..
 func FindErrorByErrorModel(response ErrorModel) *Error {
 	if response.Code != "" {
@@ -680,35 +664,6 @@ var errorPixList = []Error{
 	},
 }
 
-func verifyInvalidPixParameter(code string, messages []string) string {
-	if code == "INVALID_PARAMETER" {
-		for _, m := range messages {
-			switch {
-			case strings.Contains(strings.ToLower(m), "addressing key value does not match with addressing key type"):
-				return "INVALID_KEY_TYPE"
-			case strings.Contains(strings.ToLower(m), "sender.account.type"):
-				return "INVALID_ACCOUNT_TYPE"
-			default:
-				return "INVALID_PARAMETER_PIX"
-			}
-		}
-	}
-	return code
-}
-
-// FindPixError
-func FindPixError(code string, messages ...string) *grok.Error {
-	code = verifyInvalidPixParameter(code, messages)
-
-	for _, v := range errorPixList {
-		if v.ErrorKey == code {
-			return v.GrokError
-		}
-	}
-
-	return grok.NewError(http.StatusConflict, code, messages...)
-}
-
 // ParseErr ..
 func ParseErr(err error) (*Error, bool) {
 	celcoinErr, ok := err.(*Error)
@@ -950,54 +905,114 @@ func FindOnboardingError(code string, responseStatus *int) *grok.Error {
 	return grok.NewError(http.StatusInternalServerError, "UNKNOWN_ERROR", "unknown error")
 }
 
-// mapWebhookErrorCode ... mapeia os códigos de erro para mensagens específicas para api webhook da celcoin.
-func mapWebhookErrorCode(code string, message string) string {
-	lowerMessage := strings.ToLower(message)
-	switch code {
-	case "CBE205":
-		if strings.Contains(lowerMessage, "cliente já possui webhook cadastrado com esse evento") {
-			return "WEBHOOK_ALREADY_REGISTERED"
-		}
-	case "CBE206":
-		if strings.Contains(lowerMessage, "entity é obrigatório") {
-			return "ENTITY_REQUIRED"
-		}
-	case "CBE207":
-		if strings.Contains(lowerMessage, "webhookUrl é obrigatorio e deve ser uma url valida") {
-			return "INVALID_WEBHOOK_URL"
-		}
-	case "CBE208":
-		if strings.Contains(lowerMessage, "esse tipo de autenticação não está disponível no momento") {
-			return "AUTHENTICATION_TYPE_NOT_AVAILABLE"
-		}
-	case "CBE209":
-		if strings.Contains(lowerMessage, "esse tipo de autenticação não existe") {
-			return "AUTHENTICATION_TYPE_DOES_NOT_EXIST"
-		}
-	case "CBE211":
-		if strings.Contains(lowerMessage, "conta esta bloqueada") {
-			return "ACCOUNT_BLOCKED"
-		}
-	case "CBE212":
-		if strings.Contains(lowerMessage, "auth.login é obrigatorio") {
-			return "AUTH_LOGIN_REQUIRED"
-		}
-	case "CBE213":
-		if strings.Contains(lowerMessage, "auth.pwd é obrigatorio") {
-			return "AUTH_PASSWORD_REQUIRED"
-		}
-	case "CBE214":
-		if strings.Contains(lowerMessage, "não é permitido cadastrar esse webhook para Virtual BaaS") {
-			return "VIRTUAL_BAAS_WEBHOOK_NOT_ALLOWED"
-		}
-	case "CBE216":
-		if strings.Contains(lowerMessage, "auth.type é obrigatorio") {
-			return "AUTH_TYPE_REQUIRED"
-		}
-	case "CBE354":
-		if strings.Contains(lowerMessage, "Operação não permitida. Limite de webhooks cadastrados para o mesmo evento atingido.") {
-			return "AUTH_TYPE_REQUIRED"
-		}
+var PixErrorMappings = map[string]struct {
+	ContbankCode string
+	Description  string
+}{
+	"CBE091": {"MISSING_ACCOUNT_FIELD", "É necessário informar o campo: account."},
+	"CBE039": {"INVALID_ACCOUNT", "Account inválido."},
+	"CBE041": {"ACCOUNT_MAX_LENGTH_EXCEEDED", "Account possui tamanho máximo de 20 caracteres."},
+	"CBE173": {"MISSING_OR_INVALID_KEY_TYPE", "keyType é obrigatório e deve ser: CPF, CNPJ, EMAIL, PHONE, ou EVP."},
+	"CBE174": {"KEY_MAX_LENGTH_EXCEEDED", "O campo key não pode ultrapassar 77 caracteres."},
+	"CBE175": {"INVALID_KEY_FORMAT", "Cadastro de chave não permitido. Verifique o formato da chave informada."},
+	"CBE176": {"ACCOUNT_CLOSED", "Operação não permitida. Conta está encerrada."},
+	"CBE177": {"ACCOUNT_BLOCKED", "Operação não permitida. Conta está bloqueada."},
+	"CBE178": {"INVALID_KEY_FOR_EVP", "Quando keyType é igual a EVP, o campo key não deve ser informado."},
+	"CBE181": {"DOCUMENT_MISMATCH", "Não é permitido cadastrar chave CPF/CNPJ com o número do documento diferente do titular."},
+	"CBE187": {"PIX_KEY_LIMIT_EXCEEDED_PF", "Limite excedido de chave Pix. É permitido 5 chaves para contas PF."},
+	"CBE188": {"PIX_KEY_LIMIT_EXCEEDED_PJ", "Limite excedido de chave Pix. É permitido 20 chaves para contas PJ."},
+	"CBE226": {"INVALID_PARAMETERS", "Parâmetros fornecidos inválidos."},
+	"CBE223": {"RATE_LIMIT_EXCEEDED", "Atingiu o limite de requisições em um espaço curto de tempo durante a chamada da API. Tente novamente mais tarde."},
+	"CBE227": {"PIX_KEY_LIMIT_EXCEEDED", "Limite excedido de chave Pix."},
+	"CBE228": {"DUPLICATE_KEY", "Já existe registro para a chave informada."},
+	"CBE229": {"KEY_REGISTRATION_NOT_ALLOWED", "Cadastro de chave não permitido."},
+	"CBE230": {"KEY_OWNERSHIP_CONFLICT", "Cadastro de chave não permitido. Essa chave já pertence a outra pessoa."},
+	"CBE231": {"PENDING_CLAIM_FOR_KEY", "Cadastro de chave não permitido. Existe um processo de reinvindicação em aberto para a mesma."},
+	"CBE232": {"INVALID_KEY_TYPE", "A chave fornecida deve ser de um tipo válido."},
+	"CBE233": {"INVALID_OWNER_NAME", "Nome do responsável pela chave inválido. Verifique o nome cadastrado na conta."},
+	"CBE234": {"OPERATION_FAILED", "Não foi possível realizar essa operação. Tente novamente mais tarde."},
+	"CBE236": {"KEY_ALREADY_REGISTERED", "Chave já cadastrada para o mesmo participante."},
+	"CBE410": {"OPERATION_NOT_COMPLETED", "Não foi possível realizar essa operação."},
+	"CBE179": {"MISSING_KEY_FIELD", "É necessário informar o campo: key."},
+	"CBE190": {"KEY_NOT_LINKED_TO_ACCOUNT", "Operação não permitida. Chave não está vinculada a essa conta."},
+	// Novos erros
+	"CBE001":  {"MISSING_CLIENT_CODE", "ClientCode é obrigatório."},
+	"CBE093":  {"CLIENT_CODE_MAX_LENGTH_EXCEEDED", "ClientCode possui tamanho máximo de 200 caracteres."},
+	"CBE094":  {"MISSING_AMOUNT_FIELD", "amount é obrigatório."},
+	"CBE095":  {"INVALID_AMOUNT_FORMAT", "amount invalido.Favor verificar a formatação do campo e deve ser maior que 0."},
+	"CBE100":  {"PENDING_DUPLICATE_TRANSACTION", "Existe um lançamento idêntico pendente.Favor aguarde para realizar esta operação para evitar duplicidade."},
+	"CBE101":  {"DUPLICATE_TRANSACTION", "Já existe um lançamento com o mesmo clientCode. Favor realizar uma nova operação."},
+	"CBE102":  {"DEBIT_LIMIT_EXCEEDED", "Lançamento de debito não permitido.Valor ultrapassa o limite máximo permitido por operação."},
+	"CBE107":  {"MISSING_DEBIT_PARTY", "debitParty é obrigatório."},
+	"CBE108":  {"MISSING_DEBIT_ACCOUNT", "debitparty.account é obrigatório."},
+	"CBE109":  {"INVALID_DEBIT_ACCOUNT", "debitparty.account invalido."},
+	"CBE110":  {"DEBIT_ACCOUNT_MAX_LENGTH_EXCEEDED", "debitparty.account possui tamanho máximo de 20 caracteres."},
+	"CBE115":  {"MISSING_CREDIT_PARTY", "creditParty é obrigatório."},
+	"CBE116":  {"MISSING_CREDIT_ACCOUNT", "creditparty.account é obrigatório."},
+	"CBE117":  {"INVALID_CREDIT_ACCOUNT", "creditparty.account invalido."},
+	"CBE118":  {"CREDIT_ACCOUNT_MAX_LENGTH_EXCEEDED", "creditparty.account possui tamanho máximo de 20 caracteres."},
+	"CBE119":  {"MISSING_CREDIT_BRANCH", "creditParty.branch é obrigatório."},
+	"CBE120":  {"INVALID_CREDIT_BRANCH", "creditParty.branch invalido."},
+	"CBE121":  {"MISSING_CREDIT_TAX_ID", "creditParty.taxId é obrigatório."},
+	"CBE122":  {"INVALID_CREDIT_TAX_ID", "creditParty.taxId invalido."},
+	"CBE123":  {"INSUFFICIENT_BALANCE", "Transação não permitida.Conta com saldo insuficiente."},
+	"CBE124":  {"DEBIT_ACCOUNT_CLOSED", "Lançamento não permitido.debit.account esta encerrada."},
+	"CBE126":  {"MISSING_CREDIT_BANK", "creditParty.bank é obrigatório e deve existir na lista de participantes Pix."},
+	"CBE127":  {"MISSING_CREDIT_NAME", "creditParty.name é obrigatório e possui tamanho máximo de 120 caracteres."},
+	"CBE128":  {"INVALID_CREDIT_ACCOUNT_TYPE", "creditParty.accountType não foi informado ou é invalido."},
+	"CBE129":  {"INVALID_REMITTANCE_INFORMATION", "remittanceInformation possui tamanho máximo de 140 caracteres."},
+	"CBE130":  {"INVALID_INITIATION_TYPE", "initiationType invalido."},
+	"CBE131":  {"INVALID_PAYMENT_TYPE", "paymentType invalido."},
+	"CBE132":  {"INVALID_URGENCY", "urgency invalido."},
+	"CBE133":  {"INVALID_TRANSACTION_TYPE", "transactionType invalido."},
+	"CBE134":  {"INVALID_TRANSACTION_IDENTIFICATION_STATIC", "Campo transactionIdentification é de uso exclusivo para pagamentos de QRCodes. InitiationType STATIC_QRCODE ou DYNAMIC_QRCODE."},
+	"CBE135":  {"MISSING_TRANSACTION_IDENTIFICATION_DYNAMIC", "Campo transactionIdentification é de preenchimento obrigatório para pagamentos de QRCodes. InitiationType DYNAMIC_QRCODE."},
+	"CBE136":  {"TRANSACTION_IDENTIFICATION_LENGTH_STATIC", "Quando initiationType igual a STATIC_QRCODE o campo transactionIdentification não pode ultrapassar 25 caracteres."},
+	"CBE137":  {"TRANSACTION_IDENTIFICATION_LENGTH_DYNAMIC", "Quando initiationType igual a DYNAMIC_QRCODE o campo transactionIdentification não pode ultrapassar 35 caracteres."},
+	"CBE138":  {"DUPLICATE_END_TO_END_ID", "Já existe uma transação com o mesmo endToEndId. Favor realizar uma nova operação."},
+	"CBE139":  {"MISSING_END_TO_END_ID_AND_KEY", "Quando initiationType igual a DICT os campos endToEndId e credityParty.key se tornam obrigatórios."},
+	"CBE140":  {"MISSING_CREDIT_KEY_STATIC", "Quando initiationType igual a STATIC_QRCODE o campo credityParty.key se torna obrigatório."},
+	"CBE141":  {"MISSING_CREDIT_KEY_DYNAMIC", "Quando initiationType igual a DYNAMIC_QRCODE o campo credityParty.key se torna obrigatório."},
+	"CBE142":  {"INVALID_CREDIT_KEY_MANUAL", "Quando initiationType igual a MANUAL o campo credityParty.key não deve ser informado."},
+	"CBE143":  {"INVALID_URGENCY_SCHEDULED", "Quando paymentType está preenchido com Valor SCHEDULED, o campo urgency deve ser preenchido com valor NORMAL."},
+	"CBE144":  {"INVALID_URGENCY_IMMEDIATE", "Quando paymentType está preenchido com Valor IMMEDIATE ou FRAUD, o campo urgency deve ser preenchido com valor HIGH."},
+	"CBE145":  {"INVALID_PAYMENT_INITIATION_TYPE", "Tipo de iniciação de pagamento não permitido.Para mais informações, entre em contato com o nosso suporte."},
+	"CBE146":  {"INVALID_END_TO_END_ID", "endToEndId invalido."},
+	"CBE159":  {"BLOCKED_ACCOUNT", "Lançamento não permitido.Sua conta esta bloqueada."},
+	"PBE7055": {"RECEIVER_INSTITUTION_NOT_RESPONDING", "Instituição recebedora não está respondendo"},
+	"CBE150":  {"INVALID_PARAMETERS", "É necessário informar pelo menos um dos campos: id, clientCode, ou endtoendId."},
+}
+
+// FindPixError ... retorna a mensagem de erro correspondente ao código de erro de Pix
+func FindPixError(code string, responseStatus *int) *grok.Error {
+	if mapping, exists := PixErrorMappings[code]; exists {
+		return grok.NewError(*responseStatus, mapping.ContbankCode, mapping.Description)
 	}
-	return code // Retorna o código original se nenhuma correspondência for encontrada.
+	return grok.NewError(http.StatusInternalServerError, "UNKNOWN_ERROR", "unknown error")
+}
+
+// WebhookErrorMappings ... mapeia os códigos de erro do parceiro Celcoin para os códigos de erro do Contbank com descrição
+var WebhookErrorMappings = map[string]struct {
+	ContbankCode string
+	Description  string
+}{
+	"CBE205": {"WEBHOOK_ALREADY_REGISTERED", "Cliente já possui webhook cadastrado com esse evento."},
+	"CBE206": {"ENTITY_REQUIRED", "Entity é obrigatório."},
+	"CBE207": {"INVALID_WEBHOOK_URL", "WebhookUrl é obrigatório e deve ser uma URL válida."},
+	"CBE208": {"AUTHENTICATION_TYPE_NOT_AVAILABLE", "Esse tipo de autenticação não está disponível no momento."},
+	"CBE209": {"AUTHENTICATION_TYPE_DOES_NOT_EXIST", "Esse tipo de autenticação não existe."},
+	"CBE211": {"ACCOUNT_BLOCKED", "Conta está bloqueada."},
+	"CBE212": {"AUTH_LOGIN_REQUIRED", "Auth.login é obrigatório."},
+	"CBE213": {"AUTH_PASSWORD_REQUIRED", "Auth.pwd é obrigatório."},
+	"CBE214": {"VIRTUAL_BAAS_WEBHOOK_NOT_ALLOWED", "Não é permitido cadastrar esse webhook para Virtual BaaS."},
+	"CBE216": {"AUTH_TYPE_REQUIRED", "Auth.type é obrigatório."},
+	"CBE354": {"WEBHOOK_LIMIT_REACHED", "Operação não permitida. Limite de webhooks cadastrados para o mesmo evento atingido."},
+}
+
+// FindWebhookError ... retorna a mensagem de erro correspondente ao código de erro de Pix
+func FindWebhookError(code string, responseStatus *int) *grok.Error {
+	if mapping, exists := WebhookErrorMappings[code]; exists {
+		return grok.NewError(*responseStatus, mapping.ContbankCode, mapping.Description)
+	}
+	return grok.NewError(http.StatusInternalServerError, "UNKNOWN_ERROR", "unknown error")
 }

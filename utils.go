@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -253,4 +254,124 @@ func ParseStringToCelcoinTime(value string, layout string) (time.Time, error) {
 		return time.Time{}, fmt.Errorf("erro ao converter string para time.Time: %w", err)
 	}
 	return t, nil
+}
+
+/* PIX */
+
+var requiredFieldsForPixCashOut = map[string][]string{
+	"DYNAMIC_QRCODE": {"amount", "clientCode", "transactionIdentification", "endToEndId", "debitParty.account", "creditParty.bank", "creditParty.key", "creditParty.name"},
+	"STATIC_QRCODE":  {"amount", "clientCode", "transactionIdentification", "endToEndId", "debitParty.account", "creditParty.bank", "creditParty.key", "creditParty.name", "creditParty.accountType"},
+	"DICT":           {"amount", "clientCode", "endToEndId", "debitParty.account", "creditParty.bank", "creditParty.key"},
+	"MANUAL":         {"amount", "clientCode", "initiationType", "paymentType", "debitParty.account", "creditParty.bank", "creditParty.account", "creditParty.branch", "creditParty.taxId", "creditParty.accountType"},
+}
+
+func validatePixCashOut(req PixCashOutRequest) error {
+	// Validação de campos obrigatórios com base no requiredFieldsForPixCashOut
+	fields, ok := requiredFieldsForPixCashOut[req.InitiationType]
+	if !ok {
+		return fmt.Errorf("unknown initiationType: %s", req.InitiationType)
+	}
+
+	for _, field := range fields {
+		if !fieldExists(req, field) {
+			return fmt.Errorf("missing required field: %s", field)
+		}
+	}
+
+	// Validação adicional por InitiationType
+	switch req.InitiationType {
+	case "MANUAL":
+		if req.TransactionIdentification != "" || req.CreditParty.Key != "" || req.EndToEndId != "" || req.DebitParty.Account == "" {
+			return fmt.Errorf("invalid fields for InitiationType MANUAL")
+		}
+	case "DICT":
+		if req.TransactionIdentification != "" || req.CreditParty.Key == "" || req.EndToEndId == "" {
+			return fmt.Errorf("invalid fields for InitiationType DICT")
+		}
+	case "STATIC_QRCODE":
+		if len(req.TransactionIdentification) > 25 || req.CreditParty.Key == "" || req.EndToEndId == "" {
+			return fmt.Errorf("invalid fields for InitiationType STATIC_QRCODE")
+		}
+	case "DYNAMIC_QRCODE":
+		if len(req.TransactionIdentification) < 26 || len(req.TransactionIdentification) > 35 || req.CreditParty.Key == "" || req.EndToEndId == "" {
+			return fmt.Errorf("invalid fields for InitiationType DYNAMIC_QRCODE")
+		}
+	case "PAYMENT_INITIATOR":
+		if len(req.TransactionIdentification) > 25 || req.TaxIdPaymentInitiator == "" || req.EndToEndId == "" {
+			return fmt.Errorf("invalid fields for InitiationType PAYMENT_INITIATOR")
+		}
+	default:
+		return fmt.Errorf("unknown InitiationType: %s", req.InitiationType)
+	}
+
+	// Validação adicional por TransactionType
+	switch req.TransactionType {
+	case "TRANSFER":
+		if req.VlcpAmount != 0 || req.VldnAmount != 0 || req.WithdrawalAgentMode != "" || req.WithdrawalServiceProvider != "" {
+			return fmt.Errorf("invalid fields for TransactionType TRANSFER: vlcpAmount, vldnAmount, withdrawalAgentMode, and withdrawalServiceProvider must not be filled")
+		}
+	case "WITHDRAWAL":
+		if req.VlcpAmount != 0 || req.VldnAmount == 0 || req.WithdrawalAgentMode == "" || req.WithdrawalServiceProvider == "" {
+			return fmt.Errorf("invalid fields for TransactionType WITHDRAWAL: vlcpAmount must not be filled, and vldnAmount, withdrawalAgentMode, withdrawalServiceProvider must be filled")
+		}
+	case "CHANGE":
+		if req.VlcpAmount == 0 || req.VldnAmount == 0 || req.WithdrawalAgentMode == "" || req.WithdrawalServiceProvider == "" {
+			return fmt.Errorf("invalid fields for TransactionType CHANGE: all related fields must be filled")
+		}
+	default:
+		return fmt.Errorf("unknown TransactionType: %s", req.TransactionType)
+	}
+
+	// Validação adicional por PaymentType
+	switch req.PaymentType {
+	case "IMMEDIATE":
+		if req.Urgency != "HIGH" {
+			return fmt.Errorf("invalid urgency for PaymentType IMMEDIATE: must be HIGH")
+		}
+	case "FRAUD":
+		if req.Urgency != "NORMAL" {
+			return fmt.Errorf("invalid urgency for PaymentType FRAUD: must be NORMAL")
+		}
+	case "SCHEDULED":
+		if req.Urgency != "NORMAL" {
+			return fmt.Errorf("invalid urgency for PaymentType SCHEDULED: must be NORMAL")
+		}
+	default:
+		return fmt.Errorf("unknown PaymentType: %s", req.PaymentType)
+	}
+
+	return nil
+}
+
+// Função auxiliar para verificar se um campo existe no PixCashOutRequest
+func fieldExists(req PixCashOutRequest, fieldPath string) bool {
+	// Separar os campos aninhados por "."
+	fields := strings.Split(fieldPath, ".")
+	val := reflect.ValueOf(req)
+
+	for _, field := range fields {
+		if val.Kind() == reflect.Ptr {
+			val = val.Elem()
+		}
+
+		if val.Kind() != reflect.Struct {
+			return false
+		}
+
+		val = val.FieldByName(strings.Title(field))
+		if !val.IsValid() {
+			return false
+		}
+	}
+
+	// Verificar se o valor não é nulo ou zero
+	return !isZeroValue(val)
+}
+
+// Função auxiliar para verificar se o valor é zero
+func isZeroValue(val reflect.Value) bool {
+	return (val.Kind() == reflect.Ptr && val.IsNil()) ||
+		(val.Kind() == reflect.String && val.Len() == 0) ||
+		(val.Kind() == reflect.Slice && val.Len() == 0) ||
+		(val.IsValid() && reflect.DeepEqual(val.Interface(), reflect.Zero(val.Type()).Interface()))
 }
