@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-
-	//"io"
 	"io/ioutil"
 	"net/http"
 	"testing"
@@ -14,64 +12,58 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
+
 	"github.com/contbank/celcoin-sdk"
 )
 
-// MockRoundTripper implements http.RoundTripper (and thus can be used by http.Client).
+// MockRoundTripper implements http.RoundTripper
 type MockRoundTripper struct {
 	mock.Mock
 }
 
-// RoundTrip mocks the actual HTTP round trip.
+// RoundTrip is the main mocked method: returns *http.Response and error.
 func (m *MockRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	args := m.Called(req)
-
-	// Verifica se o primeiro argumento é nil antes de converter
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-
-	// Retorna a resposta convertida e o erro
 	return args.Get(0).(*http.Response), args.Error(1)
 }
 
-// BoletoTestSuite ...
+// BoletoTestSuite organizes our test for Celcoin Boletos.
 type BoletoTestSuite struct {
 	suite.Suite
 	assert        *assert.Assertions
 	ctx           context.Context
 	mockTransport *MockRoundTripper
 	client        *http.Client
-	boleto        *celcoin.Boleto
+
+	// The object under test (celcoin.Boletos):
+	boleto *celcoin.Boletos
 }
 
-// TestBoletoTestSuite
 func TestBoletoTestSuite(t *testing.T) {
 	suite.Run(t, new(BoletoTestSuite))
 }
 
-// SetupTest sets up each test with a new mock.
+// SetupTest ...
 func (s *BoletoTestSuite) SetupTest() {
 	s.assert = assert.New(s.T())
 	s.ctx = context.Background()
 
-	// Create our mock ...
 	s.mockTransport = new(MockRoundTripper)
 	s.client = &http.Client{Transport: s.mockTransport}
 
-	// Create the Boleto SDK instance ..
-	baseURL := "https://sandbox.openfinance.celcoin.dev/baas/v2"
-	apiKey := "fake-token"
-	s.boleto = &celcoin.Boleto{
-		BaseURL: baseURL,
-		APIKey:  apiKey,
-		Client:  s.client,
+	// Create a Session...
+	session := celcoin.Session{
+		APIEndpoint: "https://sandbox.openfinance.celcoin.dev/baas/v2",
+		// ... other fields if your Session struct has them
 	}
+
+	// Constructor NewBoletos...
+	s.boleto = celcoin.NewBoletos(s.client, session)
 }
 
-// TestCreateQueryDownloadCancel ...
+// TestCreateQueryDownloadCancel mocks out all 4 operations.
 func (s *BoletoTestSuite) TestCreateQueryDownloadCancel() {
-	// 1) CREATE mock
+	// 1) CREATE
 	createReq := celcoin.CreateBoletoRequest{
 		ExternalID:             "TesteSandbox_123",
 		ExpirationAfterPayment: 1,
@@ -102,6 +94,7 @@ func (s *BoletoTestSuite) TestCreateQueryDownloadCancel() {
 		},
 	}
 
+	// Mock the successful JSON body from Celcoin's response.
 	createResp := struct {
 		Body struct {
 			TransactionID string `json:"transactionId"`
@@ -117,28 +110,26 @@ func (s *BoletoTestSuite) TestCreateQueryDownloadCancel() {
 		Version: "1.2.0",
 		Status:  "SUCCESS",
 	}
-
-	createRespBody, _ := json.Marshal(createResp)
-	// Build the *http.Response to return from mock
-	mockCreateResponse := &http.Response{
-		StatusCode: 201, // typical success
-		Body:       ioutil.NopCloser(bytes.NewReader(createRespBody)),
+	createRespBytes, _ := json.Marshal(createResp)
+	mockCreateHTTPResp := &http.Response{
+		StatusCode: 201,
+		Body:       ioutil.NopCloser(bytes.NewReader(createRespBytes)),
 	}
 
-	// Expect that we do exactly 1 POST call for creation
+	// Expect first RoundTrip call (Create) to return mockCreateHTTPResp
 	s.mockTransport.
 		On("RoundTrip", mock.Anything).
-		Return(mockCreateResponse, nil).
+		Return(mockCreateHTTPResp, nil).
 		Once()
 
 	// Execute the Create call
 	result, err := s.boleto.Create(s.ctx, createReq)
-	s.assert.NoError(err)
+	s.assert.NoError(err, "Create should not return error")
 	s.assert.Equal("9e4f8148-03cb-430a-aec9-558e83e17352", result.TransactionID)
 	s.assert.Equal("SUCCESS", result.Status)
 
-	// 2) QUERY mock
-	queryRespJSON := struct {
+	// 2) QUERY
+	queryResp := struct {
 		Body struct {
 			TransactionID string `json:"transactionId"`
 			Status        string `json:"status"`
@@ -156,39 +147,38 @@ func (s *BoletoTestSuite) TestCreateQueryDownloadCancel() {
 		Version: "1.2.0",
 		Status:  "SUCCESS",
 	}
-
-	queryRespBody, _ := json.Marshal(queryRespJSON)
-	mockQueryResponse := &http.Response{
+	queryRespBytes, _ := json.Marshal(queryResp)
+	mockQueryHTTPResp := &http.Response{
 		StatusCode: 200,
-		Body:       ioutil.NopCloser(bytes.NewReader(queryRespBody)),
+		Body:       ioutil.NopCloser(bytes.NewReader(queryRespBytes)),
 	}
 	s.mockTransport.
 		On("RoundTrip", mock.Anything).
-		Return(mockQueryResponse, nil).
+		Return(mockQueryHTTPResp, nil).
 		Once()
 
 	qResult, err := s.boleto.Query(s.ctx, result.TransactionID)
 	s.assert.NoError(err)
-	s.assert.Equal(result.TransactionID, qResult.TransactionID)
+	s.assert.Equal("9e4f8148-03cb-430a-aec9-558e83e17352", qResult.TransactionID)
 	s.assert.Equal("PENDING", qResult.Status)
 
-	// 3) DOWNLOAD PDF mock
-	mockPDFBody := []byte("%PDF-1.7 \n ...Fake PDF data...")
-	mockDownloadResp := &http.Response{
+	// 3) DOWNLOAD PDF
+	mockPDFData := []byte("%PDF-1.7 \n ...Fake PDF data...")
+	mockDownloadHTTPResp := &http.Response{
 		StatusCode: 200,
-		Body:       ioutil.NopCloser(bytes.NewReader(mockPDFBody)),
+		Body:       ioutil.NopCloser(bytes.NewReader(mockPDFData)),
 	}
 	s.mockTransport.
 		On("RoundTrip", mock.Anything).
-		Return(mockDownloadResp, nil).
+		Return(mockDownloadHTTPResp, nil).
 		Once()
 
-	pdfData, err := s.boleto.DownloadPDF(s.ctx, result.TransactionID)
+	pdfBytes, err := s.boleto.DownloadPDF(s.ctx, qResult.TransactionID)
 	s.assert.NoError(err)
-	s.assert.True(len(pdfData) > 0)
+	s.assert.True(len(pdfBytes) > 0, "Should download non-empty PDF")
 
-	// 4) CANCEL mock
-	cancelRespJSON := struct {
+	// 4) CANCEL
+	cancelResp := struct {
 		Body struct {
 			TransactionID string `json:"transactionId"`
 		} `json:"body"`
@@ -203,17 +193,16 @@ func (s *BoletoTestSuite) TestCreateQueryDownloadCancel() {
 		Version: "1.2.0",
 		Status:  "PROCESSING",
 	}
-	cancelRespBody, _ := json.Marshal(cancelRespJSON)
-
-	mockCancelResponse := &http.Response{
-		StatusCode: 200, // success on DELETE
-		Body:       ioutil.NopCloser(bytes.NewReader(cancelRespBody)),
+	cancelRespBytes, _ := json.Marshal(cancelResp)
+	mockCancelHTTPResp := &http.Response{
+		StatusCode: 200,
+		Body:       ioutil.NopCloser(bytes.NewReader(cancelRespBytes)),
 	}
 	s.mockTransport.
 		On("RoundTrip", mock.Anything).
-		Return(mockCancelResponse, nil).
+		Return(mockCancelHTTPResp, nil).
 		Once()
 
-	err = s.boleto.Cancel(s.ctx, result.TransactionID, "Cancelamento do contrato com o cliente.")
+	err = s.boleto.Cancel(s.ctx, qResult.TransactionID, "Cancelamento do contrato com o cliente.")
 	s.assert.NoError(err)
 }

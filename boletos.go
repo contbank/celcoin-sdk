@@ -7,100 +7,64 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
+	"path"
+
+	"github.com/sirupsen/logrus"
 )
 
-// Boleto...
-type Boleto struct {
-	BaseURL string
-	APIKey  string
-	Client  *http.Client
+type Boletos struct {
+	session    Session
+	httpClient *http.Client
 }
 
-// NewBoleto ...
-func NewBoleto(baseURL, apiKey string) *Boleto {
-	return &Boleto{
-		BaseURL: baseURL,
-		APIKey:  apiKey,
-		Client:  &http.Client{},
+// NewBoletos...
+func NewBoletos(httpClient *http.Client, session Session) *Boletos {
+	return &Boletos{
+		session:    session,
+		httpClient: httpClient,
 	}
 }
 
-// CreateBoletoRequest is the payload for creating a new boleto.
-type CreateBoletoRequest struct {
-	ExternalID            string     `json:"externalId"`
-	ExpirationAfterPayment int       `json:"expirationAfterPayment"`
-	DueDate               string     `json:"dueDate"`
-	Amount                float64    `json:"amount"`
-	Key                   string     `json:"key,omitempty"` // optional 
-	Debtor                Debtor     `json:"debtor"`
-	Receiver              Receiver   `json:"receiver"`
-	Instructions          Instructions `json:"instructions"`
-}
+// Create creates a new Celcoin charge/boleto (POST /charge).
+func (b *Boletos) Create(ctx context.Context, req CreateBoletoRequest) (CreateBoletoResponse, error) {
+	fields := logrus.Fields{"method": "Create", "request": req}
+	logrus.WithFields(fields).Info("Celcoin Boleto - Create")
 
-type Debtor struct {
-	Number       string `json:"number"`
-	Neighborhood string `json:"neighborhood"`
-	Name         string `json:"name"`
-	Document     string `json:"document"`
-	City         string `json:"city"`
-	PublicArea   string `json:"publicArea"`
-	State        string `json:"state"`
-	PostalCode   string `json:"postalCode"`
-}
-
-type Receiver struct {
-	Account  string `json:"account"`
-	Document string `json:"document"`
-}
-
-type Instructions struct {
-	Fine     float64  `json:"fine"`
-	Interest float64  `json:"interest"`
-	Discount Discount `json:"discount"`
-}
-
-type Discount struct {
-	Amount    float64 `json:"amount"`
-	Modality  string  `json:"modality"`  // "fixed" or "percent"
-	LimitDate string  `json:"limitDate"` // e.g. "2025-01-20T00:00:00.0000000"
-}
-
-// CreateBoletoResponse 
-type CreateBoletoResponse struct {
-	TransactionID string `json:"transactionId"`
-	Status        string `json:"status"`
-}
-
-// Create creates a new boleto in Celcoin.
-func (b *Boleto) Create(ctx context.Context, req CreateBoletoRequest) (CreateBoletoResponse, error) {
-	url := fmt.Sprintf("%s/charge", b.BaseURL)
-
-	body, err := json.Marshal(req)
+	endpoint, err := b.buildEndpoint("charge", nil)
 	if err != nil {
+		logrus.WithError(err).WithFields(fields).Error("failed to build endpoint for create")
+		return CreateBoletoResponse{}, err
+	}
+
+	payload, err := json.Marshal(req)
+	if err != nil {
+		logrus.WithError(err).WithFields(fields).Error("marshal request error")
 		return CreateBoletoResponse{}, fmt.Errorf("failed to marshal request: %w", err)
 	}
 
-	request, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
+	request, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(payload))
 	if err != nil {
+		logrus.WithError(err).WithFields(fields).Error("failed to create request")
 		return CreateBoletoResponse{}, fmt.Errorf("failed to create request: %w", err)
 	}
-	request.Header.Set("Authorization", "Bearer "+b.APIKey)
+
 	request.Header.Set("Content-Type", "application/json")
 	request.Header.Set("Accept", "application/json")
 
-	resp, err := b.Client.Do(request)
+	resp, err := b.httpClient.Do(request)
 	if err != nil {
 		return CreateBoletoResponse{}, fmt.Errorf("request failed: %w", err)
 	}
 	defer resp.Body.Close()
 
-	// Accept 200 / 201 / 202 as "success"
+	// Accept 200/201/202 as success
 	if resp.StatusCode < 200 || resp.StatusCode > 202 {
-		errBody, _ := io.ReadAll(resp.Body)
-		return CreateBoletoResponse{}, fmt.Errorf("failed with status %d: %s", resp.StatusCode, string(errBody))
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		return CreateBoletoResponse{}, fmt.Errorf("failed with status %d: %s", resp.StatusCode, string(bodyBytes))
 	}
 
-	// Example success response:
+	// Typically returns:
 	// {
 	//   "body": { "transactionId": "318f1f31-3553-4adf-b6be-cf6dc817e26c" },
 	//   "version": "1.2.0",
@@ -124,24 +88,28 @@ func (b *Boleto) Create(ctx context.Context, req CreateBoletoRequest) (CreateBol
 	}, nil
 }
 
-// QueryBoletoResponse is the simplified struct for a GET response ...
-type QueryBoletoResponse struct {
-	TransactionID string `json:"transactionId"`
-	Status        string `json:"status"`
-}
+// Query fetches a boleto by transactionID (GET /charge?TransactionId=xxx).
+func (b *Boletos) Query(ctx context.Context, transactionID string) (QueryBoletoResponse, error) {
+	fields := logrus.Fields{"method": "Query", "transactionID": transactionID}
+	logrus.WithFields(fields).Info("Celcoin Boleto - Query")
 
-// Query fetches a boleto by transaction ID ...
-func (b *Boleto) Query(ctx context.Context, transactionID string) (QueryBoletoResponse, error) {
-	url := fmt.Sprintf("%s/charge?TransactionId=%s", b.BaseURL, transactionID)
+	queryParams := map[string]string{
+		"TransactionId": transactionID,
+	}
+	endpoint, err := b.buildEndpoint("charge", queryParams)
+	if err != nil {
+		logrus.WithError(err).WithFields(fields).Error("failed to build endpoint for query")
+		return QueryBoletoResponse{}, err
+	}
 
-	request, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
 		return QueryBoletoResponse{}, fmt.Errorf("failed to create request: %w", err)
 	}
-	request.Header.Set("Authorization", "Bearer "+b.APIKey)
-	request.Header.Set("Accept", "application/json")
 
-	resp, err := b.Client.Do(request)
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := b.httpClient.Do(req)
 	if err != nil {
 		return QueryBoletoResponse{}, fmt.Errorf("request failed: %w", err)
 	}
@@ -152,7 +120,7 @@ func (b *Boleto) Query(ctx context.Context, transactionID string) (QueryBoletoRe
 		return QueryBoletoResponse{}, fmt.Errorf("failed with status %d: %s", resp.StatusCode, string(errBody))
 	}
 
-	// Example query response:
+	// Typically returns:
 	// {
 	//   "body": {
 	//     "transactionId":"bc47586f-6834-4581-88c8-40965b3e9307",
@@ -168,7 +136,7 @@ func (b *Boleto) Query(ctx context.Context, transactionID string) (QueryBoletoRe
 			Status        string `json:"status"`
 		} `json:"body"`
 		Version string `json:"version"`
-		Status  string `json:"status"` // "SUCCESS", "ERROR", etc.
+		Status  string `json:"status"`
 	}
 
 	if err := json.NewDecoder(resp.Body).Decode(&rawResp); err != nil {
@@ -181,28 +149,34 @@ func (b *Boleto) Query(ctx context.Context, transactionID string) (QueryBoletoRe
 	}, nil
 }
 
-// DownloadPDF ...
-func (b *Boleto) DownloadPDF(ctx context.Context, transactionID string) ([]byte, error) {
-	url := fmt.Sprintf("%s/charge/pdf/%s", b.BaseURL, transactionID)
+// DownloadPDF...
+func (b *Boletos) DownloadPDF(ctx context.Context, transactionID string) ([]byte, error) {
+	fields := logrus.Fields{"method": "DownloadPDF", "transactionID": transactionID}
+	logrus.WithFields(fields).Info("Celcoin Boleto - Download PDF")
 
-	request, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	endpoint, err := b.buildEndpoint("charge/pdf/"+transactionID, nil)
+	if err != nil {
+		logrus.WithError(err).WithFields(fields).Error("failed to build endpoint for pdf")
+		return nil, err
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
-	request.Header.Set("Authorization", "Bearer "+b.APIKey)
 
-	resp, err := b.Client.Do(request)
+
+	resp, err := b.httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("request failed: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		errBody, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("failed with status %d: %s", resp.StatusCode, string(errBody))
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("failed with status %d: %s", resp.StatusCode, string(bodyBytes))
 	}
 
-	// The PDF or HTML bytes:
 	pdfBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read PDF bytes: %w", err)
@@ -211,14 +185,16 @@ func (b *Boleto) DownloadPDF(ctx context.Context, transactionID string) ([]byte,
 	return pdfBytes, nil
 }
 
-// CancelInput is the JSON body for cancel requests.
-type CancelInput struct {
-	Reason string `json:"reason"`
-}
+// Cancel a Celcoin charge...
+func (b *Boletos) Cancel(ctx context.Context, transactionID, reason string) error {
+	fields := logrus.Fields{"method": "Cancel", "transactionID": transactionID}
+	logrus.WithFields(fields).Info("Celcoin Boleto - Cancel")
 
-// Cancel cancels a charge with the given transactionID and reason.
-func (b *Boleto) Cancel(ctx context.Context, transactionID, reason string) error {
-	url := fmt.Sprintf("%s/charge/%s", b.BaseURL, transactionID)
+	endpoint, err := b.buildEndpoint("charge/"+transactionID, nil)
+	if err != nil {
+		logrus.WithError(err).WithFields(fields).Error("failed to build endpoint for cancel")
+		return err
+	}
 
 	payload := CancelInput{Reason: reason}
 	reqBody, err := json.Marshal(payload)
@@ -226,32 +202,50 @@ func (b *Boleto) Cancel(ctx context.Context, transactionID, reason string) error
 		return fmt.Errorf("failed to marshal request: %w", err)
 	}
 
-	request, err := http.NewRequestWithContext(ctx, http.MethodDelete, url, bytes.NewReader(reqBody))
+	request, err := http.NewRequestWithContext(ctx, http.MethodDelete, endpoint, bytes.NewReader(reqBody))
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
 	}
-	request.Header.Set("Authorization", "Bearer "+b.APIKey)
+
 	request.Header.Set("Content-Type", "application/json")
 	request.Header.Set("Accept", "application/json")
 
-	resp, err := b.Client.Do(request)
+	resp, err := b.httpClient.Do(request)
 	if err != nil {
 		return fmt.Errorf("request failed: %w", err)
 	}
 	defer resp.Body.Close()
 
 	// Celcoin returns 200 for a successful cancel.
-	if resp.StatusCode != http.StatusOK {
-		errBody, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("failed with status %d: %s", resp.StatusCode, string(errBody))
-	}
-
 	// Typically returns:
 	// {
 	//   "body": {...},
 	//   "version": "1.2.0",
-	//   "status": "PROCESSING"  (or "SUCCESS")
+	//   "status": "PROCESSING" (or "SUCCESS")
 	// }
+	if resp.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("failed with status %d: %s", resp.StatusCode, string(bodyBytes))
+	}
 
 	return nil
+}
+
+func (b *Boletos) buildEndpoint(pathStr string, queryParams map[string]string) (string, error) {
+	u, err := url.Parse(b.session.APIEndpoint)
+	if err != nil {
+		return "", err
+	}
+
+	u.Path = path.Join(u.Path, pathStr)
+
+	if queryParams != nil {
+		q := u.Query()
+		for k, v := range queryParams {
+			q.Set(k, v)
+		}
+		u.RawQuery = q.Encode()
+	}
+
+	return u.String(), nil
 }
