@@ -2,6 +2,7 @@ module github.com/contbank/celcoin-sdk
 
 go 1.19
 
+replace github.com/contbank/celcoin-sdk => /Users/italoxesteres/celcoin-sdk
 
 require (
 	github.com/aws/aws-sdk-go v1.55.5

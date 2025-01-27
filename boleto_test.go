@@ -1,219 +1,209 @@
 package celcoin_test
 
 import (
-	"bytes"
-	"context"
-	"encoding/json"
+    "bytes"
+    "context"
+    "encoding/json"
+    "io/ioutil"
+    "net/http"
+    "testing"
 
-	//"io"
-	"io/ioutil"
-	"net/http"
-	"testing"
+    "github.com/stretchr/testify/assert"
+    "github.com/stretchr/testify/mock"
+    "github.com/stretchr/testify/suite"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/suite"
-
-	"github.com/contbank/celcoin-sdk"
+    "github.com/contbank/celcoin-sdk" 
 )
 
-// MockRoundTripper implements http.RoundTripper (and thus can be used by http.Client).
+// MockRoundTripper
 type MockRoundTripper struct {
-	mock.Mock
+    mock.Mock
 }
 
-// RoundTrip mocks the actual HTTP round trip.
 func (m *MockRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
-	args := m.Called(req)
-
-	// Verifica se o primeiro argumento é nil antes de converter
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-
-	// Retorna a resposta convertida e o erro
-	return args.Get(0).(*http.Response), args.Error(1)
+    args := m.Called(req)
+    if args.Get(0) == nil {
+        
+        return nil, args.Error(1)
+    }
+    return args.Get(0).(*http.Response), args.Error(1)
 }
 
-// BoletoTestSuite ...
 type BoletoTestSuite struct {
-	suite.Suite
-	assert        *assert.Assertions
-	ctx           context.Context
-	mockTransport *MockRoundTripper
-	client        *http.Client
-	boleto        *celcoin.Boleto
+    suite.Suite
+    assert        *assert.Assertions
+    ctx           context.Context
+    mockTransport *MockRoundTripper
+    client        *http.Client
+
+    session  *celcoin.Session
+    boletos  celcoin.Boletos // Interface in boletos.go
 }
 
-// TestBoletoTestSuite
 func TestBoletoTestSuite(t *testing.T) {
-	suite.Run(t, new(BoletoTestSuite))
+    suite.Run(t, new(BoletoTestSuite))
 }
 
-// SetupTest sets up each test with a new mock.
 func (s *BoletoTestSuite) SetupTest() {
-	s.assert = assert.New(s.T())
-	s.ctx = context.Background()
+    s.assert = assert.New(s.T())
+    s.ctx = context.Background()
 
-	// Create our mock ...
-	s.mockTransport = new(MockRoundTripper)
-	s.client = &http.Client{Transport: s.mockTransport}
+    s.mockTransport = new(MockRoundTripper)
+    s.client = &http.Client{Transport: s.mockTransport}
 
-	// Create the Boleto SDK instance ..
-	baseURL := "https://sandbox.openfinance.celcoin.dev/baas/v2"
-	apiKey := "fake-token"
-	s.boleto = &celcoin.Boleto{
-		BaseURL: baseURL,
-		APIKey:  apiKey,
-		Client:  s.client,
-	}
+    // Create a mock session config.
+    clientID := "test-client-id"
+    clientSecret := "test-client-secret"
+    apiEndpoint := "https://sandbox.openfinance.celcoin.dev"
+    loginEndpoint := "https://sandbox.openfinance.celcoin.dev"
+
+    config := celcoin.Config{
+        ClientID:      &clientID,
+        ClientSecret:  &clientSecret,
+        Mtls:          celcoin.Bool(false),
+        APIEndpoint:   &apiEndpoint,
+        LoginEndpoint: &loginEndpoint,
+    }
+
+    sess, err := celcoin.NewSession(config)
+    s.assert.NoError(err)
+    s.session = sess
+
+    // Create the Boletos service with mocked http.Client + session
+    s.boletos = celcoin.NewBoletos(s.client, *s.session)
 }
 
-// TestCreateQueryDownloadCancel ...
+// TestCreateQueryDownloadCancel
 func (s *BoletoTestSuite) TestCreateQueryDownloadCancel() {
-	// 1) CREATE mock
-	createReq := celcoin.CreateBoletoRequest{
-		ExternalID:             "TesteSandbox_123",
-		ExpirationAfterPayment: 1,
-		DueDate:                "2025-01-30",
-		Amount:                 10,
-		Debtor: celcoin.Debtor{
-			Number:       "123",
-			Neighborhood: "Alphaville Residencial Um",
-			Name:         "Erick Augusto Farias",
-			Document:     "42318970858",
-			City:         "Barueri",
-			PublicArea:   "Alameda Holanda",
-			State:        "SP",
-			PostalCode:   "06474320",
-		},
-		Receiver: celcoin.Receiver{
-			Account:  "30054999518",
-			Document: "37786401865",
-		},
-		Instructions: celcoin.Instructions{
-			Fine:     10,
-			Interest: 5,
-			Discount: celcoin.Discount{
-				Amount:    1,
-				Modality:  "fixed",
-				LimitDate: "2025-01-20T00:00:00.0000000",
-			},
-		},
-	}
+    // 1) CREATE
+    createReq := celcoin.CreateBoletoRequest{
+        ExternalID:             "TestBoleto123",
+        ExpirationAfterPayment: 1,
+        DueDate:                "2025-01-30",
+        Amount:                 100.0,
+        Debtor: celcoin.Debtor{
+            Number:       "123",
+            Neighborhood: "Alphaville",
+            Name:         "João da Silva",
+            Document:     "42318970858",
+            City:         "Barueri",
+            PublicArea:   "Alameda Teste",
+            State:        "SP",
+            PostalCode:   "06474320",
+        },
+        Receiver: celcoin.Receiver{
+            Account:  "123456",
+            Document: "98765432100",
+        },
+        Instructions: celcoin.Instructions{
+            Fine:     10,
+            Interest: 5,
+            Discount: celcoin.Discount{
+                Amount:    2,
+                Modality:  "fixed",
+                LimitDate: "2025-01-20T00:00:00.0000000",
+            },
+        },
+    }
 
-	createResp := struct {
-		Body struct {
-			TransactionID string `json:"transactionId"`
-		} `json:"body"`
-		Version string `json:"version"`
-		Status  string `json:"status"`
-	}{
-		Body: struct {
-			TransactionID string `json:"transactionId"`
-		}{
-			TransactionID: "9e4f8148-03cb-430a-aec9-558e83e17352",
-		},
-		Version: "1.2.0",
-		Status:  "SUCCESS",
-	}
+    // Example Celcoin-ish JSON response for a successful creation:
+    createRespJSON := struct {
+        Body struct {
+            TransactionID string `json:"transactionId"`
+        } `json:"body"`
+        Version string `json:"version"`
+        Status  string `json:"status"`
+    }{
+        Body: struct {
+            TransactionID string `json:"transactionId"`
+        }{
+            TransactionID: "5a0f8148-03cb-430a-aec9-558e83e17352",
+        },
+        Version: "1.2.0",
+        Status:  "SUCCESS",
+    }
+    createBytes, _ := json.Marshal(createRespJSON)
+    mockCreateResp := &http.Response{
+        StatusCode: 201,
+        Body:       ioutil.NopCloser(bytes.NewReader(createBytes)),
+    }
 
-	createRespBody, _ := json.Marshal(createResp)
-	// Build the *http.Response to return from mock
-	mockCreateResponse := &http.Response{
-		StatusCode: 201, // typical success
-		Body:       ioutil.NopCloser(bytes.NewReader(createRespBody)),
-	}
+    // Mock the first RoundTrip call
+    s.mockTransport.On("RoundTrip", mock.Anything).Return(mockCreateResp, nil).Once()
 
-	// Expect that we do exactly 1 POST call for creation
-	s.mockTransport.
-		On("RoundTrip", mock.Anything).
-		Return(mockCreateResponse, nil).
-		Once()
+    // 1) Actually call s.boletos.Create
+    createResult, err := s.boletos.Create(s.ctx, createReq)
+    s.assert.NoError(err)
+    s.assert.Equal("5a0f8148-03cb-430a-aec9-558e83e17352", createResult.TransactionID)
+    s.assert.Equal("SUCCESS", createResult.Status)
 
-	// Execute the Create call
-	result, err := s.boleto.Create(s.ctx, createReq)
-	s.assert.NoError(err)
-	s.assert.Equal("9e4f8148-03cb-430a-aec9-558e83e17352", result.TransactionID)
-	s.assert.Equal("SUCCESS", result.Status)
+    // 2) QUERY
+    queryRespJSON := struct {
+        Body struct {
+            TransactionID string `json:"transactionId"`
+            Status        string `json:"status"`
+        } `json:"body"`
+        Version string `json:"version"`
+        Status  string `json:"status"`
+    }{
+        Body: struct {
+            TransactionID string `json:"transactionId"`
+            Status        string `json:"status"`
+        }{
+            TransactionID: createResult.TransactionID,
+            Status:        "PENDING",
+        },
+        Version: "1.2.0",
+        Status:  "SUCCESS",
+    }
+    queryBytes, _ := json.Marshal(queryRespJSON)
+    mockQueryResp := &http.Response{
+        StatusCode: 200,
+        Body:       ioutil.NopCloser(bytes.NewReader(queryBytes)),
+    }
+    s.mockTransport.On("RoundTrip", mock.Anything).Return(mockQueryResp, nil).Once()
 
-	// 2) QUERY mock
-	queryRespJSON := struct {
-		Body struct {
-			TransactionID string `json:"transactionId"`
-			Status        string `json:"status"`
-		} `json:"body"`
-		Version string `json:"version"`
-		Status  string `json:"status"`
-	}{
-		Body: struct {
-			TransactionID string `json:"transactionId"`
-			Status        string `json:"status"`
-		}{
-			TransactionID: "9e4f8148-03cb-430a-aec9-558e83e17352",
-			Status:        "PENDING",
-		},
-		Version: "1.2.0",
-		Status:  "SUCCESS",
-	}
+    queryResult, err := s.boletos.Query(s.ctx, createResult.TransactionID)
+    s.assert.NoError(err)
+    s.assert.Equal(createResult.TransactionID, queryResult.TransactionID)
+    s.assert.Equal("PENDING", queryResult.Status)
 
-	queryRespBody, _ := json.Marshal(queryRespJSON)
-	mockQueryResponse := &http.Response{
-		StatusCode: 200,
-		Body:       ioutil.NopCloser(bytes.NewReader(queryRespBody)),
-	}
-	s.mockTransport.
-		On("RoundTrip", mock.Anything).
-		Return(mockQueryResponse, nil).
-		Once()
+    // 3) DOWNLOAD PDF
+    fakePDFData := []byte("%PDF-1.7 \n ...Fake PDF Data...")
+    mockPDFResp := &http.Response{
+        StatusCode: 200,
+        Body:       ioutil.NopCloser(bytes.NewReader(fakePDFData)),
+    }
+    s.mockTransport.On("RoundTrip", mock.Anything).Return(mockPDFResp, nil).Once()
 
-	qResult, err := s.boleto.Query(s.ctx, result.TransactionID)
-	s.assert.NoError(err)
-	s.assert.Equal(result.TransactionID, qResult.TransactionID)
-	s.assert.Equal("PENDING", qResult.Status)
+    pdfData, err := s.boletos.DownloadPDF(s.ctx, queryResult.TransactionID)
+    s.assert.NoError(err)
+    s.assert.NotEmpty(pdfData)
 
-	// 3) DOWNLOAD PDF mock
-	mockPDFBody := []byte("%PDF-1.7 \n ...Fake PDF data...")
-	mockDownloadResp := &http.Response{
-		StatusCode: 200,
-		Body:       ioutil.NopCloser(bytes.NewReader(mockPDFBody)),
-	}
-	s.mockTransport.
-		On("RoundTrip", mock.Anything).
-		Return(mockDownloadResp, nil).
-		Once()
+    // 4) CANCEL
+    cancelRespJSON := struct {
+        Body struct {
+            TransactionID string `json:"transactionId"`
+        } `json:"body"`
+        Version string `json:"version"`
+        Status  string `json:"status"`
+    }{
+        Body: struct {
+            TransactionID string `json:"transactionId"`
+        }{
+            TransactionID: createResult.TransactionID,
+        },
+        Version: "1.2.0",
+        Status:  "PROCESSING",
+    }
+    cancelBytes, _ := json.Marshal(cancelRespJSON)
+    mockCancelResp := &http.Response{
+        StatusCode: 200,
+        Body:       ioutil.NopCloser(bytes.NewReader(cancelBytes)),
+    }
+    s.mockTransport.On("RoundTrip", mock.Anything).Return(mockCancelResp, nil).Once()
 
-	pdfData, err := s.boleto.DownloadPDF(s.ctx, result.TransactionID)
-	s.assert.NoError(err)
-	s.assert.True(len(pdfData) > 0)
+    err = s.boletos.Cancel(s.ctx, queryResult.TransactionID, "Cliente desistiu do contrato.")
+    s.assert.NoError(err)
 
-	// 4) CANCEL mock
-	cancelRespJSON := struct {
-		Body struct {
-			TransactionID string `json:"transactionId"`
-		} `json:"body"`
-		Version string `json:"version"`
-		Status  string `json:"status"`
-	}{
-		Body: struct {
-			TransactionID string `json:"transactionId"`
-		}{
-			TransactionID: "9e4f8148-03cb-430a-aec9-558e83e17352",
-		},
-		Version: "1.2.0",
-		Status:  "PROCESSING",
-	}
-	cancelRespBody, _ := json.Marshal(cancelRespJSON)
-
-	mockCancelResponse := &http.Response{
-		StatusCode: 200, // success on DELETE
-		Body:       ioutil.NopCloser(bytes.NewReader(cancelRespBody)),
-	}
-	s.mockTransport.
-		On("RoundTrip", mock.Anything).
-		Return(mockCancelResponse, nil).
-		Once()
-
-	err = s.boleto.Cancel(s.ctx, result.TransactionID, "Cancelamento do contrato com o cliente.")
-	s.assert.NoError(err)
 }
