@@ -5,6 +5,9 @@ import (
 	"time"
 )
 
+type CompanyType string
+type PersonType string
+
 const (
 	// CelcoinBankCode ...
 	CelcoinBankCode string = "509"
@@ -45,6 +48,7 @@ const (
 	// Webhook
 	WebhookPath string = "/baas-webhookmanager/v1/webhook"
 
+	// ONBOARDING CONSTANTS
 	// OnboardingStatusProcessing ...
 	OnboardingStatusProcessing string = "PROCESSING"
 	// OnboardingStatusApproved ...
@@ -53,26 +57,32 @@ const (
 	OnboardingStatusReproved string = "REPROVED"
 	// OnboardingStatusPending ...
 	OnboardingStatusPending string = "PENDING"
-
 	//ProposalTypeNaturalPerson ...
 	ProposalTypeNaturalPerson string = "NATURAL_PERSON"
 	// ProposalTypeLegalPerson ...
 	ProposalTypeLegalPerson string = "LEGAL_PERSON"
-
 	// LegalPersonOwnerTypeSocio ...
 	LegalPersonOwnerTypeSocio string = "SOCIO"
 	// LegalPersonOwnerTypeRepresentante ...
 	LegalPersonOwnerTypeRepresentante string = "REPRESENTANTE"
 	// LegalPersonOwnerTypeDemaisSocios...
 	LegalPersonOwnerTypeDemaisSocios string = "DEMAIS_SOCIOS"
-
 	// ProposalTypePF...
 	ProposalTypePF string = "PF"
 	// ProposalTypePJ...
 	ProposalTypePJ string = "PJ"
+	// OnboardingProposalCompanyTypes...
+	CompanyTypeME     CompanyType = "ME"
+	CompanyTypeMEI    CompanyType = "MEI"
+	CompanyTypeEPP    CompanyType = "EPP"
+	CompanyTypeLTDA   CompanyType = "LTDA"
+	CompanyTypeSA     CompanyType = "SA"
+	CompanyTypeEI     CompanyType = "EI"
+	CompanyTypeEIRELI CompanyType = "EIRELI"
+	CompanyTypePJ     CompanyType = "PJ"
+	// DefaultOnboardingType ...
+	DefaultOnboardingType string = "BAAS"
 )
-
-type PersonType string
 
 const (
 	// NaturalPersonType Pessoa Fisica
