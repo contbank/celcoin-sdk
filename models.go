@@ -946,3 +946,62 @@ type TransfersError struct {
 	ErrorCode string `json:"errorCode"` // Código do erro
 	Message   string `json:"message"`   // Mensagem do erro
 }
+
+/* BOLETO */
+
+// CreateBoletoRequest is the payload to create a new Celcoin charge/boleto.
+type CreateBoletoRequest struct {
+	ExternalID             string     `json:"externalId"`
+	ExpirationAfterPayment int        `json:"expirationAfterPayment"`
+	DueDate                string     `json:"dueDate"`
+	Amount                 float64    `json:"amount"`
+	Key                    string     `json:"key,omitempty"` // optional
+	Debtor                 Debtor     `json:"debtor"`
+	Receiver               Receiver   `json:"receiver"`
+	Instructions           Instructions `json:"instructions"`
+}
+
+type Debtor struct {
+	Number       string `json:"number"`
+	Neighborhood string `json:"neighborhood"`
+	Name         string `json:"name"`
+	Document     string `json:"document"`
+	City         string `json:"city"`
+	PublicArea   string `json:"publicArea"`
+	State        string `json:"state"`
+	PostalCode   string `json:"postalCode"`
+}
+
+type Receiver struct {
+	Account  string `json:"account"`
+	Document string `json:"document"`
+}
+
+type Instructions struct {
+	Fine     float64  `json:"fine"`
+	Interest float64  `json:"interest"`
+	Discount Discount `json:"discount"`
+}
+
+type Discount struct {
+	Amount    float64 `json:"amount"`
+	Modality  string  `json:"modality"`  // "fixed" or "percent"
+	LimitDate string  `json:"limitDate"` // e.g. "2025-01-20T00:00:00.0000000"
+}
+
+// CreateBoletoResponse is the simplified response from POST /charge.
+type CreateBoletoResponse struct {
+	TransactionID string `json:"transactionId"`
+	Status        string `json:"status"`
+}
+
+// QueryBoletoResponse is the simplified struct for GET /charge?TransactionId=...
+type QueryBoletoResponse struct {
+	TransactionID string `json:"transactionId"`
+	Status        string `json:"status"`
+}
+
+// CancelInput is the JSON body for DELETE /charge/:id requests.
+type CancelInput struct {
+	Reason string `json:"reason"`
+}
