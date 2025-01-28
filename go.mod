@@ -2,7 +2,6 @@ module github.com/contbank/celcoin-sdk
 
 go 1.19
 
-
 require (
 	github.com/aws/aws-sdk-go v1.55.5
 	github.com/contbank/grok v0.0.104
