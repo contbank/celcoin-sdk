@@ -143,3 +143,38 @@ func (s *StatementTestSuite) TestGetStatementsInvalidInputError() {
 	s.assert.Len(grokErr.Messages, 1)
 	s.assert.Equal("É necessário informar pelo menos um dos campos: account, ou documentNumber.", grokErr.Messages[0])
 }
+
+func (s *StatementTestSuite) TestGetStatementsUnknownError() {
+	// Simula a resposta de erro da API
+	errorResponse := map[string]interface{}{
+		"status":  "ERROR",
+		"version": "1.0.0",
+		"error": map[string]interface{}{
+			"errorCode": "CBE999",
+			"message":   "Unknown server error",
+		},
+	}
+	mockResponseBody, err := json.Marshal(errorResponse)
+	s.assert.NoError(err)
+
+	mockResponse := &http.Response{
+		StatusCode: http.StatusInternalServerError,
+		Body:       ioutil.NopCloser(bytes.NewReader(mockResponseBody)),
+	}
+
+	// Cria um mock do http.Client
+	s.mockClient.On("Do", mock.Anything).Return(mockResponse, nil)
+
+	// Chama o método GetStatements
+	_, err = s.statement.GetStatements(context.Background(), &StatementRequest{})
+
+	// Verifica se o erro é do tipo *grok.Error
+	grokErr, ok := err.(*grok.Error)
+	s.assert.True(ok, "erro deve ser do tipo *grok.Error")
+
+	// Verifica se o erro retornado é o esperado
+	s.assert.Equal(http.StatusInternalServerError, grokErr.Code)
+	s.assert.Equal("UNKNOWN_ERROR", grokErr.Key)
+	s.assert.Len(grokErr.Messages, 1)
+	s.assert.Equal("unknown error", grokErr.Messages[0])
+}
