@@ -45,6 +45,9 @@ const (
 	PixStaticPath       string = "/pix/v1/brcode/static"
 	PixCashInStatusPath string = "/pix/v2/receivement/v2/devolution/status"
 
+	// StatementPath ...
+	StatementPath string = "/baas-walletreports/v1/wallet/movement"
+
 	// Webhook
 	WebhookPath string = "/baas-webhookmanager/v1/webhook"
 
@@ -951,13 +954,13 @@ type TransfersError struct {
 
 // CreateBoletoRequest is the payload to create a new Celcoin charge/boleto.
 type CreateBoletoRequest struct {
-	ExternalID             string     `json:"externalId"`
-	ExpirationAfterPayment int        `json:"expirationAfterPayment"`
-	DueDate                string     `json:"dueDate"`
-	Amount                 float64    `json:"amount"`
-	Key                    string     `json:"key,omitempty"` // optional
-	Debtor                 Debtor     `json:"debtor"`
-	Receiver               Receiver   `json:"receiver"`
+	ExternalID             string       `json:"externalId"`
+	ExpirationAfterPayment int          `json:"expirationAfterPayment"`
+	DueDate                string       `json:"dueDate"`
+	Amount                 float64      `json:"amount"`
+	Key                    string       `json:"key,omitempty"` // optional
+	Debtor                 Debtor       `json:"debtor"`
+	Receiver               Receiver     `json:"receiver"`
 	Instructions           Instructions `json:"instructions"`
 }
 
@@ -1004,4 +1007,46 @@ type QueryBoletoResponse struct {
 // CancelInput is the JSON body for DELETE /charge/:id requests.
 type CancelInput struct {
 	Reason string `json:"reason"`
+}
+
+// StatementResponse ... define a estrutura da resposta da API.
+type StatementResponse struct {
+	Status       string        `json:"status"`
+	Version      string        `json:"version"`
+	TotalItems   int           `json:"totalItems"`
+	CurrentPage  int           `json:"currentPage"`
+	LimitPerPage int           `json:"limitPerPage"`
+	TotalPages   int           `json:"totalPages"`
+	DateFrom     string        `json:"dateFrom"`
+	DateTo       string        `json:"dateTo"`
+	Body         StatementBody `json:"body"`
+}
+
+// StatementBody ... define a estrutura do corpo da resposta.
+type StatementBody struct {
+	Account        string              `json:"account"`
+	DocumentNumber string              `json:"documentNumber"`
+	Movements      []StatementMovement `json:"movements"`
+}
+
+// StatementMovement ... define a estrutura de cada movimento.
+type StatementMovement struct {
+	ID             string  `json:"id"`
+	ClientCode     string  `json:"clientCode"`
+	Description    string  `json:"description"`
+	CreateDate     string  `json:"createDate"`
+	LastUpdateDate string  `json:"lastUpdateDate"`
+	Amount         float64 `json:"amount"`
+	Status         string  `json:"status"`
+	BalanceType    string  `json:"balanceType"`
+	MovementType   string  `json:"movementType"`
+}
+
+// StatementRequest ... define a estrutura da requisição da API.
+type StatementRequest struct {
+	Account        *string `json:"Account"`
+	DateFrom       *string `json:"DateFrom"`
+	DateTo         *string `json:"DateTo"`
+	DocumentNumber *string `json:"DocumentNumber"`
+	LimitPerPage   *string `json:"LimitPerPage"`
 }
