@@ -32,18 +32,18 @@ func NewTransfers(httpClient *http.Client, session Session) *Transfers {
 
 // CreateTransfer ...
 func (t *Transfers) CreateTransfer(ctx context.Context, correlationID string,
-	model TransfersRequest, isInternalTransfer bool) (*TransfersResponse, error) {
+	model TransfersRequest) (*TransfersResponse, error) {
 	logrus.
 		WithFields(logrus.Fields{
 			"correlation_id": correlationID,
 		}).
 		Info("create transfer")
-	return t.createTransferOperation(ctx, correlationID, model, isInternalTransfer)
+	return t.createTransferOperation(ctx, correlationID, model)
 }
 
 // createTransferOperation ...
 func (t *Transfers) createTransferOperation(ctx context.Context, requestID string,
-	model TransfersRequest, isInternalTransfer bool) (*TransfersResponse, error) {
+	model TransfersRequest) (*TransfersResponse, error) {
 
 	fields := logrus.Fields{
 		"request_id": requestID,
@@ -61,6 +61,11 @@ func (t *Transfers) createTransferOperation(ctx context.Context, requestID strin
 	// Description is required only when client finality is Others
 	if strings.Compare(string(model.ClientFinality), string(OthersClientFinality)) == 0 && len(model.Description) <= 0 {
 		return nil, grok.NewError(http.StatusBadRequest, "DESCRIPTION_MISSING", "description is required")
+	}
+
+	var isInternalTransfer bool = false
+	if grok.OnlyDigits(model.DebitParty.BankISPB) == grok.OnlyDigits(model.CreditParty.BankISPB) {
+		isInternalTransfer = true
 	}
 
 	endpoint, err := t.getTransfersAPIEndpoint(requestID, nil, nil, isInternalTransfer)

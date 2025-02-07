@@ -897,6 +897,7 @@ type TransfersRequest struct {
 // TransfersDebitPartyRequest ...
 type TransfersDebitPartyRequest struct {
 	AccountNumber string `validate:"required" json:"account"`
+	BankISPB      string `json:"bank"`
 }
 
 // TransfersDebitPartyResponse ...
