@@ -66,6 +66,7 @@ func (t *Transfers) createTransferOperation(ctx context.Context, requestID strin
 	var isInternalTransfer bool = false
 	if grok.OnlyDigits(model.DebitParty.BankISPB) == grok.OnlyDigits(model.CreditParty.BankISPB) {
 		isInternalTransfer = true
+		model.ClientRequestId = model.ClientCode
 	}
 
 	endpoint, err := t.getTransfersAPIEndpoint(requestID, nil, nil, isInternalTransfer)
@@ -129,6 +130,9 @@ func (t *Transfers) createTransferOperation(ctx context.Context, requestID strin
 
 	// response ok
 	if resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusCreated {
+		if isInternalTransfer && len(model.ClientRequestId) > 0 && len(model.ClientCode) == 0 {
+			model.ClientCode = model.ClientRequestId
+		}
 		return body, nil
 	}
 
