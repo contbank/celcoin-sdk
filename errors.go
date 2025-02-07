@@ -981,6 +981,7 @@ var PixErrorMappings = map[string]struct {
 	"CBE159":  {"BLOCKED_ACCOUNT", "Lançamento não permitido.Sua conta esta bloqueada."},
 	"PBE7055": {"RECEIVER_INSTITUTION_NOT_RESPONDING", "Instituição recebedora não está respondendo"},
 	"CBE150":  {"INVALID_PARAMETERS", "É necessário informar pelo menos um dos campos: id, clientCode, ou endtoendId."},
+	"DE004":   {"INVALID_TRANSACTIONID", "Nao foi possivel excluir, location não encontrado"},
 }
 
 // FindPixError ... retorna a mensagem de erro correspondente ao código de erro de Pix
