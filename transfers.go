@@ -130,8 +130,8 @@ func (t *Transfers) createTransferOperation(ctx context.Context, requestID strin
 
 	// response ok
 	if resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusCreated {
-		if isInternalTransfer && len(model.ClientRequestId) > 0 && len(model.ClientCode) == 0 {
-			model.ClientCode = model.ClientRequestId
+		if isInternalTransfer && len(body.Body.ClientRequestId) > 0 && len(body.Body.ClientCode) == 0 {
+			body.Body.ClientCode = body.Body.ClientRequestId
 		}
 		return body, nil
 	}
