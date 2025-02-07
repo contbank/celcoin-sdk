@@ -34,8 +34,10 @@ const (
 	NaturalPersonOnboardingPath string = "/onboarding/v1/onboarding-proposal/natural-person"
 	// LegalPersonOnboardingPath ...
 	LegalPersonOnboardingPath string = "/onboarding/v1/onboarding-proposal/legal-person"
-	// Transfers TED
-	TransfersPath string = "/baas-wallet-transactions-webservice/v1/spb/transfer"
+	// ExternalTransfersPath external transfer (TED)
+	ExternalTransfersPath string = "/baas-wallet-transactions-webservice/v1/spb/transfer"
+	// InternalTransfersPath internal transfer
+	InternalTransfersPath string = "/baas-wallet-transactions-webservice/v1/wallet/internal/transfer"
 
 	// Pix ...
 	PixDictPath         string = "/celcoin-baas-pix-dict-webservice/v1/pix/dict/entry"
@@ -951,13 +953,13 @@ type TransfersError struct {
 
 // CreateBoletoRequest is the payload to create a new Celcoin charge/boleto.
 type CreateBoletoRequest struct {
-	ExternalID             string     `json:"externalId"`
-	ExpirationAfterPayment int        `json:"expirationAfterPayment"`
-	DueDate                string     `json:"dueDate"`
-	Amount                 float64    `json:"amount"`
-	Key                    string     `json:"key,omitempty"` // optional
-	Debtor                 Debtor     `json:"debtor"`
-	Receiver               Receiver   `json:"receiver"`
+	ExternalID             string       `json:"externalId"`
+	ExpirationAfterPayment int          `json:"expirationAfterPayment"`
+	DueDate                string       `json:"dueDate"`
+	Amount                 float64      `json:"amount"`
+	Key                    string       `json:"key,omitempty"` // optional
+	Debtor                 Debtor       `json:"debtor"`
+	Receiver               Receiver     `json:"receiver"`
 	Instructions           Instructions `json:"instructions"`
 }
 

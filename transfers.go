@@ -62,7 +62,12 @@ func (t *Transfers) createTransferOperation(ctx context.Context, requestID strin
 		return nil, grok.NewError(http.StatusBadRequest, "DESCRIPTION_MISSING", "description is required")
 	}
 
-	endpoint, err := t.getTransfersAPIEndpoint(requestID, nil, nil)
+	var isInternalTransfer bool = false
+	if model.CreditParty.BankISPB == model.CreditParty.BankISPB {
+		isInternalTransfer = true
+	}
+
+	endpoint, err := t.getTransfersAPIEndpoint(requestID, nil, nil, isInternalTransfer)
 	if err != nil {
 		logrus.WithFields(fields).WithError(err).
 			Error("error getting api endpoint")
@@ -146,7 +151,7 @@ func (t *Transfers) createTransferOperation(ctx context.Context, requestID strin
 
 // FindTransferByCode ...
 func (t *Transfers) FindTransferByCode(ctx context.Context, requestID *string,
-	transferAuthenticationCode string, transferRequestID string) (*TransfersResponse, error) {
+	transferAuthenticationCode string, transferRequestID string, isInternalTransfer *bool) (*TransfersResponse, error) {
 
 	if requestID == nil {
 		return nil, ErrInvalidCorrelationID
@@ -160,7 +165,48 @@ func (t *Transfers) FindTransferByCode(ctx context.Context, requestID *string,
 		"transfer_request_id":          transferRequestID,
 	}
 
-	endpoint, err := t.getTransfersAPIEndpoint(*requestID, &transferAuthenticationCode, &transferRequestID)
+	if isInternalTransfer != nil && *isInternalTransfer == true {
+		logrus.WithFields(fields).Info("find transfer by code - internal flag")
+		return t.findInternalOrExternalTransferByCode(ctx, requestID, transferAuthenticationCode, transferRequestID, true)
+	} else if isInternalTransfer != nil && *isInternalTransfer == false {
+		logrus.WithFields(fields).Info("find transfer by code - external flag")
+		return t.findInternalOrExternalTransferByCode(ctx, requestID, transferAuthenticationCode, transferRequestID, false)
+	} else {
+		logrus.WithFields(fields).Info("find transfer by code - internal")
+		var resp *TransfersResponse = nil
+		resp, err := t.findInternalOrExternalTransferByCode(ctx, requestID, transferAuthenticationCode, transferRequestID, true)
+		if err != nil {
+			logrus.WithFields(fields).Info("find transfer by code - external")
+			resp, err = t.findInternalOrExternalTransferByCode(ctx, requestID, transferAuthenticationCode, transferRequestID, false)
+			if err != nil {
+				logrus.WithFields(fields).WithError(err).
+					Error("default error transfer - FindTransferByCode")
+				return nil, ErrDefaultFindTransfers
+			}
+		}
+		return resp, nil
+	}
+
+}
+
+// findInternalOrExternalTransferByCode ...
+func (t *Transfers) findInternalOrExternalTransferByCode(ctx context.Context, requestID *string,
+	transferAuthenticationCode string, transferRequestID string, isInternalTransfer bool) (*TransfersResponse, error) {
+
+	if requestID == nil {
+		return nil, ErrInvalidCorrelationID
+	} else if len(transferAuthenticationCode) == 0 || len(transferRequestID) == 0 {
+		return nil, ErrInvalidTransferAuthenticationCode
+	}
+
+	fields := logrus.Fields{
+		"request_id":                   requestID,
+		"transfer_authentication_code": transferAuthenticationCode,
+		"transfer_request_id":          transferRequestID,
+		"is_internal_transfer":         isInternalTransfer,
+	}
+
+	endpoint, err := t.getTransfersAPIEndpoint(*requestID, &transferAuthenticationCode, &transferRequestID, isInternalTransfer)
 	if err != nil {
 		return nil, err
 	}
@@ -221,14 +267,14 @@ func (t *Transfers) FindTransferByCode(ctx context.Context, requestID *string,
 	}
 
 	logrus.WithFields(fields).
-		Error("default error transfer - FindTransferByCode")
+		Error("default error transfer - findInternalOrExternalTransferByCode")
 
 	return nil, ErrDefaultFindTransfers
 }
 
 // getTransfersAPIEndpoint
 func (t *Transfers) getTransfersAPIEndpoint(correlationID string,
-	transferAuthenticationCode *string, transferRequestID *string) (*string, error) {
+	transferAuthenticationCode *string, transferRequestID *string, isInternalTransfer bool) (*string, error) {
 
 	u, err := url.Parse(t.session.APIEndpoint)
 	if err != nil {
@@ -242,7 +288,12 @@ func (t *Transfers) getTransfersAPIEndpoint(correlationID string,
 			Error("error api endpoint")
 		return nil, err
 	}
-	u.Path = path.Join(u.Path, TransfersPath)
+
+	if isInternalTransfer {
+		u.Path = path.Join(u.Path, InternalTransfersPath)
+	} else {
+		u.Path = path.Join(u.Path, ExternalTransfersPath)
+	}
 
 	if transferAuthenticationCode != nil && transferRequestID != nil {
 		u.Path = path.Join(u.Path, "status")
