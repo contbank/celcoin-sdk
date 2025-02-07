@@ -175,10 +175,10 @@ func (t *Transfers) FindTransferByCode(ctx context.Context, requestID *string,
 		logrus.WithFields(fields).Info("find transfer by code - internal")
 		var resp *TransfersResponse = nil
 		resp, err := t.findInternalOrExternalTransferByCode(ctx, requestID, transferAuthenticationCode, transferRequestID, true)
-		if err != nil {
+		if err != nil || (resp != nil && resp.Error != nil) {
 			logrus.WithFields(fields).Info("find transfer by code - external")
 			resp, err = t.findInternalOrExternalTransferByCode(ctx, requestID, transferAuthenticationCode, transferRequestID, false)
-			if err != nil {
+			if err != nil || (resp != nil && resp.Error != nil) {
 				logrus.WithFields(fields).WithError(err).
 					Error("default error transfer - FindTransferByCode")
 				return nil, ErrDefaultFindTransfers
