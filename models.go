@@ -5,9 +5,16 @@ import (
 	"time"
 )
 
+type CompanyType string
+type PersonType string
+
 const (
-	// ISPBBankCode ...
-	ISPBBankCode string = "13935893"
+	// CelcoinBankCode ...
+	CelcoinBankCode string = "509"
+	// CelcoinBankISPB ...
+	CelcoinBankISPB string = "13935893"
+	// CelcoinBankName ...
+	CelcoinBankName string = "Contbank S.A. (Celcoin Instituição De Pagamento S.A.)"
 
 	// LoginPath ...
 	LoginPath string = "v5/token"
@@ -25,8 +32,12 @@ const (
 	ProposalFilesPath string = "/onboarding/v1/onboarding-proposal/files"
 	//NaturalPersonOnboardingPath ...
 	NaturalPersonOnboardingPath string = "/onboarding/v1/onboarding-proposal/natural-person"
-	// Transfers TED
-	TransfersPath string = "/baas-wallet-transactions-webservice/v1/spb/transfer"
+	// LegalPersonOnboardingPath ...
+	LegalPersonOnboardingPath string = "/onboarding/v1/onboarding-proposal/legal-person"
+	// ExternalTransfersPath external transfer (TED)
+	ExternalTransfersPath string = "/baas-wallet-transactions-webservice/v1/spb/transfer"
+	// InternalTransfersPath internal transfer
+	InternalTransfersPath string = "/baas-wallet-transactions-webservice/v1/wallet/internal/transfer"
 
 	// Pix ...
 	PixDictPath           string = "/celcoin-baas-pix-dict-webservice/v1/pix/dict/entry"
@@ -43,6 +54,7 @@ const (
 	// Webhook
 	WebhookPath string = "/baas-webhookmanager/v1/webhook"
 
+	// ONBOARDING CONSTANTS
 	// OnboardingStatusProcessing ...
 	OnboardingStatusProcessing string = "PROCESSING"
 	// OnboardingStatusApproved ...
@@ -51,14 +63,32 @@ const (
 	OnboardingStatusReproved string = "REPROVED"
 	// OnboardingStatusPending ...
 	OnboardingStatusPending string = "PENDING"
-
 	//ProposalTypeNaturalPerson ...
 	ProposalTypeNaturalPerson string = "NATURAL_PERSON"
 	// ProposalTypeLegalPerson ...
 	ProposalTypeLegalPerson string = "LEGAL_PERSON"
+	// LegalPersonOwnerTypeSocio ...
+	LegalPersonOwnerTypeSocio string = "SOCIO"
+	// LegalPersonOwnerTypeRepresentante ...
+	LegalPersonOwnerTypeRepresentante string = "REPRESENTANTE"
+	// LegalPersonOwnerTypeDemaisSocios...
+	LegalPersonOwnerTypeDemaisSocios string = "DEMAIS_SOCIOS"
+	// ProposalTypePF...
+	ProposalTypePF string = "PF"
+	// ProposalTypePJ...
+	ProposalTypePJ string = "PJ"
+	// OnboardingProposalCompanyTypes...
+	CompanyTypeME     CompanyType = "ME"
+	CompanyTypeMEI    CompanyType = "MEI"
+	CompanyTypeEPP    CompanyType = "EPP"
+	CompanyTypeLTDA   CompanyType = "LTDA"
+	CompanyTypeSA     CompanyType = "SA"
+	CompanyTypeEI     CompanyType = "EI"
+	CompanyTypeEIRELI CompanyType = "EIRELI"
+	CompanyTypePJ     CompanyType = "PJ"
+	// DefaultOnboardingType ...
+	DefaultOnboardingType string = "BAAS"
 )
-
-type PersonType string
 
 const (
 	// NaturalPersonType Pessoa Fisica
@@ -297,7 +327,7 @@ type WebhookReplayFilter struct {
 	DocumentNumber  string `json:"documentNumber,omitempty"`  // Número do documento
 	Account         string `json:"account,omitempty"`         // Conta associada ao webhook
 	ID              string `json:"id,omitempty"`              // ID do webhook
-	ClientRequestID string `json:"clientRequestId,omitempty"` // ID da solicitação do cliente
+	ClientRequestId string `json:"clientRequestId,omitempty"` // ID da solicitação do cliente
 }
 
 /*WEBHOOK MODELS*/
@@ -415,8 +445,37 @@ type BusinessResponseBody struct {
 	BusinessAddress     Address         `json:"businessAddress"`
 }
 
+// BusinessOnboardingResponse ... representa a resposta do onboarding de customer
+type BusinessOnboardingResponse struct {
+	Body    BusinessOnboardingResponseBody `json:"body"`
+	Version string                         `json:"version"`
+	Status  string                         `json:"status"`
+}
+
+// BusinessOnboardingResponseBody ... representa o corpo da resposta do onboarding de customer
+type BusinessOnboardingResponseBody struct {
+	ProposalID     string `json:"proposalId"`
+	ClientCode     string `json:"clientCode"`
+	DocumentNumber string `json:"documentNumber"`
+}
+
+// BusinessOnboardingRequest ... representa o payload para o onboarding de uma empresa.
+type BusinessOnboardingRequest struct {
+	ClientCode      string  `json:"clientCode"`
+	ContactNumber   string  `json:"contactNumber"`
+	DocumentNumber  string  `json:"documentNumber"`
+	BusinessEmail   string  `json:"businessEmail"`
+	BusinessName    string  `json:"businessName"`
+	TradingName     string  `json:"tradingName"`
+	CompanyType     string  `json:"companyType"`
+	Owner           []Owner `json:"owner"`
+	BusinessAddress Address `json:"businessAddress"`
+	OnboardingType  string  `json:"onboardingType"`
+}
+
 // Owner ...
 type Owner struct {
+	OwnerType                  string  `json:"ownerType"`
 	DocumentNumber             string  `json:"documentNumber"`
 	PhoneNumber                string  `json:"phoneNumber"`
 	Email                      string  `json:"email"`
@@ -1125,17 +1184,19 @@ type PixQrCodeLocationResponse struct {
 /* TRANSFERS */
 // TransfersRequest ...
 type TransfersRequest struct {
-	Amount         int64                       `validate:"required" json:"amount"`
-	ClientCode     string                      `validate:"required" json:"clientCode"`
-	DebitParty     TransfersDebitPartyRequest  `validate:"required,dive" json:"debitParty"`
-	CreditParty    TransfersCreditPartyRequest `validate:"required,dive" json:"creditParty"`
-	ClientFinality ClientFinality              `json:"clientFinality"`
-	Description    string                      `json:"description"`
+	Amount          int64                       `validate:"required" json:"amount"`
+	ClientCode      string                      `validate:"required" json:"clientCode"`
+	ClientRequestId string                      `json:"clientRequestId"`
+	DebitParty      TransfersDebitPartyRequest  `validate:"required,dive" json:"debitParty"`
+	CreditParty     TransfersCreditPartyRequest `validate:"required,dive" json:"creditParty"`
+	ClientFinality  ClientFinality              `json:"clientFinality"`
+	Description     string                      `json:"description"`
 }
 
 // TransfersDebitPartyRequest ...
 type TransfersDebitPartyRequest struct {
 	AccountNumber string `validate:"required" json:"account"`
+	BankISPB      string `json:"bank"`
 }
 
 // TransfersDebitPartyResponse ...
@@ -1167,11 +1228,14 @@ type TransfersCreditPartyResponse struct {
 
 // TransfersBodyResponse ...
 type TransfersBodyResponse struct {
-	ID          string                       `json:"id"`
-	Amount      int64                        `json:"amount"`
-	ClientCode  string                       `json:"clientCode"`
-	DebitParty  TransfersDebitPartyResponse  `json:"debitParty"`
-	CreditParty TransfersCreditPartyResponse `json:"creditParty"`
+	ID              string                       `json:"id"`
+	Amount          int64                        `json:"amount"`
+	ClientCode      string                       `json:"clientCode"`
+	ClientRequestId string                       `json:"clientRequestId"`
+	DebitParty      TransfersDebitPartyResponse  `json:"debitParty"`
+	CreditParty     TransfersCreditPartyResponse `json:"creditParty"`
+	EndToEndId      string                       `json:"endToEndId"`
+	Description     string                       `json:"description"`
 }
 
 // TransfersResponse representa a resposta da rota de cadastro de webhooks
@@ -1186,4 +1250,63 @@ type TransfersResponse struct {
 type TransfersError struct {
 	ErrorCode string `json:"errorCode"` // Código do erro
 	Message   string `json:"message"`   // Mensagem do erro
+}
+
+/* BOLETO */
+
+// CreateBoletoRequest is the payload to create a new Celcoin charge/boleto.
+type CreateBoletoRequest struct {
+	ExternalID             string       `json:"externalId"`
+	ExpirationAfterPayment int          `json:"expirationAfterPayment"`
+	DueDate                string       `json:"dueDate"`
+	Amount                 float64      `json:"amount"`
+	Key                    string       `json:"key,omitempty"` // optional
+	Debtor                 Debtor       `json:"debtor"`
+	Receiver               Receiver     `json:"receiver"`
+	Instructions           Instructions `json:"instructions"`
+}
+
+type Debtor struct {
+	Number       string `json:"number"`
+	Neighborhood string `json:"neighborhood"`
+	Name         string `json:"name"`
+	Document     string `json:"document"`
+	City         string `json:"city"`
+	PublicArea   string `json:"publicArea"`
+	State        string `json:"state"`
+	PostalCode   string `json:"postalCode"`
+}
+
+type Receiver struct {
+	Account  string `json:"account"`
+	Document string `json:"document"`
+}
+
+type Instructions struct {
+	Fine     float64  `json:"fine"`
+	Interest float64  `json:"interest"`
+	Discount Discount `json:"discount"`
+}
+
+type Discount struct {
+	Amount    float64 `json:"amount"`
+	Modality  string  `json:"modality"`  // "fixed" or "percent"
+	LimitDate string  `json:"limitDate"` // e.g. "2025-01-20T00:00:00.0000000"
+}
+
+// CreateBoletoResponse is the simplified response from POST /charge.
+type CreateBoletoResponse struct {
+	TransactionID string `json:"transactionId"`
+	Status        string `json:"status"`
+}
+
+// QueryBoletoResponse is the simplified struct for GET /charge?TransactionId=...
+type QueryBoletoResponse struct {
+	TransactionID string `json:"transactionId"`
+	Status        string `json:"status"`
+}
+
+// CancelInput is the JSON body for DELETE /charge/:id requests.
+type CancelInput struct {
+	Reason string `json:"reason"`
 }
