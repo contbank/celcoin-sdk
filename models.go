@@ -47,6 +47,12 @@ const (
 	PixStaticPath       string = "/pix/v1/brcode/static"
 	PixCashInStatusPath string = "/pix/v2/receivement/v2/devolution/status"
 
+	// StatementPath ...
+	StatementPath string = "/baas-walletreports/v1/wallet/movement"
+
+	// IncomeReportPath ...
+	IncomeReportPath string = "/baas-accountmanager/v1/account/income-report"
+
 	// Webhook
 	WebhookPath string = "/baas-webhookmanager/v1/webhook"
 
@@ -1011,4 +1017,91 @@ type QueryBoletoResponse struct {
 // CancelInput is the JSON body for DELETE /charge/:id requests.
 type CancelInput struct {
 	Reason string `json:"reason"`
+}
+
+// StatementResponse ... define a estrutura da resposta da API.
+type StatementResponse struct {
+	Status       string        `json:"status"`
+	Version      string        `json:"version"`
+	TotalItems   int           `json:"totalItems"`
+	CurrentPage  int           `json:"currentPage"`
+	LimitPerPage int           `json:"limitPerPage"`
+	TotalPages   int           `json:"totalPages"`
+	DateFrom     string        `json:"dateFrom"`
+	DateTo       string        `json:"dateTo"`
+	Body         StatementBody `json:"body"`
+}
+
+// StatementBody ... define a estrutura do corpo da resposta.
+type StatementBody struct {
+	Account        string              `json:"account"`
+	DocumentNumber string              `json:"documentNumber"`
+	Movements      []StatementMovement `json:"movements"`
+}
+
+// StatementMovement ... define a estrutura de cada movimento.
+type StatementMovement struct {
+	ID             string  `json:"id"`
+	ClientCode     string  `json:"clientCode"`
+	Description    string  `json:"description"`
+	CreateDate     string  `json:"createDate"`
+	LastUpdateDate string  `json:"lastUpdateDate"`
+	Amount         float64 `json:"amount"`
+	Status         string  `json:"status"`
+	BalanceType    string  `json:"balanceType"`
+	MovementType   string  `json:"movementType"`
+}
+
+// StatementRequest ... define a estrutura da requisição da API.
+type StatementRequest struct {
+	Account        *string `json:"Account"`
+	DateFrom       *string `json:"DateFrom"`
+	DateTo         *string `json:"DateTo"`
+	DocumentNumber *string `json:"DocumentNumber"`
+	LimitPerPage   *string `json:"LimitPerPage"`
+}
+
+// IncomeReportPayerSource ... define a estrutura da fonte pagadora.
+type IncomeReportPayerSource struct {
+	Name           string `json:"name"`
+	DocumentNumber string `json:"documentNumber"`
+}
+
+// IncomeReportOwner ... define a estrutura do proprietário.
+type IncomeReportOwner struct {
+	DocumentNumber string `json:"documentNumber"`
+	Name           string `json:"name"`
+	Type           string `json:"type"`
+	CreateDate     string `json:"createDate"`
+}
+
+// IncomeReportAccount ... define a estrutura da conta.
+type IncomeReportAccount struct {
+	Branch  string `json:"branch"`
+	Account string `json:"account"`
+}
+
+// IncomeReportBalance ... define a estrutura do saldo.
+type IncomeReportBalance struct {
+	CalendarYear string  `json:"calendarYear"`
+	Amount       float64 `json:"amount"`
+	Currency     string  `json:"currency"`
+	Type         string  `json:"type"`
+}
+
+// IncomeReportBody ... define a estrutura do corpo do relatório de rendimentos.
+type IncomeReportBody struct {
+	PayerSource IncomeReportPayerSource `json:"payerSource"`
+	Owner       IncomeReportOwner       `json:"owner"`
+	Account     IncomeReportAccount     `json:"account"`
+	Balances    []IncomeReportBalance   `json:"balances"`
+	IncomeFile  string                  `json:"incomeFile"`
+	FileType    string                  `json:"fileType"`
+}
+
+// IncomeReportResponse ... define a estrutura da resposta da API de relatório de rendimentos.
+type IncomeReportResponse struct {
+	Version string           `json:"version"`
+	Status  string           `json:"status"`
+	Body    IncomeReportBody `json:"body"`
 }
