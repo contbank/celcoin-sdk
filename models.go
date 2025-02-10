@@ -34,8 +34,10 @@ const (
 	NaturalPersonOnboardingPath string = "/onboarding/v1/onboarding-proposal/natural-person"
 	// LegalPersonOnboardingPath ...
 	LegalPersonOnboardingPath string = "/onboarding/v1/onboarding-proposal/legal-person"
-	// Transfers TED
-	TransfersPath string = "/baas-wallet-transactions-webservice/v1/spb/transfer"
+	// ExternalTransfersPath external transfer (TED)
+	ExternalTransfersPath string = "/baas-wallet-transactions-webservice/v1/spb/transfer"
+	// InternalTransfersPath internal transfer
+	InternalTransfersPath string = "/baas-wallet-transactions-webservice/v1/wallet/internal/transfer"
 
 	// Pix ...
 	PixDictPath         string = "/celcoin-baas-pix-dict-webservice/v1/pix/dict/entry"
@@ -309,7 +311,7 @@ type WebhookReplayFilter struct {
 	DocumentNumber  string `json:"documentNumber,omitempty"`  // Número do documento
 	Account         string `json:"account,omitempty"`         // Conta associada ao webhook
 	ID              string `json:"id,omitempty"`              // ID do webhook
-	ClientRequestID string `json:"clientRequestId,omitempty"` // ID da solicitação do cliente
+	ClientRequestId string `json:"clientRequestId,omitempty"` // ID da solicitação do cliente
 }
 
 /*WEBHOOK MODELS*/
@@ -887,17 +889,19 @@ type PixCashInStaticResponse struct {
 /* TRANSFERS */
 // TransfersRequest ...
 type TransfersRequest struct {
-	Amount         int64                       `validate:"required" json:"amount"`
-	ClientCode     string                      `validate:"required" json:"clientCode"`
-	DebitParty     TransfersDebitPartyRequest  `validate:"required,dive" json:"debitParty"`
-	CreditParty    TransfersCreditPartyRequest `validate:"required,dive" json:"creditParty"`
-	ClientFinality ClientFinality              `json:"clientFinality"`
-	Description    string                      `json:"description"`
+	Amount          int64                       `validate:"required" json:"amount"`
+	ClientCode      string                      `validate:"required" json:"clientCode"`
+	ClientRequestId string                      `json:"clientRequestId"`
+	DebitParty      TransfersDebitPartyRequest  `validate:"required,dive" json:"debitParty"`
+	CreditParty     TransfersCreditPartyRequest `validate:"required,dive" json:"creditParty"`
+	ClientFinality  ClientFinality              `json:"clientFinality"`
+	Description     string                      `json:"description"`
 }
 
 // TransfersDebitPartyRequest ...
 type TransfersDebitPartyRequest struct {
 	AccountNumber string `validate:"required" json:"account"`
+	BankISPB      string `json:"bank"`
 }
 
 // TransfersDebitPartyResponse ...
@@ -929,11 +933,14 @@ type TransfersCreditPartyResponse struct {
 
 // TransfersBodyResponse ...
 type TransfersBodyResponse struct {
-	ID          string                       `json:"id"`
-	Amount      int64                        `json:"amount"`
-	ClientCode  string                       `json:"clientCode"`
-	DebitParty  TransfersDebitPartyResponse  `json:"debitParty"`
-	CreditParty TransfersCreditPartyResponse `json:"creditParty"`
+	ID              string                       `json:"id"`
+	Amount          int64                        `json:"amount"`
+	ClientCode      string                       `json:"clientCode"`
+	ClientRequestId string                       `json:"clientRequestId"`
+	DebitParty      TransfersDebitPartyResponse  `json:"debitParty"`
+	CreditParty     TransfersCreditPartyResponse `json:"creditParty"`
+	EndToEndId      string                       `json:"endToEndId"`
+	Description     string                       `json:"description"`
 }
 
 // TransfersResponse representa a resposta da rota de cadastro de webhooks
