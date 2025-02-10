@@ -50,6 +50,9 @@ const (
 	// StatementPath ...
 	StatementPath string = "/baas-walletreports/v1/wallet/movement"
 
+	// IncomeReportPath ...
+	IncomeReportPath string = "/baas-accountmanager/v1/account/income-report"
+
 	// Webhook
 	WebhookPath string = "/baas-webhookmanager/v1/webhook"
 
@@ -1056,4 +1059,34 @@ type StatementRequest struct {
 	DateTo         *string `json:"DateTo"`
 	DocumentNumber *string `json:"DocumentNumber"`
 	LimitPerPage   *string `json:"LimitPerPage"`
+}
+
+// IncomeReportResponse ... define a estrutura da resposta da API de relatório de rendimentos.
+type IncomeReportResponse struct {
+	Version string `json:"version"`
+	Status  string `json:"status"`
+	Body    struct {
+		PayerSource struct {
+			Name           string `json:"name"`
+			DocumentNumber string `json:"documentNumber"`
+		} `json:"payerSource"`
+		Owner struct {
+			DocumentNumber string `json:"documentNumber"`
+			Name           string `json:"name"`
+			Type           string `json:"type"`
+			CreateDate     string `json:"createDate"`
+		} `json:"owner"`
+		Account struct {
+			Branch  string `json:"branch"`
+			Account string `json:"account"`
+		} `json:"account"`
+		Balances []struct {
+			CalendarYear string  `json:"calendarYear"`
+			Amount       float64 `json:"amount"`
+			Currency     string  `json:"currency"`
+			Type         string  `json:"type"`
+		} `json:"balances"`
+		IncomeFile string `json:"incomeFile"`
+		FileType   string `json:"fileType"`
+	} `json:"body"`
 }

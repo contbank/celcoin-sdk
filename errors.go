@@ -474,19 +474,6 @@ var errorIncomeReportList = []Error{
 	},
 }
 
-// FindIncomeReportError Find income report errors.
-func FindIncomeReportError(code string, messages ...string) *grok.Error {
-	code = verifyInvalidIncomeReportParameter(code, messages)
-
-	for _, v := range errorCardList {
-		if v.ErrorKey == code {
-			return v.GrokError
-		}
-	}
-
-	return grok.NewError(http.StatusInternalServerError, code, messages...)
-}
-
 // verifyInvalidIncomeReportParameter Find the correspondent error message for income reports.
 func verifyInvalidIncomeReportParameter(code string, messages []string) string {
 	if code == "CALENDAR_NOT_ALLOWED" {
@@ -965,6 +952,26 @@ var StatementErrorMappings = map[string]struct {
 // FindStatementError ... retorna a mensagem de erro correspondente ao código de erro de Onboarding
 func FindStatementError(code string, responseStatus *int) *grok.Error {
 	if mapping, exists := StatementErrorMappings[code]; exists {
+		return grok.NewError(*responseStatus, mapping.ContbankCode, mapping.Description)
+	}
+	return grok.NewError(http.StatusInternalServerError, "UNKNOWN_ERROR", "unknown error")
+}
+
+// IncomeReportErrorMappings ... mapeia os códigos de erro do parceiro Celcoin para os códigos de erro do Contbank com descrição
+var IncomeReportErrorMappings = map[string]struct {
+	ContbankCode string
+	Description  string
+}{
+	"CIE999": {"INTERNAL_API_ERROR", "Ocorreu um erro interno durante a chamada da api."},
+	"OIE999": {"INTERNAL_API_ERROR", "Ocorreu um erro interno durante a chamada da api."},
+	"CBE078": {"ACCOUNT_NOT_FOUND", "Nenhuma conta foi encontrada."},
+	"CBE445": {"YEAR_CALENDAR_REQUIRED", "O campo calendarYear é obrigatório."},
+	"CBE091": {"ACCOUNT_NUMBER_REQUIRED", "É necessário informar o campo: account."},
+}
+
+// FindIncomeReportError ... retorna a mensagem de erro correspondente ao código de erro de informes de rendimento
+func FindIncomeReportError(code string, responseStatus *int) *grok.Error {
+	if mapping, exists := IncomeReportErrorMappings[code]; exists {
 		return grok.NewError(*responseStatus, mapping.ContbankCode, mapping.Description)
 	}
 	return grok.NewError(http.StatusInternalServerError, "UNKNOWN_ERROR", "unknown error")
