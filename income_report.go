@@ -27,19 +27,19 @@ func NewIncomeReport(httpClient *http.Client, session Session) *IncomeReport {
 
 // GetIncomeReport ...
 func (r *IncomeReport) GetIncomeReport(ctx context.Context,
-	documentNumber *string, accountNumber *string) (*IncomeReportResponse, error) {
+	calendarYear *string, accountNumber *string) (*IncomeReportResponse, error) {
 
 	requestID, _ := ctx.Value("Request-Id").(string)
 	fields := logrus.Fields{
 		"request_id": requestID,
 	}
 
-	if documentNumber != nil {
-		fields["document_number"] = documentNumber
+	if calendarYear != nil {
+		fields["calendarYear"] = calendarYear
 	}
 
 	if accountNumber != nil {
-		fields["account_number"] = accountNumber
+		fields["account"] = accountNumber
 	}
 
 	u, err := url.Parse(r.session.APIEndpoint)
@@ -51,8 +51,8 @@ func (r *IncomeReport) GetIncomeReport(ctx context.Context,
 
 	q := u.Query()
 
-	if documentNumber != nil && len(*documentNumber) > 0 {
-		q.Set("documentNumber", *documentNumber)
+	if calendarYear != nil && len(*calendarYear) > 0 {
+		q.Set("calendarYear", *calendarYear)
 	}
 
 	if accountNumber != nil && len(*accountNumber) > 0 {
@@ -99,12 +99,12 @@ func (r *IncomeReport) GetIncomeReport(ctx context.Context,
 		}
 	}
 
-	var incomeReportResponse IncomeReportResponse
-	if err := json.NewDecoder(resp.Body).Decode(&incomeReportResponse); err != nil {
+	var incomeReportResponse *IncomeReportResponse
+	if err := json.Unmarshal(bodyBytes, &incomeReportResponse); err != nil {
 		logrus.WithFields(fields).WithError(err).
-			Error("error decoding response")
+			Error("error unmarshal")
 		return nil, err
 	}
 
-	return &incomeReportResponse, nil
+	return incomeReportResponse, nil
 }

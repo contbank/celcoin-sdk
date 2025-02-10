@@ -1061,32 +1061,47 @@ type StatementRequest struct {
 	LimitPerPage   *string `json:"LimitPerPage"`
 }
 
+// IncomeReportPayerSource ... define a estrutura da fonte pagadora.
+type IncomeReportPayerSource struct {
+	Name           string `json:"name"`
+	DocumentNumber string `json:"documentNumber"`
+}
+
+// IncomeReportOwner ... define a estrutura do proprietário.
+type IncomeReportOwner struct {
+	DocumentNumber string `json:"documentNumber"`
+	Name           string `json:"name"`
+	Type           string `json:"type"`
+	CreateDate     string `json:"createDate"`
+}
+
+// IncomeReportAccount ... define a estrutura da conta.
+type IncomeReportAccount struct {
+	Branch  string `json:"branch"`
+	Account string `json:"account"`
+}
+
+// IncomeReportBalance ... define a estrutura do saldo.
+type IncomeReportBalance struct {
+	CalendarYear string  `json:"calendarYear"`
+	Amount       float64 `json:"amount"`
+	Currency     string  `json:"currency"`
+	Type         string  `json:"type"`
+}
+
+// IncomeReportBody ... define a estrutura do corpo do relatório de rendimentos.
+type IncomeReportBody struct {
+	PayerSource IncomeReportPayerSource `json:"payerSource"`
+	Owner       IncomeReportOwner       `json:"owner"`
+	Account     IncomeReportAccount     `json:"account"`
+	Balances    []IncomeReportBalance   `json:"balances"`
+	IncomeFile  string                  `json:"incomeFile"`
+	FileType    string                  `json:"fileType"`
+}
+
 // IncomeReportResponse ... define a estrutura da resposta da API de relatório de rendimentos.
 type IncomeReportResponse struct {
-	Version string `json:"version"`
-	Status  string `json:"status"`
-	Body    struct {
-		PayerSource struct {
-			Name           string `json:"name"`
-			DocumentNumber string `json:"documentNumber"`
-		} `json:"payerSource"`
-		Owner struct {
-			DocumentNumber string `json:"documentNumber"`
-			Name           string `json:"name"`
-			Type           string `json:"type"`
-			CreateDate     string `json:"createDate"`
-		} `json:"owner"`
-		Account struct {
-			Branch  string `json:"branch"`
-			Account string `json:"account"`
-		} `json:"account"`
-		Balances []struct {
-			CalendarYear string  `json:"calendarYear"`
-			Amount       float64 `json:"amount"`
-			Currency     string  `json:"currency"`
-			Type         string  `json:"type"`
-		} `json:"balances"`
-		IncomeFile string `json:"incomeFile"`
-		FileType   string `json:"fileType"`
-	} `json:"body"`
+	Version string           `json:"version"`
+	Status  string           `json:"status"`
+	Body    IncomeReportBody `json:"body"`
 }
