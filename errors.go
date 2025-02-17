@@ -892,6 +892,22 @@ var PixErrorMappings = map[string]struct {
 	"CBE159":  {"BLOCKED_ACCOUNT", "Lançamento não permitido.Sua conta esta bloqueada."},
 	"PBE7055": {"RECEIVER_INSTITUTION_NOT_RESPONDING", "Instituição recebedora não está respondendo"},
 	"CBE150":  {"INVALID_PARAMETERS", "É necessário informar pelo menos um dos campos: id, clientCode, ou endtoendId."},
+	"DE004":   {"INVALID_TRANSACTIONID", "Nao foi possivel excluir, location não encontrado"},
+	"CBE224":  {"INVALID_JSON_FORMAT", "Formato do JSON está fora do padrão. Verifique a documentação."},
+	"CBE286":  {"CLAIM_NOT_ALLOWED_FOR_EVP", "Não é permitido realizar pedido de Claim para chave EVP."},
+	"CBE287":  {"CLAIM_NOT_ALLOWED_FOR_CPF_CNPJ", "Não é permitido realizar pedido de Claim para chave CPF/CNPJ."},
+	"CBE290":  {"ACTIVE_CLAIM_EXISTS", "A chave já possui uma solicitação de reivindicação ativa."},
+	"CBE293":  {"PORTABILITY_REQUEST_EXISTS", "Já existe uma solicitação de portabilidade para essa chave."},
+	"CBE295":  {"PORTABILITY_NOT_ALLOWED", "Não é possível solicitar uma portabilidade para uma chave que pertence a outra pessoa."},
+	"CBE346":  {"MISSING_CLAIM_TYPE", "O campo ClaimType é obrigatório."},
+	"CBE349":  {"INVALID_CLAIM_TYPE", "O valor do claimType não é válido. O claimType deve ser 'OWNERSHIP' ou 'PORTABILITY'."},
+	"CBE345":  {"KYC_PENDING_ISSUE", "Cadastro com pendências no KYC, favor verificar."},
+	"CBE303":  {"MISSING_CLAIM_ID", "É preciso informar o campo: claimId."},
+	"CBE351":  {"CLAIM_NOT_FOUND", "Não foi possível encontrar dados relacionados à Claim informada."},
+	"CBE301":  {"INVALID_REASON", "Reason fornecido inválido."},
+	"CBE306":  {"CLAIM_NOT_PENDING", "Não foi possível confirmar essa Claim, pois a mesma não está mais pendente."},
+	"CBE320":  {"CLAIM_NOT_FOUND", "Claim não encontrada."},
+	"CBE348":  {"ACCOUNT_BLOCKED", "Operação não permitida. Conta está bloqueada."},
 }
 
 // FindPixError ... retorna a mensagem de erro correspondente ao código de erro de Pix
