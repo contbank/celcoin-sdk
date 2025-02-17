@@ -210,10 +210,11 @@ func (s *PixsTestSuite) TestGetPixKeys() {
 
 func (s *PixsTestSuite) TestPaymentPixCashOut() {
 	// Cenário: Resposta bem-sucedida para QR Code Dinâmico
+	transactionIdentification := "dc8cf02b81b54bd59323453b207e704a"
 	dynamicQRCodeRequest := &celcoin.PixCashOutRequest{
 		Amount:                    25.55,
 		ClientCode:                "1458854",
-		TransactionIdentification: "dc8cf02b81b54bd59323453b207e704a",
+		TransactionIdentification: transactionIdentification,
 		EndToEndId:                "E3030629420200808185300887639654",
 		InitiationType:            "DYNAMIC_QRCODE",
 		PaymentType:               "IMMEDIATE",
@@ -238,16 +239,28 @@ func (s *PixsTestSuite) TestPaymentPixCashOut() {
 		Status:  "SUCCESS",
 		Version: "1.0",
 		Body: celcoin.PixCashOutResponseBody{
+			ID:                        "123",
+			ClientCode:                "1458854",
+			EndToEndID:                "E3030629420200808185300887639654",
+			PaymentType:               "IMMEDIATE",
+			Urgency:                   "HIGH",
+			TransactionType:           "TRANSFER",
+			Amount:                    25.55,
+			TransactionIdentification: &transactionIdentification,
 			InitiationType:            "DYNAMIC_QRCODE",
-			TransactionIdentification: &dynamicQRCodeRequest.TransactionIdentification,
-			Status:                    "COMPLETED",
-			Amount:                    dynamicQRCodeRequest.Amount,
-			Currency:                  "BRL",
-			CreationDate:              "2025-01-22T10:00:00Z",
-			CompletionDate: func() *string {
-				date := "2025-01-22T10:05:00Z"
-				return &date
-			}(),
+			DebitParty: celcoin.DebitParty{
+				Account: "444444",
+			},
+			CreditParty: celcoin.CreditParty{
+				Bank:        "30306294",
+				Key:         "5244f4e-15ff-413d-808d-7837652ebdc2",
+				Account:     "10545584",
+				Branch:      "10545584",
+				TaxId:       "11122233344",
+				Name:        "Celcoin",
+				AccountType: "CACC",
+			},
+			RemittanceInformation: "Texto de mensagem",
 		},
 	}
 
@@ -269,7 +282,6 @@ func (s *PixsTestSuite) TestPaymentPixCashOut() {
 	s.Assert().NoError(err, "Erro inesperado ao processar PixCashOut por QR Code Dinâmico")
 	s.Assert().NotNil(response, "A resposta não deve ser nula")
 	s.Assert().Equal("SUCCESS", response.Status, "O status esperado era SUCCESS")
-	s.Assert().Equal("COMPLETED", response.Body.Status, "Status da transação incorreto")
 	s.Assert().Equal(dynamicQRCodeRequest.Amount, response.Body.Amount, "Valor da transação incorreto")
 
 	// Cenário: Resposta bem-sucedida para QR Code Estático
@@ -301,16 +313,18 @@ func (s *PixsTestSuite) TestPaymentPixCashOut() {
 		Status:  "SUCCESS",
 		Version: "1.0",
 		Body: celcoin.PixCashOutResponseBody{
-			InitiationType:            "STATIC_QRCODE",
+			ID:                        "124",
+			ClientCode:                staticQRCodeRequest.ClientCode,
 			TransactionIdentification: &staticQRCodeRequest.TransactionIdentification,
-			Status:                    "COMPLETED",
+			EndToEndID:                staticQRCodeRequest.EndToEndId,
+			PaymentType:               staticQRCodeRequest.PaymentType,
+			Urgency:                   staticQRCodeRequest.Urgency,
+			TransactionType:           staticQRCodeRequest.TransactionType,
 			Amount:                    staticQRCodeRequest.Amount,
-			Currency:                  "BRL",
-			CreationDate:              "2025-01-22T10:00:00Z",
-			CompletionDate: func() *string {
-				date := "2025-01-22T10:05:00Z"
-				return &date
-			}(),
+			InitiationType:            staticQRCodeRequest.InitiationType,
+			DebitParty:                staticQRCodeRequest.DebitParty,
+			CreditParty:               staticQRCodeRequest.CreditParty,
+			RemittanceInformation:     staticQRCodeRequest.RemittanceInformation,
 		},
 	}
 
@@ -329,7 +343,6 @@ func (s *PixsTestSuite) TestPaymentPixCashOut() {
 	s.Assert().NoError(err, "Erro inesperado ao processar PixCashOut por QR Code Estático")
 	s.Assert().NotNil(response, "A resposta não deve ser nula")
 	s.Assert().Equal("SUCCESS", response.Status, "O status esperado era SUCCESS")
-	s.Assert().Equal("COMPLETED", response.Body.Status, "Status da transação incorreto")
 	s.Assert().Equal(staticQRCodeRequest.Amount, response.Body.Amount, "Valor da transação incorreto")
 
 	// Cenário: Resposta bem-sucedida para Chaves Pix
@@ -357,16 +370,18 @@ func (s *PixsTestSuite) TestPaymentPixCashOut() {
 		Status:  "SUCCESS",
 		Version: "1.0",
 		Body: celcoin.PixCashOutResponseBody{
-			InitiationType:            "DICT",
+			ID:                        "txn-12345",
+			ClientCode:                pixKeysRequest.ClientCode,
 			TransactionIdentification: &pixKeysRequest.TransactionIdentification,
-			Status:                    "COMPLETED",
+			EndToEndID:                pixKeysRequest.EndToEndId,
+			InitiationType:            "DICT",
+			PaymentType:               "IMMEDIATE",
+			Urgency:                   "HIGH",
+			TransactionType:           "TRANSFER",
+			DebitParty:                pixKeysRequest.DebitParty,
+			CreditParty:               pixKeysRequest.CreditParty,
+			RemittanceInformation:     pixKeysRequest.RemittanceInformation,
 			Amount:                    pixKeysRequest.Amount,
-			Currency:                  "BRL",
-			CreationDate:              "2025-01-22T10:00:00Z",
-			CompletionDate: func() *string {
-				date := "2025-01-22T10:05:00Z"
-				return &date
-			}(),
 		},
 	}
 
@@ -385,7 +400,6 @@ func (s *PixsTestSuite) TestPaymentPixCashOut() {
 	s.Assert().NoError(err, "Erro inesperado ao processar PixCashOut por Chaves Pix")
 	s.Assert().NotNil(response, "A resposta não deve ser nula")
 	s.Assert().Equal("SUCCESS", response.Status, "O status esperado era SUCCESS")
-	s.Assert().Equal("COMPLETED", response.Body.Status, "Status da transação incorreto")
 	s.Assert().Equal(pixKeysRequest.Amount, response.Body.Amount, "Valor da transação incorreto")
 
 	// Cenário: Resposta bem-sucedida para dados bancários
@@ -414,16 +428,11 @@ func (s *PixsTestSuite) TestPaymentPixCashOut() {
 		Status:  "SUCCESS",
 		Version: "1.0",
 		Body: celcoin.PixCashOutResponseBody{
-			InitiationType:            "MANUAL",
-			TransactionIdentification: &bankDetailsRequest.TransactionIdentification,
-			Status:                    "COMPLETED",
-			Amount:                    bankDetailsRequest.Amount,
-			Currency:                  "BRL",
-			CreationDate:              "2025-01-22T10:00:00Z",
-			CompletionDate: func() *string {
-				date := "2025-01-22T10:05:00Z"
-				return &date
-			}(),
+			InitiationType:        bankDetailsRequest.InitiationType,
+			Amount:                bankDetailsRequest.Amount,
+			DebitParty:            bankDetailsRequest.DebitParty,
+			CreditParty:           bankDetailsRequest.CreditParty,
+			RemittanceInformation: bankDetailsRequest.RemittanceInformation,
 		},
 	}
 
@@ -442,7 +451,6 @@ func (s *PixsTestSuite) TestPaymentPixCashOut() {
 	s.Assert().NoError(err, "Erro inesperado ao processar PixCashOut por dados bancários")
 	s.Assert().NotNil(response, "A resposta não deve ser nula")
 	s.Assert().Equal("SUCCESS", response.Status, "O status esperado era SUCCESS")
-	s.Assert().Equal("COMPLETED", response.Body.Status, "Status da transação incorreto")
 	s.Assert().Equal(bankDetailsRequest.Amount, response.Body.Amount, "Valor da transação incorreto")
 }
 
