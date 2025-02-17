@@ -58,7 +58,7 @@ func (s *PixsTestSuite) SetupTest() {
 	s.pixService = celcoin.NewPixs(s.client, *s.session)
 }
 
-// TestCreatePixKey testa o método de criação de chave pix
+// TestCreatePixKey testa o método de criação de chave pix.
 func (s *PixsTestSuite) TestCreatePixKey() {
 	request := celcoin.PixKeyRequest{
 		Key:     "test-key",
