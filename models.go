@@ -40,8 +40,9 @@ const (
 	InternalTransfersPath string = "/baas-wallet-transactions-webservice/v1/wallet/internal/transfer"
 
 	// Pix ...
+	PixClaimPath          string = "/celcoin-baas-pix-dict-webservice/v1/pix/dict/claim"
 	PixDictPath           string = "/celcoin-baas-pix-dict-webservice/v1/pix/dict/entry"
-	PixDictDueDatePath    string = "/v1/dict/v2/key"
+	PixDictDueDatePath    string = "/pix/v1/dict/v2/key"
 	PixCashOutPath        string = "/baas-wallet-transactions-webservice/v1/pix/payment"
 	PixCashInPath         string = "/pix/v2/receivement/v2"
 	PixEmvPath            string = "/pix/v1/emv"
@@ -148,6 +149,34 @@ const (
 	PixPHONE PixType = "PHONE"
 	//  PixEVP ...
 	PixEVP PixType = "EVP"
+)
+
+type PixClaimType string
+
+const (
+	Portability PixClaimType = "PORTABILITY"
+	Ownership   PixClaimType = "OWNERSHIP"
+)
+
+type StatusClaim string
+
+const (
+	Open              StatusClaim = "OPEN"
+	WaitingResolution StatusClaim = "WAITING_RESOLUTION"
+	Confirmed         StatusClaim = "CONFIRMED"
+	CanceledClaim     StatusClaim = "CANCELED"
+	CompletedClaim    StatusClaim = "COMPLETED"
+)
+
+type CancelReason string
+
+const (
+	UserRequested    CancelReason = "USER_REQUESTED"
+	ClaimerRequest   CancelReason = "CLAIMER_REQUEST"
+	DonorRequest     CancelReason = "DONOR_REQUEST"
+	AccountClosure   CancelReason = "ACCOUNT_CLOSURE"
+	Fraud            CancelReason = "FRAUD"
+	DefaultOperation CancelReason = "DEFAULT_OPERATION"
 )
 
 // AuthenticationResponse ...
@@ -675,6 +704,13 @@ type PixKeyAccount struct {
 	AccountType string    `json:"accountType"`
 	CreateDate  time.Time `json:"createDate"`
 }
+type PixExternalKeyAccount struct {
+	Participant string    `json:"participant"`
+	Branch      int       `json:"branch"`
+	Account     string    `json:"accountNumber"`
+	AccountType string    `json:"accountType"`
+	OpeningDate time.Time `json:"openingDate"`
+}
 
 // PixKeyOwner representa as informações do proprietário da Pix Key.
 type PixKeyOwner struct {
@@ -737,13 +773,13 @@ type PixExternalKeyErrorResponse struct {
 
 // PixExternalKeyDueDateResponse representa a resposta de uma consulta de chave Pix externa (COBV - DUEDATE).
 type PixExternalKeyDueDateResponse struct {
-	Key              string        `json:"key"`
-	KeyType          string        `json:"keyType"`
-	Account          PixKeyAccount `json:"account"`
-	Owner            PixKeyOwner   `json:"owner"`
-	EndToEndId       string        `json:"endtoendid"`
-	CreationDate     time.Time     `json:"creationDate"`
-	KeyOwnershipDate time.Time     `json:"keyOwnershipDate"`
+	Key              string                `json:"key"`
+	KeyType          string                `json:"keyType"`
+	Account          PixExternalKeyAccount `json:"account"`
+	Owner            PixKeyOwner           `json:"owner"`
+	EndToEndId       string                `json:"endtoendid"`
+	CreationDate     time.Time             `json:"creationDate"`
+	KeyOwnershipDate time.Time             `json:"keyOwnershipDate"`
 }
 
 // PixCashOutRequest representa os dados para realizar um Pix Cash-Out.
@@ -968,7 +1004,7 @@ type QRCodeDueDateResponse struct {
 	Revision              string              `json:"revision"`
 	Status                string              `json:"status"`
 	Key                   string              `json:"key"`
-	Amount                PixAmount           `json:"amount"`
+	Amount                PixQrCodeAmount     `json:"amount"`
 	AdditionalInformation []PixAdditionalInfo `json:"additionalInformation"`
 }
 
@@ -982,34 +1018,44 @@ type PixReceiver struct {
 	State       string `json:"state,omitempty"`
 	PostalCode  string `json:"postalCode,omitempty"`
 	Name        string `json:"name"`
+	Email       string `json:"email,omitempty"`
 }
 
 // Amount representa os valores relacionados à transação.
 type PixAmount struct {
-	Original   string            `json:"original,omitempty"`
-	Abatement  PixChargeFee      `json:"abatement,omitempty"`
-	Discount   PixAmountDiscount `json:"discount,omitempty"`
-	Interest   PixChargeFee      `json:"interest,omitempty"`
-	Fine       PixChargeFee      `json:"fine,omitempty"`
-	Final      string            `json:"final,omitempty"`
-	ChangeType int               `json:"changeType"`
-	Withdrawal *PixWithdrawal    `json:"withdrawal,omitempty"`
-	Change     *PixChangeDetails `json:"change,omitempty"`
+	Original   *string            `json:"original,omitempty"`
+	Abatement  *PixChargeFee      `json:"abatement,omitempty"`
+	Discount   *PixAmountDiscount `json:"discount,omitempty"`
+	Interest   *PixChargeFee      `json:"interest,omitempty"`
+	Fine       *PixChargeFee      `json:"fine,omitempty"`
+	Final      *string            `json:"final,omitempty"`
+	ChangeType int                `json:"changeType"`
+	Withdrawal *PixWithdrawal     `json:"withdrawal,omitempty"`
+	Change     *PixChangeDetails  `json:"change,omitempty"`
 }
 
+// Amount representa os valores relacionados à transação.
+type PixQrCodeAmount struct {
+	Original  *string `json:"original,omitempty"`
+	Abatement *string `json:"abatement,omitempty"`
+	Discount  *string `json:"discount,omitempty"`
+	Interest  *string `json:"interest,omitempty"`
+	Fine      *string `json:"fine,omitempty"`
+	Final     *string `json:"final,omitempty"`
+}
 type PixWithdrawal struct {
-	VldnAmount                float64 `json:"vldnAmount"`
-	AgentMode                 *string `json:"agentMode,omitempty"`
-	WithdrawalServiceProvider *string `json:"withdrawalServiceProvider,omitempty"`
-	ChangeType                int     `json:"changeType"`
+	VldnAmount                *float64 `json:"vldnAmount"`
+	AgentMode                 *string  `json:"agentMode,omitempty"`
+	WithdrawalServiceProvider *string  `json:"withdrawalServiceProvider,omitempty"`
+	ChangeType                int      `json:"changeType"`
 }
 
 type PixChangeDetails struct {
-	VldnAmount                float64 `json:"vldnAmount"`
-	VlcpAmount                float64 `json:"vlcpAmount"`
-	AgentMode                 *string `json:"agentMode,omitempty"`
-	WithdrawalServiceProvider *string `json:"withdrawalServiceProvider,omitempty"`
-	ChangeType                int     `json:"changeType"`
+	VldnAmount                *float64 `json:"vldnAmount"`
+	VlcpAmount                *float64 `json:"vlcpAmount"`
+	AgentMode                 *string  `json:"agentMode,omitempty"`
+	WithdrawalServiceProvider *string  `json:"withdrawalServiceProvider,omitempty"`
+	ChangeType                int      `json:"changeType"`
 }
 
 // AdditionalInfo representa informações adicionais incluídas na transação.
@@ -1047,8 +1093,8 @@ type PixDebtor struct {
 	Email      string  `json:"email,omitempty"`
 }
 type PixChargeFee struct {
-	AmountPerc json.RawMessage `json:"amountPerc,omitempty"` // Aceita string ou número
-	Modality   string          `json:"modality"`
+	AmountPerc *string `json:"amountPerc,omitempty"` // Aceita string ou número
+	Modality   *string `json:"modality"`
 }
 
 type PixLocation struct {
@@ -1064,18 +1110,18 @@ type PixLocation struct {
 type PixMerchant struct {
 	PostalCode           string `json:"postalCode" validate:"required"`
 	City                 string `json:"city" validate:"required"`
-	MerchantCategoryCode int    `json:"merchantCategoryCode"`
+	MerchantCategoryCode string `json:"merchantCategoryCode"`
 	Name                 string `json:"name" validate:"required"`
 }
 
 // Calendar representa os detalhes do calendário da transação.
 type PixCalendar struct {
-	ExpirationAfterPayment  string    `json:"expirationAfterPayment, omitempty"`
-	CreatedAt               time.Time `json:"createdAt, omitempty"`
-	DueDate                 time.Time `json:"dueDate, omitempty"`
-	ValidateAfterExpiration int       `json:"validateAfterExpiration, omitempty"`
-	Presentation            string    `json:"presentation, omitempty"`
-	Expiration              int       `json:"expiration, omitempty"`
+	ExpirationAfterPayment  string `json:"expirationAfterPayment,omitempty"`
+	CreatedAt               string `json:"createdAt,omitempty"`
+	DueDate                 string `json:"dueDate,omitempty"`
+	ValidateAfterExpiration int    `json:"validateAfterExpiration,omitempty"`
+	Presentation            string `json:"presentation,omitempty"`
+	Expiration              int    `json:"expiration,omitempty"`
 }
 
 type PixCashInDueDateRequest struct {
@@ -1179,6 +1225,76 @@ type PixQrCodeLocationResponse struct {
 	EMV             string            `json:"emv"`
 	Type            string            `json:"type"`
 	Merchant        PixQrCodeMerchant `json:"merchant"`
+}
+
+// PixClaimRequest representa o payload para requisições de portabilidade de chave Pix.
+type PixClaimRequest struct {
+	Key       string `json:"key" validate:"required"`
+	KeyType   string `json:"keyType" validate:"required,oneof=EMAIL CPF CNPJ PHONE EVP"`
+	Account   string `json:"account" validate:"required"`
+	ClaimType string `json:"claimType" validate:"required,oneof=OWNERSHIP"`
+}
+
+// PixClaimResponse representa a resposta de operações individuais de portabilidade de chave Pix.
+type PixClaimResponse struct {
+	Version string               `json:"version"`
+	Status  string               `json:"status"`
+	Body    PixClaimResponseBody `json:"body"`
+}
+
+// PixClaimResponseBody representa o corpo da resposta de uma única portabilidade de chave Pix.
+type PixClaimResponseBody struct {
+	ID                  string             `json:"id"`
+	ClaimType           string             `json:"claimType"`
+	Key                 string             `json:"key"`
+	KeyType             string             `json:"keyType"`
+	ClaimerAccount      PixClaimKeyAccount `json:"claimerAccount"`
+	Claimer             PixClaimKeyOwner   `json:"claimer"`
+	DonorParticipant    string             `json:"donorParticipant"`
+	Status              string             `json:"status"`
+	CreateTimestamp     string             `json:"createTimestamp"`
+	CompletionPeriodEnd string             `json:"completionPeriodEnd"`
+	ResolutionPeriodEnd string             `json:"resolutionPeriodEnd"`
+	LastModified        string             `json:"lastModified"`
+	ConfirmReason       string             `json:"confirmReason,omitempty"`
+	CancelReason        string             `json:"cancelReason,omitempty"`
+	CancelledBy         string             `json:"cancelledBy,omitempty"`
+	DonorAccount        PixClaimKeyAccount `json:"donorAccount,omitempty"`
+}
+
+// PixClaimListResponse representa a resposta da consulta de lista de reivindicações de chaves Pix.
+type PixClaimListResponse struct {
+	Version string                   `json:"version"`
+	Status  string                   `json:"status"`
+	Body    PixClaimListResponseBody `json:"body"`
+}
+
+// PixClaimListResponseBody representa o corpo da resposta da consulta de lista de reivindicações de chaves Pix.
+type PixClaimListResponseBody struct {
+	Claims []PixClaimResponseBody `json:"claims"`
+}
+
+// PixClaimActionRequest representa requisições para confirmação ou cancelamento de portabilidade.
+type PixClaimActionRequest struct {
+	ID     string `json:"id" validate:"required"`
+	Reason string `json:"reason" validate:"required"`
+}
+
+// PixKeyAccount representa os detalhes da conta bancária associada a uma chave Pix.
+type PixClaimKeyAccount struct {
+	Participant string `json:"participant,omitempty"`
+	Branch      string `json:"branch"`
+	Account     string `json:"account"`
+	AccountType string `json:"accountType,omitempty"`
+	TaxID       string `json:"taxId,omitempty"`
+	Name        string `json:"name,omitempty"`
+}
+
+// PixKeyOwner representa o proprietário da chave Pix.
+type PixClaimKeyOwner struct {
+	PersonType string `json:"personType"`
+	TaxID      string `json:"taxId"`
+	Name       string `json:"name"`
 }
 
 /* TRANSFERS */

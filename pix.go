@@ -23,6 +23,12 @@ type Pixs interface {
 	// CHAVE PIX
 	CreatePixKey(ctx context.Context, req PixKeyRequest) (*PixKeyResponse, error)
 	GetPixKeys(ctx context.Context, account string) (*PixKeyListResponse, error)
+	// REIVIDICAÇÃO CHAVE PIX
+	GetPixClaim(ctx context.Context, claimID string) (*PixClaimResponse, error)
+	GetPixClaimList(ctx context.Context, dateFrom, dateTo string, limit, page int, status, claimType string) (*PixClaimListResponse, error)
+	CancelPixClaim(ctx context.Context, req PixClaimActionRequest) (*PixClaimResponse, error)
+	ConfirmPixClaim(ctx context.Context, req PixClaimActionRequest) (*PixClaimResponse, error)
+	CreatePixClaim(ctx context.Context, req PixClaimRequest) (*PixClaimResponse, error)
 	// IMMEDIATE, STATIC
 	GetExternalPixKey(ctx context.Context, account string, key string, ownerTaxId string) (*PixExternalKeyResponse, error)
 	// DUEDATE
@@ -131,6 +137,7 @@ func (s *PixsService) CreatePixKey(ctx context.Context, req PixKeyRequest) (*Pix
 		return nil, fmt.Errorf("error creating HTTP request: %v", err)
 	}
 
+	httpReq.Header.Set("Content-Type", "application/json")
 	resp, err := s.httpClient.Do(httpReq)
 	if err != nil {
 		logrus.WithFields(fields).WithError(err).Error("Error in HTTP client")
@@ -192,6 +199,7 @@ func (s *PixsService) GetPixKeys(ctx context.Context, account string) (*PixKeyLi
 		return nil, fmt.Errorf("error creating HTTP request: %v", err)
 	}
 
+	httpReq.Header.Set("Content-Type", "application/json")
 	resp, err := s.httpClient.Do(httpReq)
 	if err != nil {
 		logrus.WithFields(fields).WithError(err).Error("Error in HTTP client")
@@ -270,6 +278,7 @@ func (s *PixsService) DeletePixKey(ctx context.Context, account, key string) err
 		return fmt.Errorf("error creating HTTP request: %v", err)
 	}
 
+	httpReq.Header.Set("Content-Type", "application/json")
 	resp, err := s.httpClient.Do(httpReq)
 	if err != nil {
 		logrus.WithFields(fields).WithError(err).Error("Error in HTTP client")
@@ -332,6 +341,7 @@ func (s *PixsService) GetExternalPixKey(ctx context.Context, account string, key
 		return nil, fmt.Errorf("error creating HTTP request: %v", err)
 	}
 
+	httpReq.Header.Set("Content-Type", "application/json")
 	resp, err := s.httpClient.Do(httpReq)
 	if err != nil {
 		logrus.WithFields(fields).WithError(err).Error("Error in HTTP client")
@@ -407,7 +417,9 @@ func (s *PixsService) GetExternalPixKeyDueDate(ctx context.Context, documentNumb
 		logrus.WithFields(fields).WithError(err).Error("Error creating HTTP request")
 		return nil, fmt.Errorf("error creating HTTP request: %v", err)
 	}
-	httpReq.Header.Set("Content-Type", "application/json")
+
+	httpReq.Header.Set("accept", "application/json")
+	httpReq.Header.Set("Content-Type", "application/json-patch+json")
 
 	resp, err := s.httpClient.Do(httpReq)
 	if err != nil {
@@ -484,7 +496,7 @@ func (s *PixsService) PaymentPixCashOut(ctx context.Context, req PixCashOutReque
 		logrus.WithFields(fields).WithError(err).Error("Error creating HTTP request")
 		return nil, fmt.Errorf("error creating HTTP request: %v", err)
 	}
-
+	httpReq.Header.Set("Content-Type", "application/json")
 	resp, err := s.httpClient.Do(httpReq)
 	if err != nil {
 		logrus.WithFields(fields).WithError(err).Error("Error in HTTP client")
@@ -550,7 +562,7 @@ func (s *PixsService) DecodeEmvQRCode(ctx context.Context, emv string) (*QRCodeR
 		logrus.WithFields(fields).WithError(err).Error("Error creating HTTP request")
 		return nil, fmt.Errorf("error creating HTTP request: %v", err)
 	}
-
+	httpReq.Header.Set("Content-Type", "application/json")
 	resp, err := s.httpClient.Do(httpReq)
 	if err != nil {
 		logrus.WithFields(fields).WithError(err).Error("Error in HTTP client")
@@ -622,7 +634,7 @@ func (s *PixsService) GetPixCashoutStatus(ctx context.Context, id, endtoendId, c
 		logrus.WithFields(fields).WithError(err).Error("Erro criando a requisição HTTP")
 		return nil, fmt.Errorf("erro criando requisição HTTP: %v", err)
 	}
-
+	httpReq.Header.Set("Content-Type", "application/json")
 	resp, err := s.httpClient.Do(httpReq)
 	if err != nil {
 		logrus.WithFields(fields).WithError(err).Error("Erro na requisição HTTP")
@@ -702,7 +714,7 @@ func (s *PixsService) GetPixCashinStatus(ctx context.Context, returnIdentificati
 		logrus.WithFields(fields).WithError(err).Error("Erro criando a requisição HTTP")
 		return nil, fmt.Errorf("erro criando requisição HTTP: %v", err)
 	}
-
+	httpReq.Header.Set("Content-Type", "application/json")
 	resp, err := s.httpClient.Do(httpReq)
 	if err != nil {
 		logrus.WithFields(fields).WithError(err).Error("Erro na requisição HTTP")
@@ -779,7 +791,7 @@ func (s *PixsService) PixCashInStatic(ctx context.Context, req PixCashInStaticRe
 		logrus.WithFields(fields).WithError(err).Error("Error creating HTTP request")
 		return nil, fmt.Errorf("error creating HTTP request: %v", err)
 	}
-
+	httpReq.Header.Set("Content-Type", "application/json")
 	resp, err := s.httpClient.Do(httpReq)
 	if err != nil {
 		logrus.WithFields(fields).WithError(err).Error("Error in HTTP client")
@@ -1083,7 +1095,6 @@ func (s *PixsService) DeletePixCashInDueDate(ctx context.Context, transactionId 
 	}
 
 	httpReq.Header.Set("Content-Type", "application/json")
-
 	resp, err := s.httpClient.Do(httpReq)
 	if err != nil {
 		logrus.WithFields(fields).WithError(err).Error("Error in HTTP client")
@@ -1381,7 +1392,6 @@ func (s *PixsService) DeletePixCashInImmediate(ctx context.Context, transactionI
 	}
 
 	httpReq.Header.Set("Content-Type", "application/json")
-
 	resp, err := s.httpClient.Do(httpReq)
 	if err != nil {
 		logrus.WithFields(fields).WithError(err).Error("Error in HTTP client")
@@ -1534,6 +1544,7 @@ func (s *PixsService) GetEmvQRCodeImmediate(ctx context.Context, merchanturl *st
 		return nil, fmt.Errorf("error creating HTTP request: %v", err)
 	}
 
+	httpReq.Header.Set("Content-Type", "application/json")
 	resp, err := s.httpClient.Do(httpReq)
 	if err != nil {
 		logrus.WithFields(fields).WithError(err).Error("Error in HTTP client")
@@ -1618,6 +1629,7 @@ func (s *PixsService) GetEmvQRCodeDueDate(ctx context.Context, merchanturl *stri
 		return nil, fmt.Errorf("error creating HTTP request: %v", err)
 	}
 
+	httpReq.Header.Set("Content-Type", "application/json")
 	resp, err := s.httpClient.Do(httpReq)
 	if err != nil {
 		logrus.WithFields(fields).WithError(err).Error("Error in HTTP client")
@@ -1735,6 +1747,359 @@ func (s *PixsService) CreateQrCodeLocation(ctx context.Context, req PixQrCodeLoc
 	if errResponse.Error != nil {
 		err := FindPixError(*errResponse.Error.ErrorCode, &resp.StatusCode)
 		logrus.WithField("celcoin_error", errResponse.Error).WithFields(fields).WithError(err).Error("Pix service error")
+		return nil, err
+	}
+
+	return nil, ErrDefaultPix
+}
+
+// CreatePixClaim cadastra um pedido de portabilidade de chave Pix.
+func (s *PixsService) CreatePixClaim(ctx context.Context, req PixClaimRequest) (*PixClaimResponse, error) {
+	fields := logrus.Fields{"request": req}
+	logrus.WithFields(fields).Info("Create Pix Claim")
+
+	err := grok.Validator.Struct(req)
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).Error("Error validating model")
+		return nil, grok.FromValidationErros(err)
+	}
+
+	endpoint, err := s.BuildEndpoint(PixClaimPath, nil)
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).Error("Error building endpoint for CreatePixClaim")
+		return nil, err
+	}
+
+	logrus.WithField("endpoint", *endpoint).Info("Calling CreatePixClaim")
+
+	payload, err := json.Marshal(req)
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).Error("Error serializing request")
+		return nil, fmt.Errorf("error serializing request: %v", err)
+	}
+
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", *endpoint, bytes.NewReader(payload))
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).Error("Error creating HTTP request")
+		return nil, fmt.Errorf("error creating HTTP request: %v", err)
+	}
+
+	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set("Accept", "application/json")
+	resp, err := s.httpClient.Do(httpReq)
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).Error("Error in HTTP client")
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	respBody, _ := ioutil.ReadAll(resp.Body)
+
+	if resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusAccepted || resp.StatusCode == http.StatusCreated {
+		var response PixClaimResponse
+		if err := json.Unmarshal(respBody, &response); err != nil {
+			logrus.WithFields(fields).WithError(err).Error("Error decoding json response")
+			return nil, ErrDefaultPix
+		}
+		return &response, nil
+	}
+
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, ErrEntryNotFound
+	}
+
+	var errResponse ErrorDefaultResponse
+	if err := json.Unmarshal(respBody, &errResponse); err != nil {
+		logrus.WithFields(fields).WithError(err).Error("Error decoding json response")
+		return nil, ErrDefaultPix
+	}
+
+	if errResponse.Error != nil {
+		err := FindPixError(*errResponse.Error.ErrorCode, &resp.StatusCode)
+		logrus.WithField("celcoin_error", errResponse.Error).WithFields(fields).WithError(err).Error("Celcoin get pix error")
+		return nil, err
+	}
+
+	return nil, ErrDefaultPix
+}
+
+// ConfirmPixClaim confirma um pedido de portabilidade de chave Pix.
+func (s *PixsService) ConfirmPixClaim(ctx context.Context, req PixClaimActionRequest) (*PixClaimResponse, error) {
+	fields := logrus.Fields{"request": req}
+	logrus.WithFields(fields).Info("Confirm Pix Claim")
+
+	err := grok.Validator.Struct(req)
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).Error("Error validating model")
+		return nil, grok.FromValidationErros(err)
+	}
+
+	endpoint, err := s.BuildEndpoint(PixClaimPath, nil, "confirm")
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).Error("Error building endpoint for ConfirmPixClaim")
+		return nil, err
+	}
+
+	logrus.WithField("endpoint", *endpoint).Info("Calling ConfirmPixClaim")
+
+	payload, err := json.Marshal(req)
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).Error("Error serializing request")
+		return nil, fmt.Errorf("error serializing request: %v", err)
+	}
+
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", *endpoint, bytes.NewReader(payload))
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).Error("Error creating HTTP request")
+		return nil, fmt.Errorf("error creating HTTP request: %v", err)
+	}
+
+	httpReq.Header.Set("Content-Type", "application/json")
+	resp, err := s.httpClient.Do(httpReq)
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).Error("Error in HTTP client")
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	respBody, _ := ioutil.ReadAll(resp.Body)
+
+	if resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusAccepted || resp.StatusCode == http.StatusCreated {
+		var response *PixClaimResponse
+
+		if err := json.Unmarshal(respBody, &response); err != nil {
+			logrus.WithFields(fields).WithError(err).
+				Error("error decoding json response")
+			return nil, ErrDefaultPix
+		}
+		return response, nil
+	}
+
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, ErrEntryNotFound
+	}
+
+	var errResponse *ErrorDefaultResponse
+	if err := json.Unmarshal(respBody, &errResponse); err != nil {
+		logrus.WithFields(fields).WithError(err).
+			Error("error decoding json response")
+		return nil, ErrDefaultPix
+	}
+
+	if errResponse.Error != nil {
+		err := FindPixError(*errResponse.Error.ErrorCode, &resp.StatusCode)
+		logrus.WithField("celcoin_error", errResponse.Error).
+			WithFields(fields).WithError(err).
+			Error("celcoin get pix error")
+		return nil, err
+	}
+
+	return nil, ErrDefaultPix
+}
+
+// CancelPixClaim Cancelar pedido de portabilidade recebido
+func (s *PixsService) CancelPixClaim(ctx context.Context, req PixClaimActionRequest) (*PixClaimResponse, error) {
+	fields := logrus.Fields{"request": req}
+	logrus.WithFields(fields).Info("Confirm Pix Claim")
+
+	err := grok.Validator.Struct(req)
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).Error("Error validating model")
+		return nil, grok.FromValidationErros(err)
+	}
+
+	endpoint, err := s.BuildEndpoint(PixClaimPath, nil, "cancel")
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).Error("Error building endpoint for ConfirmPixClaim")
+		return nil, err
+	}
+
+	logrus.WithField("endpoint", *endpoint).Info("Calling ConfirmPixClaim")
+
+	payload, err := json.Marshal(req)
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).Error("Error serializing request")
+		return nil, fmt.Errorf("error serializing request: %v", err)
+	}
+
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", *endpoint, bytes.NewReader(payload))
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).Error("Error creating HTTP request")
+		return nil, fmt.Errorf("error creating HTTP request: %v", err)
+	}
+
+	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set("accept", "application/json")
+	resp, err := s.httpClient.Do(httpReq)
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).Error("Error in HTTP client")
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	respBody, _ := ioutil.ReadAll(resp.Body)
+
+	if resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusAccepted || resp.StatusCode == http.StatusCreated {
+		var response *PixClaimResponse
+
+		if err := json.Unmarshal(respBody, &response); err != nil {
+			logrus.WithFields(fields).WithError(err).
+				Error("error decoding json response")
+			return nil, ErrDefaultPix
+		}
+		return response, nil
+	}
+
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, ErrEntryNotFound
+	}
+
+	var errResponse *ErrorDefaultResponse
+	if err := json.Unmarshal(respBody, &errResponse); err != nil {
+		logrus.WithFields(fields).WithError(err).
+			Error("error decoding json response")
+		return nil, ErrDefaultPix
+	}
+
+	if errResponse.Error != nil {
+		err := FindPixError(*errResponse.Error.ErrorCode, &resp.StatusCode)
+		logrus.WithField("celcoin_error", errResponse.Error).
+			WithFields(fields).WithError(err).
+			Error("celcoin get pix error")
+		return nil, err
+	}
+
+	return nil, ErrDefaultPix
+}
+
+// GetPixClaim consulta um pedido de portabilidade de chave Pix.
+func (s *PixsService) GetPixClaim(ctx context.Context, claimID string) (*PixClaimResponse, error) {
+	fields := logrus.Fields{"account": claimID}
+	logrus.WithFields(fields).Info("Get Pix Claim")
+
+	endpoint, err := s.BuildEndpoint(PixClaimPath, nil, claimID)
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).Error("Error building endpoint for GetPixClaim")
+		return nil, err
+	}
+
+	logrus.WithField("endpoint", *endpoint).Info("Calling GetPixClaim")
+
+	httpReq, err := http.NewRequestWithContext(ctx, "GET", *endpoint, nil)
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).Error("Error creating HTTP request")
+		return nil, fmt.Errorf("error creating HTTP request: %v", err)
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+	resp, err := s.httpClient.Do(httpReq)
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).Error("Error in HTTP client")
+		return nil, fmt.Errorf("error making HTTP request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	respBody, _ := ioutil.ReadAll(resp.Body)
+
+	if resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusAccepted || resp.StatusCode == http.StatusCreated {
+		var response *PixClaimResponse
+
+		if err := json.Unmarshal(respBody, &response); err != nil {
+			logrus.WithFields(fields).WithError(err).
+				Error("error decoding json response")
+			return nil, ErrDefaultPix
+		}
+		return response, nil
+	}
+
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, ErrEntryNotFound
+	}
+
+	var errResponse *ErrorDefaultResponse
+	if err := json.Unmarshal(respBody, &errResponse); err != nil {
+		logrus.WithFields(fields).WithError(err).
+			Error("error decoding json response")
+		return nil, ErrDefaultPix
+	}
+
+	if errResponse.Error != nil {
+		err := FindPixError(*errResponse.Error.ErrorCode, &resp.StatusCode)
+		logrus.WithField("celcoin_error", errResponse.Error).
+			WithFields(fields).WithError(err).
+			Error("celcoin get pix error")
+		return nil, err
+	}
+
+	return nil, ErrDefaultPix
+
+}
+
+// GetPixClaimList consulta a lista de pedidos de portabilidade de chave Pix.
+func (s *PixsService) GetPixClaimList(ctx context.Context, dateFrom, dateTo string, limit, page int, status, claimType string) (*PixClaimListResponse, error) {
+	fields := logrus.Fields{
+		"dateFrom":  dateFrom,
+		"dateTo":    dateTo,
+		"limit":     limit,
+		"page":      page,
+		"status":    status,
+		"claimType": claimType,
+	}
+	logrus.WithFields(fields).Info("Get Pix Claim List")
+
+	queryParams := map[string]string{
+		"DateFrom":     dateFrom,
+		"DateTo":       dateTo,
+		"LimitPerPage": fmt.Sprintf("%d", limit),
+		"Page":         fmt.Sprintf("%d", page),
+		"Status":       status,
+		"claimType":    claimType,
+	}
+
+	endpoint, err := s.BuildEndpoint(PixClaimPath, queryParams)
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).Error("Error building endpoint for GetPixClaimList")
+		return nil, err
+	}
+
+	logrus.WithField("endpoint", *endpoint).Info("Calling GetPixClaimList")
+
+	httpReq, err := http.NewRequestWithContext(ctx, "GET", *endpoint, nil)
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).Error("Error creating HTTP request")
+		return nil, fmt.Errorf("error creating HTTP request: %v", err)
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+	resp, err := s.httpClient.Do(httpReq)
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).Error("Error in HTTP client")
+		return nil, fmt.Errorf("error making HTTP request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	respBody, _ := ioutil.ReadAll(resp.Body)
+
+	if resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusAccepted || resp.StatusCode == http.StatusCreated {
+		var response *PixClaimListResponse
+		if err := json.Unmarshal(respBody, &response); err != nil {
+			logrus.WithFields(fields).WithError(err).Error("error decoding json response")
+			return nil, ErrDefaultPix
+		}
+		return response, nil
+	}
+
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, ErrEntryNotFound
+	}
+
+	var errResponse *ErrorDefaultResponse
+	if err := json.Unmarshal(respBody, &errResponse); err != nil {
+		logrus.WithFields(fields).WithError(err).Error("error decoding json response")
+		return nil, ErrDefaultPix
+	}
+
+	if errResponse.Error != nil {
+		err := FindPixError(*errResponse.Error.ErrorCode, &resp.StatusCode)
+		logrus.WithField("celcoin_error", errResponse.Error).WithFields(fields).WithError(err).Error("celcoin get pix error")
 		return nil, err
 	}
 
