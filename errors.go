@@ -474,19 +474,6 @@ var errorIncomeReportList = []Error{
 	},
 }
 
-// FindIncomeReportError Find income report errors.
-func FindIncomeReportError(code string, messages ...string) *grok.Error {
-	code = verifyInvalidIncomeReportParameter(code, messages)
-
-	for _, v := range errorCardList {
-		if v.ErrorKey == code {
-			return v.GrokError
-		}
-	}
-
-	return grok.NewError(http.StatusInternalServerError, code, messages...)
-}
-
 // verifyInvalidIncomeReportParameter Find the correspondent error message for income reports.
 func verifyInvalidIncomeReportParameter(code string, messages []string) string {
 	if code == "CALENDAR_NOT_ALLOWED" {
@@ -742,82 +729,6 @@ var errorBoletoList = []Error{
 	},
 }
 
-// OnboardingErrorMessages ... mapeia os códigos de erro para suas respectivas mensagens
-var OnboardingErrorMessages = map[string]string{
-	"OBE001": "Token de autorização não enviado.",
-	"OBE002": "Token enviado está no formato incorreto.",
-	"OBE003": "Token inválido.",
-	"OBE004": "Token expirado.",
-	"OBE005": "Usuario não encontrado.",
-	"OBE006": "Cliente não possui produto Onboarding ativo.",
-	"OBE007": "O campo clientCode é obrigatório.",
-	"OBE008": "O campo documentNumber é obrigatório e deve ser um CPF válido.",
-	"OBE009": "O campo documentNumber é obrigatório e deve ser um CNPJ válido.",
-	"OBE010": "O campo phoneNumber ou contactNumber é obrigatório e deve ser um telefone válido.",
-	"OBE011": "O campo email é obrigatório e deve ser um email válido.",
-	"OBE012": "O campo motherName é obrigatório e deve ser completo.",
-	"OBE013": "O campo fullName é obrigatório e deve ser completo.",
-	"OBE014": "O campo fullName possui tamanho máximo de 120 caracteres.",
-	"OBE015": "socialName inválido.",
-	"OBE016": "O campo birthDate é obrigatório e deve ser no formato (DD-MM-YYYY).",
-	"OBE017": "O campo address é obrigatório.",
-	"OBE018": "O campo onboardingType é obrigatório e deve conter um tipo válido.",
-	"OBE019": "O campo postalCode é obrigatório e deve ser um CEP existente.",
-	"OBE020": "O campo street é obrigatório deve respeitar o limite de caracteres e conter um formato de texto válido.",
-	"OBE021": "Number inválido.",
-	"OBE022": "AddressComplement inválido.",
-	"OBE023": "O campo neighborhood é obrigatório e deve conter um formato de texto válido.",
-	"OBE024": "O campo city é obrigatório e deve conter um formato de texto válido.",
-	"OBE025": "O campo state é obrigatório e deve ser uma estado valido.",
-	"OBE026": "O campo businessEmail é obrigatório e deve ser um email válido.",
-	"OBE027": "O campo businessName é obrigatório e deve conter um formato de texto válido.",
-	"OBE028": "O campo tradingName é obrigatório deve respeitar o limite de caracteres e conter um formato de texto válido.",
-	"OBE029": "O campo owner.documentNumber é obrigatório e deve ser um CPF ou CNPJ válido.",
-	"OBE030": "O campo owner.name é obrigatório e deve ser completo.",
-	"OBE031": "O campo owner.email é obrigatório e deve ser um email válido.",
-	"OBE032": "O campo owner.address é obrigatório.",
-	"OBE033": "Cadastro não permitido para menores de idade.",
-	"OBE034": "Formato do JSON esta fora do padrão. Verifique a documentação.",
-	"OBE035": "Não foi possivel realizar essa operação. Tente novamente mais tarde.",
-	"OBE036": "CompanyType inválido.",
-	"OBE037": "O campo Owners deve conter um array de no mínimo 1 e máximo 10.",
-	"OBE038": "Owners não podem ser duplicados.",
-	"OBE039": "O campo businessAddress é obrigatório.",
-	"OBE040": "O campo ownerType é obrigatório e deve conter um valor válido.",
-	"OBE041": "BackgroundCheck não encontrado ou com status diferente de pendente.",
-	"OBE042": "Erro ao atualizar backgroundCheck.",
-	"OBE043": "Documentscopy não encontrado ou com status diferente de pendente.",
-	"OBE044": "Erro ao atualizar documentscopy.",
-	"OBE045": "Status da proposta inexistente verifique a documentação por favor.",
-	"OBE046": "Data inválida.",
-	"OBE047": "Limite inserido inválido. Os campos limit ou limitPerPage devem ter valores entre 1 e 200.",
-	"OBE048": "O campo documentNumber deve ser um CPF ou CNPJ válido.",
-	"OBE049": "Não foi encontrada nenhuma proposta referente aos dados informados.",
-	"OBE050": "A data inicial não pode ser maior que a data final.",
-	"OBE051": "Ao não enviar o proposalId os campos data inicial e a data final são obrigatórios.",
-	"OBE052": "O intervalo de dias entre a data inicial e a data final não deve ser maior que {0} dias.",
-	"OBE053": "O campo ownerType deve conter pelo menos um sócio ou representante",
-	"OBE054": "ProposalId e clientCode não enviados. Ao menos um desses parametros deve ser enviado.",
-	"OBE055": "Não foram encontrados arquivos para o proposalId ou clientCode informado(s).",
-	"OBE056": "Não foram encontradas documentoscopias referentes ao proposalId ou clientCode enviado.",
-	"OBE057": "Ocorreu um erro ao buscar documentos.",
-	"OBE058": "ClientType inválido.",
-	"OBE059": "SourceType inválido.",
-	"OBE060": "O campo clientId é obrigatório.",
-	"OBE061": "Source inválido.",
-	"OBE062": "ClientCode já vinculado a outra proposta, esse campo deve ser único por proposta.",
-	"OBE063": "Não foram encontrados registros para a sua requisição.",
-	"OBE064": "Já existe uma proposta em aberto para esse documentNumber.",
-	"OBE065": "O campo dateFrom é obrigatório.",
-	"OBE066": "O campo dateTo é obrigatório.",
-	"OBE067": "O campo partner.partnerName deve conter um valor válido.",
-	"OBE068": "O campo partner.parameter deve ser preenchido.",
-	"OBE069": "Ao enviar os campos partner.parameters, o campo partner.partnerName deve ser obrigatório.",
-	"OBE070": "Não foram encontrados dados, pois o usuário ainda não iniciou a jornada webview. Tente novamente mais tarde.",
-	"OBE071": "Ocorreu um erro ao consultar parceiro. Favor tentar novamente mais tarde.",
-	"OIE999": "Ocorreu um erro interno durante a chamada da api",
-}
-
 // OnboardingErrorMappings ... mapeia os códigos de erro do parceiro Celcoin para os códigos de erro do Contbank com descrição
 var OnboardingErrorMappings = map[string]struct {
 	ContbankCode string
@@ -1028,6 +939,55 @@ var WebhookErrorMappings = map[string]struct {
 // FindWebhookError ... retorna a mensagem de erro correspondente ao código de erro de Pix
 func FindWebhookError(code string, responseStatus *int) *grok.Error {
 	if mapping, exists := WebhookErrorMappings[code]; exists {
+		return grok.NewError(*responseStatus, mapping.ContbankCode, mapping.Description)
+	}
+	return grok.NewError(http.StatusInternalServerError, "UNKNOWN_ERROR", "unknown error")
+}
+
+// StatementErrorMappings ... mapeia os códigos de erro do parceiro Celcoin para os códigos de erro do Contbank com descrição
+var StatementErrorMappings = map[string]struct {
+	ContbankCode string
+	Description  string
+}{
+	"CBE073": {"INVALID_INPUT", "É necessário informar pelo menos um dos campos: account, ou documentNumber."},
+	"CBE039": {"INVALID_ACCOUNT", "Account invalido."},
+	"CBE040": {"INVALID_DOCUMENT_NUMBER", "DocumentNumber invalido."},
+	"CBE041": {"ACCOUNT_TOO_LONG", "Account possui tamanho maximo de 20 caracteres."},
+	"CBE042": {"DOCUMENT_NUMBER_TOO_LONG", "DocumentNumber possui tamanho maximo de 14 caracteres."},
+	"CBE089": {"ACCOUNT_BLOCKED", "Consulta não permitida, Conta esta bloqueada."},
+	"CBE090": {"ACCOUNT_CLOSED", "Consulta não permitida.Conta esta encerrada."},
+	"CBE066": {"INVALID_SEARCH_LIMIT", "Limite sua busca entre 1 a 200."},
+	"CBE068": {"INVALID_DATE_RANGE", "dateFrom não pode ser maior que dateTo."},
+	"CBE153": {"DATE_REQUIRED", "dateFrom e dateTo são obrigatórios para busca dos lançamentos."},
+	"CBE376": {"DATE_RANGE_TOO_LARGE", "Consulta conta não permitida. Diferença entre dateFrom e dateTo não pode ultrapassar 7 dias."},
+	"CBE080": {"INVALID_PAGE", "Page invalido"},
+	"CBE088": {"INVALID_LIMIT", "Limit invalido"},
+	"CIE999": {"INTERNAL_API_ERROR", "Ocorreu um erro interno durante a chamada da api."},
+}
+
+// FindStatementError ... retorna a mensagem de erro correspondente ao código de erro de Onboarding
+func FindStatementError(code string, responseStatus *int) *grok.Error {
+	if mapping, exists := StatementErrorMappings[code]; exists {
+		return grok.NewError(*responseStatus, mapping.ContbankCode, mapping.Description)
+	}
+	return grok.NewError(http.StatusInternalServerError, "UNKNOWN_ERROR", "unknown error")
+}
+
+// IncomeReportErrorMappings ... mapeia os códigos de erro do parceiro Celcoin para os códigos de erro do Contbank com descrição
+var IncomeReportErrorMappings = map[string]struct {
+	ContbankCode string
+	Description  string
+}{
+	"CIE999": {"INTERNAL_API_ERROR", "Ocorreu um erro interno durante a chamada da api."},
+	"OIE999": {"INTERNAL_API_ERROR", "Ocorreu um erro interno durante a chamada da api."},
+	"CBE078": {"ACCOUNT_NOT_FOUND", "Nenhuma conta foi encontrada."},
+	"CBE445": {"YEAR_CALENDAR_REQUIRED", "O campo calendarYear é obrigatório."},
+	"CBE091": {"ACCOUNT_NUMBER_REQUIRED", "É necessário informar o campo: account."},
+}
+
+// FindIncomeReportError ... retorna a mensagem de erro correspondente ao código de erro de informes de rendimento
+func FindIncomeReportError(code string, responseStatus *int) *grok.Error {
+	if mapping, exists := IncomeReportErrorMappings[code]; exists {
 		return grok.NewError(*responseStatus, mapping.ContbankCode, mapping.Description)
 	}
 	return grok.NewError(http.StatusInternalServerError, "UNKNOWN_ERROR", "unknown error")
