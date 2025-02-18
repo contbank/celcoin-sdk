@@ -283,8 +283,7 @@ var requiredFieldsForPixCashOut = map[string][]string{
 }
 
 func validatePixCashOut(req PixCashOutRequest) error {
-	req.InitiationType = strings.ToUpper(req.InitiationType)
-	req.TransactionType = strings.ToUpper(req.TransactionType)
+
 	// Validação de campos obrigatórios com base no requiredFieldsForPixCashOut
 	fields, ok := requiredFieldsForPixCashOut[req.InitiationType]
 	if !ok {

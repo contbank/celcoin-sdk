@@ -470,6 +470,11 @@ func (s *PixsService) GetExternalPixKeyDueDate(ctx context.Context, documentNumb
 // Realizar um Pix Cash-out por QR Code Estático
 // Realizar um Pix Cash-out por QR Code Dinâmico
 func (s *PixsService) PaymentPixCashOut(ctx context.Context, req PixCashOutRequest) (*PixCashOutResponse, error) {
+
+	// deixando como upper pois contbank usa parametros minusculos mas é obrigatório na celcoin maiusculo
+	req.InitiationType = strings.ToUpper(req.InitiationType)
+	req.TransactionType = strings.ToUpper(req.TransactionType)
+
 	fields := logrus.Fields{"request": req}
 	logrus.WithFields(fields).Info("Create Pix PerformPixCashOut")
 
