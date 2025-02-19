@@ -14,7 +14,7 @@ const (
 	// CelcoinBankISPB ...
 	CelcoinBankISPB string = "13935893"
 	// CelcoinBankName ...
-	CelcoinBankName string = "Contbank S.A. (Celcoin Instituição De Pagamento S.A.)"
+	CelcoinBankName string = "Celcoin Instituição De Pagamento S.A."
 
 	// LoginPath ...
 	LoginPath string = "v5/token"
@@ -1472,7 +1472,8 @@ type StatementRequest struct {
 	DateFrom       *string `json:"DateFrom"`
 	DateTo         *string `json:"DateTo"`
 	DocumentNumber *string `json:"DocumentNumber"`
-	LimitPerPage   *string `json:"LimitPerPage"`
+	LimitPerPage   *int64  `json:"LimitPerPage"`
+	Page           *int64  `json:"Page"`
 }
 
 // IncomeReportPayerSource ... define a estrutura da fonte pagadora.

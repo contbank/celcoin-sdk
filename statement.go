@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"path"
+	"strconv"
 
 	"github.com/sirupsen/logrus"
 )
@@ -65,7 +66,10 @@ func (s *Statement) GetStatements(ctx context.Context,
 			q.Set("DocumentNumber", *request.DocumentNumber)
 		}
 		if request.LimitPerPage != nil {
-			q.Set("LimitPerPage", *request.LimitPerPage)
+			q.Set("LimitPerPage", strconv.Itoa(int(*request.LimitPerPage)))
+		}
+		if request.Page != nil {
+			q.Set("Page", strconv.Itoa(int(*request.Page)))
 		}
 		url.RawQuery = q.Encode()
 	}
