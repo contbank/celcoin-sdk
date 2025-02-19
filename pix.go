@@ -616,7 +616,7 @@ func (s *PixsService) GetPixCashoutStatus(ctx context.Context, id, endtoendId, c
 	fields := logrus.Fields{"id": id, "endtoendId": endtoendId, "clientCode": clientCode}
 	logrus.WithFields(fields).Info("Consultando status do Pix Cashout")
 
-	if id == "" || endtoendId == "" || clientCode == "" {
+	if id == "" && endtoendId == "" && clientCode == "" {
 		logrus.WithFields(fields).Error("é necessário informar pelo menos um dos campos: id, endtoendId, ou clientCode")
 		return nil, fmt.Errorf("é necessário informar pelo menos um dos campos: id, endtoendId, ou clientCode")
 	}
