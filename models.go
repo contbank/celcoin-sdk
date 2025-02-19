@@ -1058,7 +1058,8 @@ type StatementRequest struct {
 	DateFrom       *string `json:"DateFrom"`
 	DateTo         *string `json:"DateTo"`
 	DocumentNumber *string `json:"DocumentNumber"`
-	LimitPerPage   *string `json:"LimitPerPage"`
+	LimitPerPage   *int64  `json:"LimitPerPage"`
+	Page           *int64  `json:"Page"`
 }
 
 // IncomeReportPayerSource ... define a estrutura da fonte pagadora.
