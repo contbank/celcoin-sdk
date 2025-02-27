@@ -15,14 +15,14 @@ import (
 type Balance struct {
 	session        Session
 	authentication *Authentication
-	httpClient     *http.Client
+	httpClient     *LoggingHTTPClient
 }
 
 // NewBalance ...
 func NewBalance(httpClient *http.Client, session Session) *Balance {
 	return &Balance{
 		session:        session,
-		httpClient:     httpClient,
+		httpClient:     NewLoggingHTTPClient(httpClient),
 		authentication: NewAuthentication(httpClient, session),
 	}
 }
