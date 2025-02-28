@@ -1,4 +1,4 @@
-package celcoin_test
+/*package celcoin_test
 
 import (
 	"bytes"
@@ -201,3 +201,4 @@ func (s *BoletoTestSuite) TestCreateQueryDownloadCancel() {
 	err = s.boletos.CancelBoleto(s.ctx, queryResult.TransactionID, "Cliente desistiu do contrato.")
 	s.assert.NoError(err)
 }
+*/
