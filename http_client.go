@@ -35,7 +35,7 @@ func (c *LoggingHTTPClient) Do(req *http.Request) (*http.Response, error) {
 			"body":       string(reqBody),
 			"user-agent": req.UserAgent(),
 		},
-	}).Info("HTTP Celcoin Request")
+	}).Info("HTTP Request Celcoin")
 
 	resp, err := c.client.Do(req)
 	if err != nil {
@@ -59,7 +59,7 @@ func (c *LoggingHTTPClient) Do(req *http.Request) (*http.Response, error) {
 			"duration": duration,
 			"body":     string(respBody),
 		},
-	}).Info("HTTP Celcoin Response")
+	}).Info("HTTP Response Celcoin")
 
 	return resp, nil
 }
