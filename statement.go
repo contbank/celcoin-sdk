@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"path"
+	"strconv"
 
 	"github.com/sirupsen/logrus"
 )
@@ -33,7 +34,7 @@ func (s *Statement) GetStatements(ctx context.Context,
 	requestID, _ := ctx.Value("Request-Id").(string)
 	fields := logrus.Fields{
 		"request_id": requestID,
-		"service":    "Statement",
+		"service":    "statement",
 		"interface":  "GetStatements",
 	}
 
@@ -65,10 +66,16 @@ func (s *Statement) GetStatements(ctx context.Context,
 			q.Set("DocumentNumber", *request.DocumentNumber)
 		}
 		if request.LimitPerPage != nil {
-			q.Set("LimitPerPage", *request.LimitPerPage)
+			q.Set("LimitPerPage", strconv.Itoa(int(*request.LimitPerPage)))
+		}
+		if request.Page != nil {
+			q.Set("Page", strconv.Itoa(int(*request.Page)))
 		}
 		url.RawQuery = q.Encode()
 	}
+
+	logrus.WithFields(fields).WithField("celcoin_endpoint", url.String()).WithField("request_body", request).
+		Info("celcoin statement request")
 
 	req, err := http.NewRequest("GET", url.String(), nil)
 	if err != nil {
@@ -103,7 +110,10 @@ func (s *Statement) GetStatements(ctx context.Context,
 		}
 
 		if errResponse != nil && errResponse.Error != nil && len(*errResponse.Error.ErrorCode) > 0 {
-			return nil, FindStatementError(*errResponse.Error.ErrorCode, &resp.StatusCode)
+			err := FindStatementError(*errResponse.Error.ErrorCode, &resp.StatusCode)
+			logrus.WithFields(fields).WithError(err).
+				Error("error getting celcoin statements")
+			return nil, err
 		}
 	}
 
@@ -113,6 +123,9 @@ func (s *Statement) GetStatements(ctx context.Context,
 			Error("error decoding response body")
 		return nil, err
 	}
+
+	logrus.WithFields(fields).WithField("celcoin_response", walletMovementResponse).
+		Info("celcoin wallet movement response")
 
 	return &walletMovementResponse, nil
 }

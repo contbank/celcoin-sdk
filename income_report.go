@@ -31,7 +31,11 @@ func (r *IncomeReport) GetIncomeReport(ctx context.Context,
 
 	requestID, _ := ctx.Value("Request-Id").(string)
 	fields := logrus.Fields{
-		"request_id": requestID,
+		"request_id":     requestID,
+		"interface":      "GetIncomeReport",
+		"service":        "income_report",
+		"calendar_year":  calendarYear,
+		"account_number": accountNumber,
 	}
 
 	if calendarYear != nil {
@@ -44,6 +48,8 @@ func (r *IncomeReport) GetIncomeReport(ctx context.Context,
 
 	u, err := url.Parse(r.session.APIEndpoint)
 	if err != nil {
+		logrus.WithFields(fields).WithError(err).
+			Error("error parsing api endpoint")
 		return nil, err
 	}
 
@@ -61,6 +67,9 @@ func (r *IncomeReport) GetIncomeReport(ctx context.Context,
 
 	u.RawQuery = q.Encode()
 	endpoint := u.String()
+
+	logrus.WithFields(fields).WithField("celcoin_endpoint", endpoint).
+		Info("income report request")
 
 	req, err := http.NewRequest("GET", endpoint, nil)
 	if err != nil {
@@ -95,7 +104,10 @@ func (r *IncomeReport) GetIncomeReport(ctx context.Context,
 		}
 
 		if errResponse != nil && errResponse.Error != nil && len(*errResponse.Error.ErrorCode) > 0 {
-			return nil, FindIncomeReportError(*errResponse.Error.ErrorCode, &resp.StatusCode)
+			err := FindIncomeReportError(*errResponse.Error.ErrorCode, &resp.StatusCode)
+			logrus.WithFields(fields).WithError(err).
+				Error("error getting income response")
+			return nil, err
 		}
 	}
 
@@ -105,6 +117,9 @@ func (r *IncomeReport) GetIncomeReport(ctx context.Context,
 			Error("error unmarshal")
 		return nil, err
 	}
+
+	logrus.WithFields(fields).WithField("celcoin_response", incomeReportResponse).
+		Info("income report response")
 
 	return incomeReportResponse, nil
 }

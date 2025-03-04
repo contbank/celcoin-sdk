@@ -962,6 +962,8 @@ var StatementErrorMappings = map[string]struct {
 	"CBE376": {"DATE_RANGE_TOO_LARGE", "Consulta conta não permitida. Diferença entre dateFrom e dateTo não pode ultrapassar 7 dias."},
 	"CBE080": {"INVALID_PAGE", "Page invalido"},
 	"CBE088": {"INVALID_LIMIT", "Limit invalido"},
+	"CBE151": {"STATEMENTS_NOT_FOUND", "Não localizamos nenhum lançamento para o periodo informado."},
+	"CBE152": {"STATEMENTS_NOT_FOUND", "Página informada não contem lançamentos"},
 	"CIE999": {"INTERNAL_API_ERROR", "Ocorreu um erro interno durante a chamada da api."},
 }
 
