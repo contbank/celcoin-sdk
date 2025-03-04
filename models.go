@@ -1306,7 +1306,7 @@ type PixClaimKeyOwner struct {
 /* TRANSFERS */
 // TransfersRequest ...
 type TransfersRequest struct {
-	Amount          int64                       `validate:"required" json:"amount"`
+	Amount          float64                     `validate:"required" json:"amount"`
 	ClientCode      string                      `validate:"required" json:"clientCode"`
 	ClientRequestId string                      `json:"clientRequestId"`
 	DebitParty      TransfersDebitPartyRequest  `validate:"required,dive" json:"debitParty"`
@@ -1351,7 +1351,7 @@ type TransfersCreditPartyResponse struct {
 // TransfersBodyResponse ...
 type TransfersBodyResponse struct {
 	ID              string                       `json:"id"`
-	Amount          int64                        `json:"amount"`
+	Amount          float64                      `json:"amount"`
 	ClientCode      string                       `json:"clientCode"`
 	ClientRequestId string                       `json:"clientRequestId"`
 	DebitParty      TransfersDebitPartyResponse  `json:"debitParty"`
@@ -1521,8 +1521,7 @@ type IncomeReportResponse struct {
 	Body    IncomeReportBody `json:"body"`
 }
 
-///PAYMENT 
-
+///PAYMENT
 
 // ValidatePaymentRequest representa a requisição para validar um pagamento.
 // No SDK do Bankly este modelo possui o campo Code; adapte-o se o payload da Celcoin exigir outro nome.
@@ -1563,9 +1562,9 @@ type ConfirmPaymentResponse struct {
 
 // FilterPaymentsRequest..
 type FilterPaymentsRequest struct {
-	BankBranch  string `validate:"required" json:"bankBranch"`
-	BankAccount string `validate:"required" json:"bankAccount"`
-	PageSize    int    `validate:"required" json:"pageSize"`
+	BankBranch  string  `validate:"required" json:"bankBranch"`
+	BankAccount string  `validate:"required" json:"bankAccount"`
+	PageSize    int     `validate:"required" json:"pageSize"`
 	PageToken   *string `json:"pageToken,omitempty"`
 }
 
