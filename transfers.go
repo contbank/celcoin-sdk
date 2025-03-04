@@ -296,18 +296,23 @@ func (t *Transfers) getTransfersAPIEndpoint(correlationID string,
 
 	if isInternalTransfer {
 		u.Path = path.Join(u.Path, InternalTransfersPath)
+		if transferAuthenticationCode != nil && transferRequestID != nil {
+			u.Path = path.Join(u.Path, "status")
+			q := u.Query()
+			q.Set("id", *transferAuthenticationCode)
+			q.Set("ClientRequestId", *transferRequestID)
+			u.RawQuery = q.Encode()
+		}
 	} else {
 		u.Path = path.Join(u.Path, ExternalTransfersPath)
+		if transferAuthenticationCode != nil && transferRequestID != nil {
+			u.Path = path.Join(u.Path, "status")
+			q := u.Query()
+			q.Set("id", *transferAuthenticationCode)
+			q.Set("clientCode", *transferRequestID)
+			u.RawQuery = q.Encode()
+		}
 	}
-
-	if transferAuthenticationCode != nil && transferRequestID != nil {
-		u.Path = path.Join(u.Path, "status")
-		q := u.Query()
-		q.Set("id", *transferAuthenticationCode)
-		q.Set("clientCode", *transferRequestID)
-		u.RawQuery = q.Encode()
-	}
-
 	endpoint := u.String()
 	return &endpoint, nil
 }
