@@ -10,7 +10,6 @@ import (
 	"net/url"
 	"path"
 	"strings"
-	"time"
 
 	"github.com/contbank/grok"
 	"github.com/sirupsen/logrus"
@@ -1449,64 +1448,31 @@ func (s *PixsService) GetAddressKey(ctx context.Context, key, currentIdentity, a
 		return nil, fmt.Errorf("missing required parameters: key, currentIdentity, or account")
 	}
 
-	// 2. Consultar as chaves Pix da conta usando o método GetPixKeys
-	pixKeysResponse, err := s.GetPixKeys(ctx, account)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get pix keys: %v", err)
-	}
+	response := &PixAddressKeyResponse{}
 
-	if pixKeysResponse.Status != "SUCCESS" {
-		return nil, fmt.Errorf("unexpected response status: %s", pixKeysResponse.Status)
-	}
-
-	// 3. Procurar se a chave está na lista de chaves
-	var foundKey *PixKeyListItem
-	for _, pixKey := range pixKeysResponse.Body.ListKeys {
-		if pixKey.Key == key {
-			foundKey = &pixKey
-			break
-		}
-	}
-
-	if foundKey == nil {
-		return nil, fmt.Errorf("key not found in list of pix keys")
-	}
-
-	// 4. Criar o PixAddressKeyResponse com as informações básicas da chave encontrada
-	holder_type := "CPF"
-	if len(foundKey.Owner.DocumentNumber) > 11 {
-		holder_type = "CNPJ"
-	}
-	response := &PixAddressKeyResponse{
-		AddressingKey: PixTypeValue{
-			Type:  PixType(foundKey.KeyType),
-			Value: foundKey.Key,
-		},
-		Holder: PixHolder{
-			Type: holder_type,
-			Name: foundKey.Owner.Name,
-			Document: PixTypeValue{
-				Type:  PixType(holder_type), // CPF ou CNPJ
-				Value: foundKey.Owner.DocumentNumber,
-			},
-		},
-		Status:    "FOUND",
-		CreatedAt: time.Now(), // Data atual, ajustar se houver outro campo correspondente
-		OwnedAt:   time.Now(), // Data atual, ajustar se houver outro campo correspondente
-	}
-
-	// 5. Verificar se o searchDict é true e consultar o método GetExternalPixKey
+	// Verificar se o searchDict é true e consultar o método GetExternalPixKey
 	if searchDict != nil && *searchDict {
-		externalPixResponse, err := s.GetExternalPixKey(ctx, foundKey.Account.Account, foundKey.Key, foundKey.Owner.DocumentNumber)
+		externalPixResponse, err := s.GetExternalPixKey(ctx, account, key, currentIdentity)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get external pix key: %v", err)
 		}
-
+		holder_type := "CPF"
+		if len(externalPixResponse.Body.Owner.DocumentNumber) > 11 {
+			holder_type = "CNPJ"
+		}
 		// Atualizar o response com base na resposta do GetExternalPixKey
 		response.Status = "FOUND_IN_DICT"
 		response.EndToEndID = externalPixResponse.Body.EndToEndId
 		response.CreatedAt = externalPixResponse.Body.CreationDate
 		response.OwnedAt = externalPixResponse.Body.Account.CreateDate
+
+		response.AddressingKey.Type = PixType(externalPixResponse.Body.KeyType)
+		response.AddressingKey.Value = externalPixResponse.Body.Key
+
+		response.Holder.Type = holder_type
+		response.Holder.Name = externalPixResponse.Body.Owner.Name
+		response.Holder.Document.Type = PixType(holder_type)
+		response.Holder.Document.Value = externalPixResponse.Body.Owner.DocumentNumber
 	}
 
 	return response, nil
