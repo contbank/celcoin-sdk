@@ -1443,7 +1443,7 @@ func (s *PixsService) GetAddressKey(ctx context.Context, key, currentIdentity, a
 		searchDict = &search_dict // valor for null, não devemos buscar no DICT pois pode afetar o balde de fichas
 	}
 
-	// 1. Validar se todos os parâmetros foram enviados
+	// Validar se todos os parâmetros foram enviados
 	if key == "" || currentIdentity == "" || account == "" {
 		return nil, fmt.Errorf("missing required parameters: key, currentIdentity, or account")
 	}
