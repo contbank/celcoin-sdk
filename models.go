@@ -1041,6 +1041,19 @@ type PixAmount struct {
 }
 
 // Amount representa os valores relacionados à transação.
+type PixAmountCashIn struct {
+	Original   *float64           `json:"original,omitempty"`
+	Abatement  *PixChargeFee      `json:"abatement,omitempty"`
+	Discount   *PixAmountDiscount `json:"discount,omitempty"`
+	Interest   *PixChargeFee      `json:"interest,omitempty"`
+	Fine       *PixChargeFee      `json:"fine,omitempty"`
+	Final      *float64           `json:"final,omitempty"`
+	ChangeType int                `json:"changeType"`
+	Withdrawal *PixWithdrawal     `json:"withdrawal,omitempty"`
+	Change     *PixChangeDetails  `json:"change,omitempty"`
+}
+
+// Amount representa os valores relacionados à transação.
 type PixQrCodeAmount struct {
 	Original  *string `json:"original,omitempty"`
 	Abatement *string `json:"abatement,omitempty"`
@@ -1080,7 +1093,7 @@ type PixCashInDueDateResponse struct {
 	PayerQuestion             string              `json:"payerQuestion"`
 	AdditionalInformation     []PixAdditionalInfo `json:"additionalInformation"`
 	Debtor                    PixDebtor           `json:"debtor"`
-	Amount                    PixAmount           `json:"amount"`
+	Amount                    PixAmountCashIn     `json:"amount"`
 	Location                  *PixLocation        `json:"location,omitempty"` // Campo opcional
 	Key                       string              `json:"key"`
 	Receiver                  PixReceiver         `json:"receiver"`
