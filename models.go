@@ -48,7 +48,7 @@ const (
 	PixEmvPath            string = "/pix/v1/emv"
 	PixStaticPath         string = "/pix/v1/brcode/static"
 	PixCashInStatusPath   string = "/pix/v2/receivement/v2/devolution/status"
-	PixEmvUrl             string = "/pix/v2/collection"
+	PixEmvUrl             string = "/pix/v1/collection"
 	PixCashInDynamicPath  string = "/pix/v1/collection"
 	PixQrCodeLocationPath string = "/pix/v1/location"
 
