@@ -61,29 +61,43 @@ const (
 	// Webhook
 	WebhookPath string = "/baas-webhookmanager/v1/webhook"
 
+	//BaasV2ChargePath ...
+	BaasV2ChargePath string = "/baas/v2/charge"
+
 	// ONBOARDING CONSTANTS
 	// OnboardingStatusProcessing ...
 	OnboardingStatusProcessing string = "PROCESSING"
+
 	// OnboardingStatusApproved ...
 	OnboardingStatusApproved string = "APPROVED"
+
 	// OnboardingStatusReproved ...
 	OnboardingStatusReproved string = "REPROVED"
+
 	// OnboardingStatusPending ...
 	OnboardingStatusPending string = "PENDING"
+
 	//ProposalTypeNaturalPerson ...
 	ProposalTypeNaturalPerson string = "NATURAL_PERSON"
+
 	// ProposalTypeLegalPerson ...
 	ProposalTypeLegalPerson string = "LEGAL_PERSON"
+
 	// LegalPersonOwnerTypeSocio ...
 	LegalPersonOwnerTypeSocio string = "SOCIO"
+
 	// LegalPersonOwnerTypeRepresentante ...
 	LegalPersonOwnerTypeRepresentante string = "REPRESENTANTE"
+
 	// LegalPersonOwnerTypeDemaisSocios...
 	LegalPersonOwnerTypeDemaisSocios string = "DEMAIS_SOCIOS"
+
 	// ProposalTypePF...
 	ProposalTypePF string = "PF"
+
 	// ProposalTypePJ...
 	ProposalTypePJ string = "PJ"
+
 	// OnboardingProposalCompanyTypes...
 	CompanyTypeME     CompanyType = "ME"
 	CompanyTypeMEI    CompanyType = "MEI"
@@ -93,8 +107,14 @@ const (
 	CompanyTypeEI     CompanyType = "EI"
 	CompanyTypeEIRELI CompanyType = "EIRELI"
 	CompanyTypePJ     CompanyType = "PJ"
+
 	// DefaultOnboardingType ...
 	DefaultOnboardingType string = "BAAS"
+
+	// ChargeDiscountModalityFixed ...
+	ChargeDiscountModalityFixed string = "FIXED"
+	// ChargeDiscountModalityPercentage ...
+	ChargeDiscountModalityPercentage string = "PERCENT"
 )
 
 const (
@@ -1165,12 +1185,14 @@ type PixAmountInterest struct {
 	AmountPerc   string `json:"amountPerc"`
 	Modality     string `json:"modality"`
 }
+
 type PixAmountDiscount struct {
 	HasCondition      bool                   `json:"hasDicount"`
 	AmountPerc        string                 `json:"amountPerc"`
 	Modality          string                 `json:"modality"`
-	DiscountDateFixed []PixDiscountDateFixed `json: "discountDateFixed"`
+	DiscountDateFixed []PixDiscountDateFixed `json:"discountDateFixed"`
 }
+
 type PixDiscountDateFixed struct {
 	Date       string `json:"date"`
 	AmountPerc string `json:"amountPerc"`
@@ -1631,4 +1653,91 @@ type Charges struct {
 	InterestAmountCalculated float64 `json:"interestAmountCalculated,omitempty"`
 	FineAmountCalculated     float64 `json:"fineAmountCalculated,omitempty"`
 	DiscountAmount           float64 `json:"discountAmount,omitempty"`
+}
+
+// ChargeRequest ... define a estrutura da requisição de cobrança.
+type ChargeRequest struct {
+	TransactionID *string `json:"transactionId"`
+	ExternalID    *string `json:"externalId"`
+}
+
+// ChargeDebtor ... define a estrutura do devedor.
+type ChargeDebtor struct {
+	Name         string `json:"name"`
+	Document     string `json:"document"`
+	PostalCode   string `json:"postalCode"`
+	PublicArea   string `json:"publicArea"`
+	Number       string `json:"number"`
+	Neighborhood string `json:"neighborhood"`
+	City         string `json:"city"`
+	State        string `json:"state"`
+}
+
+// ChargeReceiver ... define a estrutura do recebedor.
+type ChargeReceiver struct {
+	Name       string `json:"name"`
+	Document   string `json:"document"`
+	PostalCode string `json:"postalCode"`
+	PublicArea string `json:"publicArea"`
+	City       string `json:"city"`
+	State      string `json:"state"`
+	Account    string `json:"account"`
+}
+
+// ChargeDiscount ... define a estrutura do desconto.
+type ChargeDiscount struct {
+	Amount    float64 `json:"amount"`
+	Modality  string  `json:"modality"`
+	LimitDate string  `json:"limitDate"`
+}
+
+// ChargeInstructions ... define a estrutura das instruções.
+type ChargeInstructions struct {
+	Fine     float64        `json:"fine"`
+	Interest float64        `json:"interest"`
+	Discount ChargeDiscount `json:"discount"`
+}
+
+// ChargeDetails ... define a estrutura dos detalhes do boleto.
+type ChargeDetails struct {
+	TransactionID string `json:"transactionId"`
+	Status        string `json:"status"`
+	BankEmissor   string `json:"bankEmissor"`
+	BankNumber    string `json:"bankNumber"`
+	BankAgency    string `json:"bankAgency"`
+	BankAccount   string `json:"bankAccount"`
+	BarCode       string `json:"barCode"`
+	BankLine      string `json:"bankLine"`
+	BankAssignor  string `json:"bankAssignor"`
+}
+
+// ChargePix ... define a estrutura do Pix.
+type ChargePix struct {
+	TransactionID             string `json:"transactionId"`
+	TransactionIdentification string `json:"transactionIdentification"`
+	Status                    string `json:"status"`
+	Key                       string `json:"key"`
+	Emv                       string `json:"emv"`
+}
+
+// ChargeBody ... define a estrutura do corpo do boleto.
+type ChargeBody struct {
+	TransactionID string             `json:"transactionId"`
+	ExternalID    string             `json:"externalId"`
+	Amount        float64            `json:"amount"`
+	DueDate       string             `json:"duedate"`
+	Status        string             `json:"status"`
+	Debtor        ChargeDebtor       `json:"debtor"`
+	Receiver      ChargeReceiver     `json:"receiver"`
+	Instructions  ChargeInstructions `json:"instructions"`
+	Boleto        ChargeDetails      `json:"boleto"`
+	Pix           ChargePix          `json:"pix"`
+	Split         []interface{}      `json:"split"` // Defina os campos necessários para a estrutura Split, se houver
+}
+
+// ChargeResponse ... define a estrutura da resposta do boleto.
+type ChargeResponse struct {
+	Body    ChargeBody `json:"body"`
+	Version string     `json:"version"`
+	Status  string     `json:"status"`
 }

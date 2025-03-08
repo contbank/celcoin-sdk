@@ -994,3 +994,21 @@ func FindIncomeReportError(code string, responseStatus *int) *grok.Error {
 	}
 	return grok.NewError(http.StatusInternalServerError, "UNKNOWN_ERROR", "unknown error")
 }
+
+// ChargeErrorMappings ... mapeia os códigos de erro do parceiro Celcoin para os códigos de erro do Contbank com descrição
+var ChargeErrorMappings = map[string]struct {
+	ContbankCode string
+	Description  string
+}{
+	"CSE001": {"INVALID_REQUEST_MISSING_FIELDS", "É necessário informar um dos campos: transactionId ou externalId."},
+	"CSE002": {"CHARGE_NOT_FOUND", "Não foi encontrado registro para o identificador informado."},
+	"AUE002": {"BEARER_TOKEN_NOT_FOUND", "Authorization Header não localizado."},
+}
+
+// FindChargeError ... retorna a mensagem de erro correspondente ao código de erro de cobrança
+func FindChargeError(code string, responseStatus *int) *grok.Error {
+	if mapping, exists := IncomeReportErrorMappings[code]; exists {
+		return grok.NewError(*responseStatus, mapping.ContbankCode, mapping.Description)
+	}
+	return grok.NewError(http.StatusInternalServerError, "UNKNOWN_ERROR", "unknown error")
+}

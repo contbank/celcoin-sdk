@@ -17,15 +17,14 @@ import (
 // Boletos provides methods to create, cancel, query, and download boleto (charge) documents.
 type Boletos struct {
 	session    Session
-	httpClient *http.Client
-	// Note: The injected httpClient automatically handles authentication (token injection).
+	httpClient *LoggingHTTPClient
 }
 
 // NewBoletos creates and returns a new instance of Boletos using the given httpClient and session.
 func NewBoletos(httpClient *http.Client, session Session) *Boletos {
 	return &Boletos{
 		session:    session,
-		httpClient: httpClient,
+		httpClient: NewLoggingHTTPClient(httpClient),
 	}
 }
 
@@ -199,4 +198,95 @@ func (b *Boletos) DownloadBoletoPDF(ctx context.Context, transactionID string, w
 	}
 
 	return nil
+}
+
+// GetCharge ...
+func (r *Boletos) GetCharge(ctx context.Context,
+	request *ChargeRequest) (*ChargeResponse, error) {
+
+	requestID, _ := ctx.Value("Request-Id").(string)
+	fields := logrus.Fields{
+		"request_id": requestID,
+		"interface":  "GetCharge",
+		"service":    "charge",
+	}
+
+	if request != nil && request.TransactionID != nil && len(*request.TransactionID) > 0 {
+		fields["transaction_id"] = request.TransactionID
+	}
+
+	if request != nil && request.ExternalID != nil && len(*request.ExternalID) > 0 {
+		fields["external_id"] = request.ExternalID
+	}
+
+	u, err := url.Parse(r.session.APIEndpoint)
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).
+			Error("error parsing charge api endpoint")
+		return nil, err
+	}
+
+	u.Path = path.Join(u.Path, BaasV2ChargePath)
+
+	q := u.Query()
+
+	if request != nil && request.TransactionID != nil && len(*request.TransactionID) > 0 {
+		q.Set("transactionId", *request.TransactionID)
+	}
+
+	if request != nil && request.ExternalID != nil && len(*request.ExternalID) > 0 {
+		q.Set("externalId", *request.ExternalID)
+	}
+
+	u.RawQuery = q.Encode()
+	endpoint := u.String()
+
+	req, err := http.NewRequest("GET", endpoint, nil)
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).
+			Error("error creating charge request")
+		return nil, err
+	}
+
+	req.Header.Set("accept", "application/json")
+
+	resp, err := r.httpClient.Do(req)
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).
+			Error("error making charge request")
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).
+			Error("error reading charge response body")
+		return nil, err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		var errResponse *ErrorDefaultResponse
+		if err := json.Unmarshal(bodyBytes, &errResponse); err != nil {
+			logrus.WithFields(fields).WithError(err).
+				Error("error unmarshal charge response")
+			return nil, err
+		}
+
+		if errResponse != nil && errResponse.Error != nil && len(*errResponse.Error.ErrorCode) > 0 {
+			err := FindChargeError(*errResponse.Error.ErrorCode, &resp.StatusCode)
+			logrus.WithFields(fields).WithError(err).
+				Error("error getting charge response")
+			return nil, err
+		}
+	}
+
+	var chargeResponse *ChargeResponse
+	if err := json.Unmarshal(bodyBytes, &chargeResponse); err != nil {
+		logrus.WithFields(fields).WithError(err).
+			Error("error unmarshal charge response")
+		return nil, err
+	}
+
+	return chargeResponse, nil
 }
