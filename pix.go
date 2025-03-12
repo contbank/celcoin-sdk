@@ -64,7 +64,7 @@ type Pixs interface {
 // PixsService implementa a interface Pixs.
 type PixsService struct {
 	session        Session
-	httpClient     *http.Client
+	httpClient     *LoggingHTTPClient
 	authentication *Authentication
 }
 
@@ -72,7 +72,7 @@ type PixsService struct {
 func NewPixs(httpClient *http.Client, session Session) Pixs {
 	return &PixsService{
 		session:        session,
-		httpClient:     httpClient,
+		httpClient:     NewLoggingHTTPClient(httpClient),
 		authentication: NewAuthentication(httpClient, session),
 	}
 }

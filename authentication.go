@@ -15,14 +15,16 @@ import (
 // Authentication ...
 type Authentication struct {
 	session    Session
-	httpClient *http.Client
+	httpClient *LoggingHTTPClient
 }
 
 // NewAuthentication ...
-func NewAuthentication(httpClient *http.Client, session Session) *Authentication {
+func NewAuthentication(
+	httpClient *http.Client,
+	session Session) *Authentication {
 	return &Authentication{
 		session:    session,
-		httpClient: httpClient,
+		httpClient: NewLoggingHTTPClient(httpClient),
 	}
 }
 

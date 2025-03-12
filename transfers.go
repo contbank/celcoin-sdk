@@ -4,28 +4,29 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"github.com/contbank/grok"
-	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"path"
 	"strconv"
 	"strings"
+
+	"github.com/contbank/grok"
+	"github.com/sirupsen/logrus"
 )
 
 // Transfers ...
 type Transfers struct {
 	session        Session
 	authentication *Authentication
-	httpClient     *http.Client
+	httpClient     *LoggingHTTPClient
 }
 
 // NewTransfers ...
 func NewTransfers(httpClient *http.Client, session Session) *Transfers {
 	return &Transfers{
 		session:        session,
-		httpClient:     httpClient,
+		httpClient:     NewLoggingHTTPClient(httpClient),
 		authentication: NewAuthentication(httpClient, session),
 	}
 }

@@ -80,7 +80,7 @@ var (
 	// ErrDefaultFindTransfers ...
 	ErrDefaultFindTransfers = grok.NewError(http.StatusConflict, "FIND_TRANSFERS_ERROR", "error find transfers")
 	// ErrDefaultPayment ...
-	ErrDefaultPayment = grok.NewError(http.StatusInternalServerError, "PAYMENT_ERROR", "error payment")
+	ErrDefaultPayment = grok.NewError(http.StatusInternalServerError, "PAYMENT_ERROR", "payment intenral server error")
 	// ErrDefaultBusinessAccounts ...
 	ErrDefaultBusinessAccounts = grok.NewError(http.StatusConflict, "BUSINESS_ACCOUNTS_ERROR", "error business accounts")
 	// ErrDefaultCorporationBusinessAccounts ...
@@ -326,37 +326,6 @@ type TransferError struct {
 	grokError            *grok.Error
 }
 
-var transferErrorList = []TransferError{
-	{
-		celcoinTransferError: CelcoinTransferError{Key: "x-correlation-id"},
-		grokError:            ErrInvalidCorrelationID,
-	},
-	{
-		celcoinTransferError: CelcoinTransferError{Key: "$.amount"},
-		grokError:            ErrInvalidAmount,
-	},
-	{
-		celcoinTransferError: CelcoinTransferError{Key: "INSUFFICIENT_BALANCE"},
-		grokError:            ErrInsufficientBalance,
-	},
-	{
-		celcoinTransferError: CelcoinTransferError{Key: "CASH_OUT_NOT_ALLOWED_OUT_OF_BUSINESS_PERIOD"},
-		grokError:            ErrOutOfServicePeriod,
-	},
-	{
-		celcoinTransferError: CelcoinTransferError{Key: "CASHOUT_LIMIT_NOT_ENOUGH"},
-		grokError:            ErrCashoutLimitNotEnough,
-	},
-	{
-		celcoinTransferError: CelcoinTransferError{Key: "Recipient.Branch"},
-		grokError:            ErrInvalidRecipientBranch,
-	},
-	{
-		celcoinTransferError: CelcoinTransferError{Key: "Recipient.Account"},
-		grokError:            ErrInvalidRecipientAccount,
-	},
-}
-
 // FindError Find errors.
 func FindError(code string, messages ...string) *Error {
 	code = verifyInvalidParameter(code, messages)
@@ -460,18 +429,6 @@ func mapBalanceErrorCode(code string, message string) string {
 		}
 	}
 	return code // Retorna o código original se nenhuma correspondência for encontrada.
-}
-
-// errorIncomeReportList ...
-var errorIncomeReportList = []Error{
-	{
-		ErrorKey:  "INVALID_CALENDAR_FOR_INCOME_REPORT",
-		GrokError: ErrInvalidIncomeReportCalendar,
-	},
-	{
-		ErrorKey:  "INVALID_PARAMETER_INCOME_REPORT",
-		GrokError: ErrInvalidIncomeReportParameter,
-	},
 }
 
 // verifyInvalidIncomeReportParameter Find the correspondent error message for income reports.
@@ -1007,7 +964,42 @@ var ChargeErrorMappings = map[string]struct {
 
 // FindChargeError ... retorna a mensagem de erro correspondente ao código de erro de cobrança
 func FindChargeError(code string, responseStatus *int) *grok.Error {
-	if mapping, exists := IncomeReportErrorMappings[code]; exists {
+	if mapping, exists := ChargeErrorMappings[code]; exists {
+		return grok.NewError(*responseStatus, mapping.ContbankCode, mapping.Description)
+	}
+	return grok.NewError(http.StatusInternalServerError, "UNKNOWN_ERROR", "unknown error")
+}
+
+var PaymentErrorMappings = map[string]struct {
+	ContbankCode string
+	Description  string
+}{
+	"PCE001": {"MISSING_CLIENT_REQUEST_ID", "É obrigatório informar o campo clientRequestId."},
+	"PCE002": {"ACCOUNT_MAX_LENGTH_EXCEEDED", "O campo account ultrapassou os 20 caracteres permitidos."},
+	"PCE003": {"MISSING_ACCOUNT_FIELD", "É obrigatório informar o campo account."},
+	"PCE004": {"MISSING_BARCODE_INFO", "É necessário informar o campo barcodeInfo.digitable ou barcodeInfo.barcode."},
+	"PCE005": {"EXCLUSIVE_BARCODE_INFO", "Apenas um dos campos devem estar preenchido, barcodeInfo.digitable ou barcodeInfo.barcode."},
+	"PCE006": {"ACCOUNT_CLOSED", "Conta informada está encerrada."},
+	"PCE007": {"ACCOUNT_BLOCKED", "Conta informada está bloqueada."},
+	"PCE008": {"ACCOUNT_KYC_PENDING", "Conta informada está com pendências no KYC."},
+	"PCE009": {"MISSING_TRANSACTION_ID_AUTHORIZE", "O campo transactionIdAuthorize é obrigatório."},
+	"PCE010": {"ACCOUNT_NOT_FOUND", "Conta não encontrada."},
+	"PCE011": {"CLIENT_REQUEST_ID_MAX_LENGTH_EXCEEDED", "O campo clientRequestId não pode conter mais de 20 caracteres."},
+	"PCE012": {"INVALID_AMOUNT", "O campo amount está inválido."},
+	"PCE013": {"MISSING_AMOUNT_FIELD", "É obrigatório informar o campo amount."},
+	"PCE014": {"INVALID_AMOUNT_VALUE", "O campo amount deve ser a partir de 0.01."},
+	"PCE015": {"CLIENT_NOT_ACTIVE", "Cliente não está ativo para utilizar a API."},
+	"PCE016": {"MISSING_CLIENT_REQUEST_ID_OR_ID", "É obrigatório informar o clientRequestId ou id."},
+	"PCE018": {"TRANSACTION_NOT_FOUND", "Não foi encontrada nenhuma transação com os parâmetros informados."},
+	"PCE019": {"OPERATION_NOT_AUTHORIZED", "Operação não realizada. Cliente não está autorizado para esse produto."},
+	"PCE024": {"INVALID_REQUEST_FORMAT", "Request fora do padrão. Favor verificar a documentação."},
+	"PCE025": {"DUPLICATE_CLIENT_REQUEST_ID", "Já existe um pagamento com o mesmo clientRequestId."},
+	"PCE026": {"DUPLICATE_TRANSACTION_ID_AUTHORIZE", "Já existe um pagamento com o mesmo transactionIdAuthorize."},
+}
+
+// FindPaymentError ... retorna a mensagem de erro correspondente ao código de erro de pagamentos
+func FindPaymentError(code string, responseStatus *int) *grok.Error {
+	if mapping, exists := PaymentErrorMappings[code]; exists {
 		return grok.NewError(*responseStatus, mapping.ContbankCode, mapping.Description)
 	}
 	return grok.NewError(http.StatusInternalServerError, "UNKNOWN_ERROR", "unknown error")
