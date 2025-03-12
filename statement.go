@@ -16,14 +16,14 @@ import (
 // StatementService ... implementa a interface para o extrato da conta.
 type Statement struct {
 	session    Session
-	httpClient *http.Client
+	httpClient *LoggingHTTPClient
 }
 
 // NewStatement ... cria uma nova instância de StatementService.
 func NewStatement(httpClient *http.Client, session Session) *Statement {
 	return &Statement{
 		session:    session,
-		httpClient: httpClient,
+		httpClient: NewLoggingHTTPClient(httpClient),
 	}
 }
 

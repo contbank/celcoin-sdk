@@ -30,7 +30,7 @@ type Webhooks interface {
 // Webhooks ...
 type WebhooksService struct {
 	session        Session
-	httpClient     *http.Client
+	httpClient     *LoggingHTTPClient
 	authentication *Authentication
 }
 
@@ -38,7 +38,7 @@ type WebhooksService struct {
 func NewWebhooks(httpClient *http.Client, session Session) Webhooks {
 	return &WebhooksService{
 		session:        session,
-		httpClient:     httpClient,
+		httpClient:     NewLoggingHTTPClient(httpClient),
 		authentication: NewAuthentication(httpClient, session),
 	}
 }

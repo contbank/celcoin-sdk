@@ -1561,7 +1561,8 @@ type IncomeReportResponse struct {
 // ValidatePaymentRequest representa a requisição para validar um pagamento.
 // No SDK do Bankly este modelo possui o campo Code; adapte-o se o payload da Celcoin exigir outro nome.
 type ValidatePaymentRequest struct {
-	Code string `validate:"required" json:"code,omitempty"`
+	DigitableLine string `json:"digitableLine,omitempty"`
+	BarCode       string `json:"barcode,omitempty"`
 }
 
 // ValidatePaymentResponse..
@@ -1614,28 +1615,6 @@ type DetailPaymentRequest struct {
 	BankBranch         string `validate:"required" json:"bankBranch"`
 	BankAccount        string `validate:"required" json:"bankAccount"`
 	AuthenticationCode string `validate:"required" json:"authenticationCode"`
-}
-
-// PaymentResponse..
-type PaymentResponse struct {
-	AuthenticationCode string     `json:"authenticationCode,omitempty"`
-	Status             string     `json:"status,omitempty"`
-	Digitable          string     `json:"digitable,omitempty"`
-	Description        *string    `json:"description,omitempty"`
-	BankBranch         string     `json:"bankBranch,omitempty"`
-	BankAccount        string     `json:"bankAccount,omitempty"`
-	RecipientDocument  string     `json:"recipientDocument,omitempty"`
-	RecipientName      string     `json:"recipientName,omitempty"`
-	Amount             float64    `json:"amount,omitempty"`
-	OriginalAmount     float64    `json:"originalAmount,omitempty"`
-	Assignor           string     `json:"assignor,omitempty"`
-	Charges            *Charges   `json:"charges,omitempty"`
-	SettleDate         time.Time  `json:"settleDate,omitempty"`
-	PaymentDate        time.Time  `json:"paymentDate,omitempty"`
-	ConfirmedAt        time.Time  `json:"confirmedAt,omitempty"`
-	DueDate            *time.Time `json:"dueDate,omitempty"`
-	CompanyKey         *string    `json:"companyKey,omitempty"`
-	DocumentNumber     *string    `json:"documentNumber,omitempty"`
 }
 
 // PaymentPayer, BusinessHours e Charges (auxiliares, seguindo padrão existente)
@@ -1740,4 +1719,166 @@ type ChargeResponse struct {
 	Body    ChargeBody `json:"body"`
 	Version string     `json:"version"`
 	Status  string     `json:"status"`
+}
+
+// =================================================================================
+// PAYMENT SERVICE MODELS DEFINITIONS
+// =================================================================================
+
+type PaymentCategory int
+
+const (
+
+	// BillPaymentBasePath ...
+	BillPaymentBasePath = "/baas/v2/billpayment"
+	// BillPaymentEndpoint ...
+	BillPaymentAuthorizePath = "authorize"
+
+	// PaymentCategoryConcessionaireAndTaxes
+	PaymentCategoryConcessionaireAndTaxes PaymentCategory = 1
+	// PaymentCategoryCompensationForm ...
+	PaymentCategoryCompensationForm PaymentCategory = 2
+)
+
+// GetPaymentRequest ... define a estrutura da requisição para executar consulta de uam cobrança.
+type GetPaymentRequest struct {
+	ClientRequestID string `json:"clientRequestId"`
+	TransactionID   string `json:"id"`
+}
+
+// GetPaymentTag ... define a estrutura das tags.
+type GetPaymentTag struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+}
+
+// GetPaymentBarCodeInfo ... define a estrutura das informações do código de barras.
+type GetPaymentBarCodeInfo struct {
+	Digitable string `json:"digitable"`
+}
+
+// GetPaymentError ... define a estrutura do erro.
+type GetPaymentError struct {
+	ErrorCode string `json:"errorCode"`
+	Message   string `json:"message"`
+}
+
+// GetPaymentResponseBody ... define a estrutura do corpo da resposta de obtenção de pagamento.
+type GetPaymentResponseBody struct {
+	ID                     string                `json:"id"`
+	ClientRequestID        string                `json:"clientRequestId"`
+	Account                int                   `json:"account"`
+	Amount                 float64               `json:"amount"`
+	TransactionIDAuthorize int                   `json:"transactionIdAuthorize"`
+	HasOccurrence          bool                  `json:"hasOccurrence"`
+	Tags                   []GetPaymentTag       `json:"tags"`
+	BarCodeInfo            GetPaymentBarCodeInfo `json:"barCodeInfo"`
+	Error                  GetPaymentError       `json:"error"`
+}
+
+// GetPaymentResponse define a estrutura da resposta de obtenção de pagamento.
+type GetPaymentResponse struct {
+	Body    GetPaymentResponseBody `json:"body"`
+	Status  string                 `json:"status"`
+	Version string                 `json:"version"`
+}
+
+// PaymentCode ... define a estrutura do código de barras.
+type PaymentCode struct {
+	Type      PaymentCategory `json:"type"`
+	Digitable string          `json:"digitable"`
+	BarCode   string          `json:"barCode"`
+}
+
+// PaymentAuthorizeRequest ... define a estrutura da requisição para autorizar um pagamento.
+type PaymentAuthorizeRequest struct {
+	ExternalTerminal string      `json:"externalTerminal"` // Terminal de identificação externa do sistema do cliente, Ex: CPF
+	ExternalNSU      int         `json:"externalNSU"`      // Identificador da transação do sistema cliente
+	BarCode          PaymentCode `json:"barCode"`
+}
+
+// PaymentRegisterData ... define a estrutura dos dados de registro do pagamento.
+type PaymentRegisterData struct {
+	DocumentRecipient       string  `json:"documentRecipient"`
+	DocumentPayer           string  `json:"documentPayer"`
+	PayDueDate              string  `json:"payDueDate"`
+	NextBusinessDay         *string `json:"nextBusinessDay"`
+	DueDateRegister         string  `json:"dueDateRegister"`
+	AllowChangeValue        bool    `json:"allowChangeValue"`
+	Recipient               string  `json:"recipient"`
+	Payer                   string  `json:"payer"`
+	DiscountValue           float64 `json:"discountValue"`
+	InterestValueCalculated float64 `json:"interestValueCalculated"`
+	MaxValue                float64 `json:"maxValue"`
+	MinValue                float64 `json:"minValue"`
+	FineValueCalculated     float64 `json:"fineValueCalculated"`
+	OriginalValue           float64 `json:"originalValue"`
+	TotalUpdated            float64 `json:"totalUpdated"`
+	TotalWithDiscount       float64 `json:"totalWithDiscount"`
+	TotalWithAdditional     float64 `json:"totalWithAdditional"`
+	TotalPaymentPaid        int     `json:"totalPaymentPaid"`
+	TotalValuePaid          float64 `json:"totalValuePaid"`
+	MaxPartialsAccepts      int     `json:"maxPartialsAccepts"`
+	PaymentSpecies          int     `json:"paymentSpecies"`
+	DocumentFinalRecipient  *string `json:"documentFinalRecipient"`
+	FinalRecipient          *string `json:"finalRecipient"`
+}
+
+// PaymentResponse ... define a estrutura da resposta do pagamento.
+type PaymentResponse struct {
+	Assignor      string              `json:"assignor"`
+	RegisterData  PaymentRegisterData `json:"registerData"`
+	SettleDate    string              `json:"settleDate"`
+	DueDate       time.Time           `json:"dueDate"`
+	EndHour       string              `json:"endHour"`
+	IniteHour     string              `json:"initeHour"`
+	NextSettle    string              `json:"nextSettle"`
+	Digitable     string              `json:"digitable"`
+	TransactionID int                 `json:"transactionId"`
+	Type          int                 `json:"type"`
+	Value         float64             `json:"value"`
+	MaxValue      *float64            `json:"maxValue"`
+	MinValue      *float64            `json:"minValue"`
+	ErrorCode     string              `json:"errorCode"`
+	Message       *string             `json:"message"`
+	Status        int                 `json:"status"`
+}
+
+// ExecPaymentTag define a estrutura das tags.
+type ExecPaymentTag struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+}
+
+// ExecPaymentBarCodeInfo define a estrutura das informações do código de barras.
+type ExecPaymentBarCodeInfo struct {
+	Digitable string `json:"digitable"`
+	BarCode   string `json:"barCode"`
+}
+
+// ExecPaymentRequest define a estrutura da requisição para executar um pagamento.
+type ExecPaymentRequest struct {
+	ClientRequestID        string                 `json:"clientRequestId"`
+	Amount                 float64                `json:"amount"`
+	Account                string                 `json:"account"`
+	TransactionIDAuthorize int                    `json:"transactionIdAuthorize"`
+	Tags                   []ExecPaymentTag       `json:"tags"`
+	BarCodeInfo            ExecPaymentBarCodeInfo `json:"barCodeInfo"`
+}
+
+// ExecPaymentResponseBody define a estrutura do corpo da resposta de execução de pagamento.
+type ExecPaymentResponseBody struct {
+	ID                     string                 `json:"id"`
+	ClientRequestID        string                 `json:"clientRequestId"`
+	Amount                 float64                `json:"amount"`
+	TransactionIDAuthorize int                    `json:"transactionIdAuthorize"`
+	Tags                   []ExecPaymentTag       `json:"tags"`
+	BarCodeInfo            ExecPaymentBarCodeInfo `json:"barCodeInfo"`
+}
+
+// ExecPaymentResponse define a estrutura da resposta de execução de pagamento.
+type ExecPaymentResponse struct {
+	Body    ExecPaymentResponseBody `json:"body"`
+	Status  string                  `json:"status"`
+	Version string                  `json:"version"`
 }

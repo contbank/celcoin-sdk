@@ -15,7 +15,7 @@ import (
 // Business ...
 type Business struct {
 	session        Session
-	httpClient     *http.Client
+	httpClient     *LoggingHTTPClient
 	authentication *Authentication
 }
 
@@ -23,7 +23,7 @@ type Business struct {
 func NewBusiness(httpClient *http.Client, session Session) *Business {
 	return &Business{
 		session:        session,
-		httpClient:     httpClient,
+		httpClient:     NewLoggingHTTPClient(httpClient),
 		authentication: NewAuthentication(httpClient, session),
 	}
 }

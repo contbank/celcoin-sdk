@@ -14,14 +14,14 @@ import (
 // IncomeReport ...
 type IncomeReport struct {
 	session    Session
-	httpClient *http.Client
+	httpClient *LoggingHTTPClient
 }
 
 // NewIncomeReport ...
 func NewIncomeReport(httpClient *http.Client, session Session) *IncomeReport {
 	return &IncomeReport{
 		session:    session,
-		httpClient: httpClient,
+		httpClient: NewLoggingHTTPClient(httpClient),
 	}
 }
 
