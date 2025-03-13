@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/contbank/celcoin-sdk"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -76,12 +77,12 @@ func (s *BoletoTestSuite) SetupTest() {
 
 func (s *BoletoTestSuite) TestCreateQueryDownloadCancel() {
 	// --- 1) CREATE BOLETO ---
-	createReq := celcoin.CreateBoletoRequest{
-		ExternalID:             "TestBoleto123",
-		ExpirationAfterPayment: 1,
-		DueDate:                "2025-01-30",
-		Amount:                 100.0,
-		Debtor: celcoin.Debtor{
+	createReq := &celcoin.CreateBoletoRequest{
+		ExternalID:             aws.String("TestBoleto123"),
+		ExpirationAfterPayment: aws.Int(1),
+		DueDate:                aws.String("2025-01-30"),
+		Amount:                 aws.Float64(100.0),
+		Debtor: &celcoin.Debtor{
 			Number:       "123",
 			Neighborhood: "Alphaville",
 			Name:         "João da Silva",
@@ -91,17 +92,17 @@ func (s *BoletoTestSuite) TestCreateQueryDownloadCancel() {
 			State:        "SP",
 			PostalCode:   "06474320",
 		},
-		Receiver: celcoin.Receiver{
+		Receiver: &celcoin.Receiver{
 			Account:  "123456",
 			Document: "98765432100",
 		},
-		Instructions: celcoin.Instructions{
-			Fine:     10,
-			Interest: 5,
-			Discount: celcoin.Discount{
-				Amount:    2,
-				Modality:  "fixed",
-				LimitDate: "2025-01-20T00:00:00.0000000",
+		Instructions: &celcoin.Instructions{
+			Fine:     aws.Float64(10),
+			Interest: aws.Float64(5),
+			Discount: &celcoin.Discount{
+				Amount:    aws.Float64(2),
+				Modality:  aws.String("fixed"),
+				LimitDate: aws.String("2025-01-20T00:00:00.0000000"),
 			},
 		},
 	}
@@ -127,7 +128,7 @@ func (s *BoletoTestSuite) TestCreateQueryDownloadCancel() {
 	s.mockTransport.On("RoundTrip", mock.Anything).Return(mockCreateResp, nil).Once()
 
 	// Call CreateBoleto
-	createResult, err := s.boletos.CreateBoleto(s.ctx, createReq)
+	createResult, err := s.boletos.CreateBoleto(s.ctx, *createReq)
 	s.assert.NoError(err)
 	s.assert.Equal("5a0f8148-03cb-430a-aec9-558e83e17352", createResult.TransactionID)
 	s.assert.Equal("SUCCESS", createResult.Status)

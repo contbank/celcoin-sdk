@@ -1413,14 +1413,14 @@ type TransfersError struct {
 
 // CreateBoletoRequest is the payload to create a new Celcoin charge/boleto.
 type CreateBoletoRequest struct {
-	ExternalID             string       `json:"externalId"`
-	ExpirationAfterPayment int          `json:"expirationAfterPayment"`
-	DueDate                string       `json:"dueDate"`
-	Amount                 float64      `json:"amount"`
-	Key                    string       `json:"key,omitempty"` // optional
-	Debtor                 Debtor       `json:"debtor"`
-	Receiver               Receiver     `json:"receiver"`
-	Instructions           Instructions `json:"instructions"`
+	ExternalID             *string       `json:"externalId,omitempty"`
+	ExpirationAfterPayment *int          `json:"expirationAfterPayment,omitempty"`
+	DueDate                *string       `json:"dueDate,omitempty"`
+	Amount                 *float64      `json:"amount,omitempty"`
+	Key                    *string       `json:"key,omitempty,omitempty"` // optional
+	Debtor                 *Debtor       `json:"debtor,omitempty"`
+	Receiver               *Receiver     `json:"receiver,omitempty"`
+	Instructions           *Instructions `json:"instructions,omitempty"`
 }
 
 type Debtor struct {
@@ -1440,15 +1440,15 @@ type Receiver struct {
 }
 
 type Instructions struct {
-	Fine     float64  `json:"fine"`
-	Interest float64  `json:"interest"`
-	Discount Discount `json:"discount"`
+	Fine     *float64  `json:"fine,omitempty"`
+	Interest *float64  `json:"interest,omitempty"`
+	Discount *Discount `json:"discount,omitempty"`
 }
 
 type Discount struct {
-	Amount    float64 `json:"amount"`
-	Modality  string  `json:"modality"`  // "fixed" or "percent"
-	LimitDate string  `json:"limitDate"` // e.g. "2025-01-20T00:00:00.0000000"
+	Amount    *float64 `json:"amount,omitempty"`
+	Modality  *string  `json:"modality,omitempty"`  // "fixed" or "percent"
+	LimitDate *string  `json:"limitDate,omitempty"` // e.g. "2025-01-20T00:00:00.0000000"
 }
 
 // CreateBoletoResponse is the simplified response from POST /charge.
