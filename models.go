@@ -1417,7 +1417,7 @@ type CreateBoletoRequest struct {
 	ExpirationAfterPayment *int          `json:"expirationAfterPayment,omitempty"`
 	DueDate                *string       `json:"dueDate,omitempty"`
 	Amount                 *float64      `json:"amount,omitempty"`
-	Key                    *string       `json:"key,omitempty,omitempty"` // optional
+	Key                    *string       `json:"key,omitempty"` // optional
 	Debtor                 *Debtor       `json:"debtor,omitempty"`
 	Receiver               *Receiver     `json:"receiver,omitempty"`
 	Instructions           *Instructions `json:"instructions,omitempty"`
@@ -1561,52 +1561,57 @@ type IncomeReportResponse struct {
 // ValidatePaymentRequest representa a requisição para validar um pagamento.
 // No SDK do Bankly este modelo possui o campo Code; adapte-o se o payload da Celcoin exigir outro nome.
 type ValidatePaymentRequest struct {
-	DigitableLine string `json:"digitableLine,omitempty"`
-	BarCode       string `json:"barcode,omitempty"`
+	BarCode *BarcodeData `json:"barCode,omitempty"`
+}
+
+// BarcodeData representa os dados do código de barras.
+type BarcodeData struct {
+	DigitableLine *string `json:"digitable,omitempty"`
+	BarCode       *string `json:"barCode,omitempty"`
 }
 
 // ValidatePaymentResponse..
 type ValidatePaymentResponse struct {
-	ID                string  `json:"id,omitempty"`
-	Assignor          string  `json:"assignor,omitempty"`
-	Code              string  `json:"code,omitempty"`
-	Digitable         string  `json:"digitable,omitempty"`
-	Amount            float64 `json:"amount,omitempty"`
-	OriginalAmount    float64 `json:"originalAmount,omitempty"`
-	MinAmount         float64 `json:"minAmount,omitempty"`
-	MaxAmount         float64 `json:"maxAmount,omitempty"`
-	AllowChangeAmount bool    `json:"allowChangeAmount,omitempty"`
-	DueDate           string  `json:"dueDate,omitempty"`
-	SettleDate        string  `json:"settleDate,omitempty"`
-	NextSettle        bool    `json:"nextSettle,omitempty"`
+	ID                *string  `json:"id,omitempty"`
+	Assignor          *string  `json:"assignor,omitempty"`
+	Code              *string  `json:"code,omitempty"`
+	Digitable         *string  `json:"digitable,omitempty"`
+	Amount            *float64 `json:"amount,omitempty"`
+	OriginalAmount    *float64 `json:"originalAmount,omitempty"`
+	MinAmount         *float64 `json:"minAmount,omitempty"`
+	MaxAmount         *float64 `json:"maxAmount,omitempty"`
+	AllowChangeAmount *bool    `json:"allowChangeAmount,omitempty"`
+	DueDate           *string  `json:"dueDate,omitempty"`
+	SettleDate        *string  `json:"settleDate,omitempty"`
+	NextSettle        *bool    `json:"nextSettle,omitempty"`
 }
 
 // ConfirmPaymentRequest..
 type ConfirmPaymentRequest struct {
-	ID          string  `validate:"required" json:"id,omitempty"`
-	Amount      float64 `validate:"required" json:"amount,omitempty"`
-	Description *string `json:"description,omitempty"`
-	BankBranch  string  `validate:"required" json:"bankBranch,omitempty"`
-	BankAccount string  `validate:"required" json:"bankAccount,omitempty"`
+	ID          *string  `validate:"required" json:"id,omitempty"`
+	Amount      *float64 `validate:"required" json:"amount,omitempty"`
+	Description *string  `json:"description,omitempty"`
+	BankBranch  *string  `validate:"required" json:"bankBranch,omitempty"`
+	BankAccount *string  `validate:"required" json:"bankAccount,omitempty"`
 }
 
 // ConfirmPaymentResponse..
 type ConfirmPaymentResponse struct {
-	AuthenticationCode string    `json:"authenticationCode,omitempty"`
-	SettledDate        time.Time `json:"settledDate,omitempty"`
+	AuthenticationCode *string    `json:"authenticationCode,omitempty"`
+	SettledDate        *time.Time `json:"settledDate,omitempty"`
 }
 
 // FilterPaymentsRequest..
 type FilterPaymentsRequest struct {
-	BankBranch  string  `validate:"required" json:"bankBranch"`
-	BankAccount string  `validate:"required" json:"bankAccount"`
-	PageSize    int     `validate:"required" json:"pageSize"`
+	BankBranch  *string `validate:"required" json:"bankBranch"`
+	BankAccount *string `validate:"required" json:"bankAccount"`
+	PageSize    *int    `validate:"required" json:"pageSize"`
 	PageToken   *string `json:"pageToken,omitempty"`
 }
 
 // FilterPaymentsResponse..
 type FilterPaymentsResponse struct {
-	NextPageToken string             `json:"nextPage,omitempty"`
+	NextPageToken *string            `json:"nextPage,omitempty"`
 	Data          []*PaymentResponse `json:"data,omitempty"`
 }
 
@@ -1729,10 +1734,16 @@ type PaymentCategory int
 
 const (
 
-	// BillPaymentBasePath ...
-	BillPaymentBasePath = "/baas/v2/billpayment"
-	// BillPaymentEndpoint ...
+	// BillPaymentConfirmBasePath ...
+	BillPaymentConfirmBasePath = "/baas/v2/billpayment"
+	// BillPaymentAuthorizeBasePath ...
+	BillPaymentAuthorizeBasePath = "/v5/transactions/billpayments"
+	// BillPaymenStatusBasePath ...
+	BillPaymenStatusBasePath = "/baas/v2/billpayment"
+	// BillPaymentAuthorizePath ...
 	BillPaymentAuthorizePath = "authorize"
+	// BillPaymentStatusPath ...
+	BillPaymentStatusPath = "status"
 
 	// PaymentCategoryConcessionaireAndTaxes
 	PaymentCategoryConcessionaireAndTaxes PaymentCategory = 1
@@ -1826,22 +1837,22 @@ type PaymentRegisterData struct {
 
 // PaymentResponse ... define a estrutura da resposta do pagamento.
 type PaymentResponse struct {
-	Assignor      string              `json:"assignor"`
-	RegisterData  PaymentRegisterData `json:"registerData"`
-	SettleDate    string              `json:"settleDate"`
-	DueDate       time.Time           `json:"dueDate"`
-	EndHour       string              `json:"endHour"`
-	IniteHour     string              `json:"initeHour"`
-	NextSettle    string              `json:"nextSettle"`
-	Digitable     string              `json:"digitable"`
-	TransactionID int                 `json:"transactionId"`
-	Type          int                 `json:"type"`
-	Value         float64             `json:"value"`
-	MaxValue      *float64            `json:"maxValue"`
-	MinValue      *float64            `json:"minValue"`
-	ErrorCode     string              `json:"errorCode"`
-	Message       *string             `json:"message"`
-	Status        int                 `json:"status"`
+	Assignor      *string              `json:"assignor,omitempty"`
+	RegisterData  *PaymentRegisterData `json:"registerData,omitempty"`
+	SettleDate    *string              `json:"settleDate,omitempty"`
+	DueDate       *time.Time           `json:"dueDate,omitempty"`
+	EndHour       *string              `json:"endHour,omitempty"`
+	IniteHour     *string              `json:"initeHour,omitempty"`
+	NextSettle    *string              `json:"nextSettle,omitempty"`
+	Digitable     *string              `json:"digitable,omitempty"`
+	TransactionID *int                 `json:"transactionId,omitempty"`
+	Type          *int                 `json:"type,omitempty"`
+	Value         *float64             `json:"value,omitempty"`
+	MaxValue      *float64             `json:"maxValue,omitempty"`
+	MinValue      *float64             `json:"minValue,omitempty"`
+	ErrorCode     *string              `json:"errorCode,omitempty"`
+	Message       *string              `json:"message,omitempty"`
+	Status        *int                 `json:"status,omitempty"`
 }
 
 // ExecPaymentTag define a estrutura das tags.
