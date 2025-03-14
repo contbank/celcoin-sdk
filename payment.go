@@ -47,7 +47,7 @@ func (p *Payment) AuthorizePayment(ctx context.Context,
 	}
 
 	// Concatena o endpoint billpayment e o subcaminho "validate"
-	u.Path = path.Join(u.Path, BillPaymentBasePath, BillPaymentAuthorizePath)
+	u.Path = path.Join(u.Path, BillPaymentAuthorizeBasePath, BillPaymentAuthorizePath)
 	endpoint := u.String()
 
 	reqBytes, err := json.Marshal(request)
@@ -82,12 +82,13 @@ func (p *Payment) AuthorizePayment(ctx context.Context,
 	}
 
 	if resp.StatusCode == http.StatusOK {
-		var response PaymentResponse
+		var response *PaymentResponse
 		if err := json.Unmarshal(respBody, &response); err != nil {
-			logrus.WithFields(fields).WithError(err).Error("error decoding JSON response")
+			logrus.WithFields(fields).WithError(err).
+				Error("error decoding JSON response")
 			return nil, ErrDefaultPayment
 		}
-		return &response, nil
+		return response, nil
 	}
 
 	var bodyErr ErrorDefaultResponse
@@ -123,7 +124,7 @@ func (p *Payment) ExecutePayment(ctx context.Context, request *ExecPaymentReques
 	}
 
 	// Concatena o endpoint billpayment e o subcaminho "confirm"
-	u.Path = path.Join(u.Path, BillPaymentBasePath)
+	u.Path = path.Join(u.Path, BillPaymentConfirmBasePath)
 	endpoint := u.String()
 
 	reqBytes, err := json.Marshal(request)
@@ -200,7 +201,7 @@ func (p *Payment) Get(ctx context.Context, request *GetPaymentRequest) (*GetPaym
 		return nil, err
 	}
 
-	u.Path = path.Join(u.Path, BillPaymentBasePath)
+	u.Path = path.Join(u.Path, BillPaymenStatusBasePath, BillPaymentStatusPath)
 
 	q := u.Query()
 
