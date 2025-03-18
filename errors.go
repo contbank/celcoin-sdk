@@ -1010,6 +1010,7 @@ var CancelAccountErrorMappings = map[string]struct {
 	ContbankCode string
 	Description  string
 }{
+	"CBE078": {"ACCOUNT_NUMBER_NOT_FOUND", "Nenhuma conta foi encontrada."},
 	"CBE073": {"ACCOUNT_OR_DOCUMENT_NUMBER_NOT_FOUND", "É necessário informar pelo menos um dos campos: account, ou documentNumber."},
 	"CBE074": {"REASON_NOT_FOUND", "reason é obrigatório."},
 	"CBE062": {"BALANCE_PENDING", "Não é permitido encerrar conta com saldo."},
