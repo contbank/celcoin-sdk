@@ -30,6 +30,8 @@ const (
 	ProposalsPath string = "/onboarding/v1/onboarding-proposal"
 	// ProposalFilesPath ...
 	ProposalFilesPath string = "/onboarding/v1/onboarding-proposal/files"
+	// CancelAccountPath ...
+	CancelAccountPath string = "/baas-accountmanager/v1/account/close"
 	//NaturalPersonOnboardingPath ...
 	NaturalPersonOnboardingPath string = "/onboarding/v1/onboarding-proposal/natural-person"
 	// LegalPersonOnboardingPath ...
@@ -659,6 +661,12 @@ type OnboardingProposalFilesResponse struct {
 	Body    OnboardingProposalFilesResponseBody `json:"body"`
 	Version string                              `json:"version"`
 	Status  string                              `json:"status"`
+}
+
+// CancelAccountResponse ... representa a resposta do método CancelAccount
+type CancelAccountResponse struct {
+	Version string `json:"version"`
+	Status  string `json:"status"`
 }
 
 // OnboardingProposalFilesResponseBody ... representa o corpo da resposta do método GetOnboardingProposalFiles

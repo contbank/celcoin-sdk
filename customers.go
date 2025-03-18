@@ -397,3 +397,107 @@ func (c *Customers) getCustomerAPIEndpoint(requestID string, documentNumber *str
 
 	return &endpoint, nil
 }
+
+// CancelAccount ... consulta os arquivos do proposalId
+func (c *Customers) CancelAccount(ctx context.Context,
+	accountNumber *string, documentNumber *string, reason *string) (*CancelAccountResponse, error) {
+
+	requestID, _ := ctx.Value("Request-Id").(string)
+	fields := logrus.Fields{
+		"request_id": requestID,
+		"interface":  "CancelAccount",
+		"service":    "business",
+	}
+
+	if accountNumber != nil {
+		fields["account_number"] = accountNumber
+	}
+
+	if reason != nil {
+		fields["reason"] = reason
+	}
+
+	if documentNumber != nil {
+		fields["document_number"] = documentNumber
+	}
+
+	endpoint := c.session.APIEndpoint
+	u, err := url.Parse(endpoint)
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).
+			Error("error parsing endpoint")
+		return nil, err
+	}
+
+	u.Path = path.Join(u.Path, CancelAccountPath)
+
+	q := u.Query()
+	if accountNumber != nil {
+		q.Set("account", *accountNumber)
+	}
+
+	if reason != nil {
+		q.Set("reason", *reason)
+	}
+
+	if documentNumber != nil {
+		q.Set("documentNumber", *documentNumber)
+	}
+
+	u.RawQuery = q.Encode()
+
+	logrus.WithFields(fields).WithField("celcoin_endpoint", u.String()).
+		Info("celcoin cancel account request")
+
+	req, err := http.NewRequestWithContext(ctx, "DELETE", u.String(), nil)
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).
+			Error("error creating request")
+		return nil, err
+	}
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).
+			Error("error executing request")
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	respBody, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).
+			Error("error reading response body")
+		return nil, err
+	}
+
+	if resp.StatusCode == http.StatusOK {
+		var response CancelAccountResponse
+		if err := json.Unmarshal(respBody, &response); err != nil {
+			logrus.WithFields(fields).WithError(err).
+				Error("error unmarshalling response")
+			return nil, err
+		}
+
+		logrus.WithFields(fields).WithField("celcoin_response", response).
+			Info("response with success")
+		return &response, nil
+	}
+
+	var errResponse *ErrorDefaultResponse
+	if err := json.Unmarshal(respBody, &errResponse); err != nil {
+		logrus.WithFields(fields).WithError(err).Error("error unmarshalling error response")
+		return nil, err
+	}
+
+	if errResponse != nil && errResponse.Error != nil && len(*errResponse.Error.ErrorCode) > 0 {
+		err := FindCancelAccountError(*errResponse.Error.ErrorCode, &resp.StatusCode)
+		logrus.WithFields(fields).WithError(err).
+			Error("error cancel account")
+		return nil, err
+	}
+
+	logrus.WithFields(fields).
+		Error("error cancel account")
+	return nil, ErrDefaultBusinessAccounts
+}
