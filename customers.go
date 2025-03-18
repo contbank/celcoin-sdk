@@ -440,7 +440,7 @@ func (c *Customers) CancelAccount(ctx context.Context,
 		q.Set("reason", *reason)
 	}
 
-	if documentNumber != nil {
+	if documentNumber != nil && accountNumber == nil {
 		q.Set("documentNumber", *documentNumber)
 	}
 
