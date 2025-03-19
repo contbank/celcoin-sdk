@@ -1793,6 +1793,7 @@ type GetPaymentResponseBody struct {
 	Tags                   []GetPaymentTag       `json:"tags"`
 	BarCodeInfo            GetPaymentBarCodeInfo `json:"barCodeInfo"`
 	Error                  GetPaymentError       `json:"error"`
+	PaymentDate            string                `json:"paymentDate"`
 }
 
 // GetPaymentResponse define a estrutura da resposta de obtenção de pagamento.
