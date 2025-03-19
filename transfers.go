@@ -76,6 +76,7 @@ func (t *Transfers) createTransferOperation(ctx context.Context, requestID strin
 			Error("error getting api endpoint")
 		return nil, err
 	}
+	logrus.WithField("endpoint", *endpoint).Info("Endpoint built successfully")
 
 	reqbyte, err := json.Marshal(model)
 	if err != nil {
@@ -91,15 +92,7 @@ func (t *Transfers) createTransferOperation(ctx context.Context, requestID strin
 		return nil, err
 	}
 
-	token, err := t.authentication.Token(ctx)
-	if err != nil {
-		logrus.WithFields(fields).WithError(err).
-			Error("error authentication")
-		return nil, err
-	}
-
-	req.Header.Add("Authorization", token)
-	req.Header.Add("Content-type", "application/json")
+	req.Header.Set("Content-Type", "application/json")
 	req.Header.Add("api-version", t.session.APIVersion)
 	req.Header.Add("x-correlation-id", requestID)
 
@@ -221,14 +214,7 @@ func (t *Transfers) findInternalOrExternalTransferByCode(ctx context.Context, re
 	if err != nil {
 		return nil, err
 	}
-
-	token, err := t.authentication.Token(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Add("Authorization", token)
-	req.Header.Add("Content-type", "application/json")
+	req.Header.Set("Content-Type", "application/json")
 	req.Header.Add("api-version", t.session.APIVersion)
 	req.Header.Add("x-correlation-id", *requestID)
 
