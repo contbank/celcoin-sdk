@@ -1030,3 +1030,29 @@ func FindCancelAccountError(code string, responseStatus *int) *grok.Error {
 	}
 	return grok.NewError(http.StatusInternalServerError, "UNKNOWN_ERROR", "unknown error")
 }
+
+// UpdateAccountStatusAccountErrorMappings ... mapeia os códigos de erro do parceiro Celcoin para os códigos de erro do Contbank com descrição
+var UpdateAccountStatusAccountErrorMappings = map[string]struct {
+	ContbankCode string
+	Description  string
+}{
+	"CBE078": {"ACCOUNT_NUMBER_NOT_FOUND", "Nenhuma conta foi encontrada."},
+	"CBE073": {"ACCOUNT_OR_DOCUMENT_NUMBER_NOT_FOUND", "É necessário informar pelo menos um dos campos: account, ou documentNumber."},
+	"CBE074": {"REASON_NOT_FOUND", "reason é obrigatório."},
+	"CBE062": {"BALANCE_PENDING", "Não é permitido encerrar conta com saldo."},
+	"CBE075": {"ACCOUNT_ALREADY_CANCELLED", "Conta já foi encerrada."},
+	"CBE039": {"ACCOUNT_INVALID", "Account invalido."},
+	"CBE040": {"DOCUMENT_NUMBER_INVALID", "DocumentNumber invalido."},
+	"CBE041": {"ACCOUNT_MAX_SIZE_EXCEEDED", "Account possui tamanho maximo de 20 caracteres."},
+	"CBE042": {"DOCUMENT_NUMBER_SIZE_EXCEEDED", "DocumentNumber possui tamanho maximo de 14 caracteres."},
+	"CBE043": {"REASON_MAX_SIZE_EXCEEDED", "Reason possui tamanho maximo de 300 caracteres."},
+	"CBE281": {"CANCEL_NOT_ALLOWED_PIX_KEY_REMAINING", "Encerramento de conta não permitido. Identificamos Chave Pix cadastrado para essa conta, favor excluir as chaves antes para prosseguir com o encerramento de conta."},
+}
+
+// FindUpdateAccountStatusAccountErrors ... retorna a mensagem de erro correspondente ao código de erro de cancelamento de conta
+func FindUpdateAccountStatusAccountErrors(code string, responseStatus *int) *grok.Error {
+	if mapping, exists := UpdateAccountStatusAccountErrorMappings[code]; exists {
+		return grok.NewError(*responseStatus, mapping.ContbankCode, mapping.Description)
+	}
+	return grok.NewError(http.StatusInternalServerError, "UNKNOWN_ERROR", "unknown error")
+}
