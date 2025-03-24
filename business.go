@@ -497,11 +497,7 @@ func (c *Business) UpdateAccountStatus(ctx context.Context,
 	}
 
 	if accountNumber != nil {
-		fields["account_number"] = accountNumber
-	}
-
-	if reason != nil {
-		fields["reason"] = reason
+		fields["account"] = accountNumber
 	}
 
 	if documentNumber != nil {
@@ -516,22 +512,14 @@ func (c *Business) UpdateAccountStatus(ctx context.Context,
 		return nil, err
 	}
 
-	u.Path = path.Join(u.Path, CancelAccountPath)
+	u.Path = path.Join(u.Path, UpdateAccountStatusPath)
 
 	q := u.Query()
 	if accountNumber != nil {
 		q.Set("account", *accountNumber)
 	}
 
-	if reason != nil {
-		q.Set("reason", *reason)
-	}
-
-	if status != nil {
-		q.Set("status", *status)
-	}
-
-	if documentNumber != nil && accountNumber == nil {
+	if documentNumber != nil {
 		q.Set("documentNumber", *documentNumber)
 	}
 
@@ -540,12 +528,29 @@ func (c *Business) UpdateAccountStatus(ctx context.Context,
 	logrus.WithFields(fields).WithField("celcoin_endpoint", u.String()).
 		Info("celcoin update account status request")
 
-	req, err := http.NewRequestWithContext(ctx, "PUT", u.String(), nil)
+	bodyPayload := struct {
+		Status string `json:"status"`
+		Reason string `json:"reason"`
+	}{
+		Status: *status,
+		Reason: *reason,
+	}
+
+	reqBody, err := json.Marshal(bodyPayload)
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).
+			Error("error marshalling request body")
+		return nil, err
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "PUT", u.String(), strings.NewReader(string(reqBody)))
 	if err != nil {
 		logrus.WithFields(fields).WithError(err).
 			Error("error creating request")
 		return nil, err
 	}
+
+	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
