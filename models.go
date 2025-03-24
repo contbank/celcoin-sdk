@@ -669,6 +669,12 @@ type CancelAccountResponse struct {
 	Status  string `json:"status"`
 }
 
+// UpdateAccountStatusResponse ... representa a resposta do método CancelAccount
+type UpdateAccountStatusResponse struct {
+	Version string `json:"version"`
+	Status  string `json:"status"`
+}
+
 // OnboardingProposalFilesResponseBody ... representa o corpo da resposta do método GetOnboardingProposalFiles
 type OnboardingProposalFilesResponseBody struct {
 	Files          []OnboardingFile `json:"files"`

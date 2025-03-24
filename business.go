@@ -484,3 +484,111 @@ func (c *Business) CancelAccount(ctx context.Context,
 		Error("error cancel account")
 	return nil, ErrDefaultBusinessAccounts
 }
+
+// UpdateAccountStatus ... faz atualização do status da conta
+func (c *Business) UpdateAccountStatus(ctx context.Context,
+	accountNumber *string, documentNumber *string, reason *string, status *string) (*UpdateAccountStatusResponse, error) {
+
+	requestID, _ := ctx.Value("Request-Id").(string)
+	fields := logrus.Fields{
+		"request_id": requestID,
+		"interface":  "CancelAccount",
+		"service":    "business",
+	}
+
+	if accountNumber != nil {
+		fields["account_number"] = accountNumber
+	}
+
+	if reason != nil {
+		fields["reason"] = reason
+	}
+
+	if documentNumber != nil {
+		fields["document_number"] = documentNumber
+	}
+
+	endpoint := c.session.APIEndpoint
+	u, err := url.Parse(endpoint)
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).
+			Error("error parsing endpoint")
+		return nil, err
+	}
+
+	u.Path = path.Join(u.Path, CancelAccountPath)
+
+	q := u.Query()
+	if accountNumber != nil {
+		q.Set("account", *accountNumber)
+	}
+
+	if reason != nil {
+		q.Set("reason", *reason)
+	}
+
+	if status != nil {
+		q.Set("status", *status)
+	}
+
+	if documentNumber != nil && accountNumber == nil {
+		q.Set("documentNumber", *documentNumber)
+	}
+
+	u.RawQuery = q.Encode()
+
+	logrus.WithFields(fields).WithField("celcoin_endpoint", u.String()).
+		Info("celcoin update account status request")
+
+	req, err := http.NewRequestWithContext(ctx, "PUT", u.String(), nil)
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).
+			Error("error creating request")
+		return nil, err
+	}
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).
+			Error("error executing request")
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	respBody, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).
+			Error("error reading response body")
+		return nil, err
+	}
+
+	if resp.StatusCode == http.StatusOK {
+		var response UpdateAccountStatusResponse
+		if err := json.Unmarshal(respBody, &response); err != nil {
+			logrus.WithFields(fields).WithError(err).
+				Error("error unmarshalling response")
+			return nil, err
+		}
+
+		logrus.WithFields(fields).WithField("celcoin_response", response).
+			Info("response with success")
+		return &response, nil
+	}
+
+	var errResponse *ErrorDefaultResponse
+	if err := json.Unmarshal(respBody, &errResponse); err != nil {
+		logrus.WithFields(fields).WithError(err).Error("error unmarshalling error response")
+		return nil, err
+	}
+
+	if errResponse != nil && errResponse.Error != nil && len(*errResponse.Error.ErrorCode) > 0 {
+		err := FindUpdateAccountStatusAccountErrors(*errResponse.Error.ErrorCode, &resp.StatusCode)
+		logrus.WithFields(fields).WithError(err).
+			Error("error updating account status")
+		return nil, err
+	}
+
+	logrus.WithFields(fields).
+		Error("error updating account status")
+	return nil, ErrDefaultBusinessAccounts
+}
