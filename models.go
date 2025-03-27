@@ -532,6 +532,21 @@ type BusinessOnboardingRequest struct {
 	OnboardingType  string  `json:"onboardingType"`
 }
 
+// BusinessOnboardingRequest ... representa o payload para o onboarding de uma empresa na migração.
+type BusinessOnboardingMigrationRequest struct {
+	ClientCode      string                   `json:"clientCode"`
+	ContactNumber   string                   `json:"contactNumber"`
+	DocumentNumber  string                   `json:"documentNumber"`
+	BusinessEmail   string                   `json:"businessEmail"`
+	BusinessName    string                   `json:"businessName"`
+	TradingName     string                   `json:"tradingName"`
+	CompanyType     string                   `json:"companyType"`
+	Owner           []Owner                  `json:"owner"`
+	BusinessAddress Address                  `json:"businessAddress"`
+	OnboardingType  string                   `json:"onboardingType"`
+	Files           []CustomerFilesMigration `json:"files"`
+}
+
 // Owner ...
 type Owner struct {
 	OwnerType                  string  `json:"ownerType"`
@@ -602,6 +617,27 @@ type Customer struct {
 	Address                    CustomerAddress `json:"address"`
 	IsPoliticallyExposedPerson bool            `json:"isPoliticallyExposedPerson"`
 	OnboardingType             string          `json:"onboardingType"`
+}
+
+// CustomerMigration ... representa o cliente a ser migrado
+type CustomerMigration struct {
+	ClientCode                 string                   `json:"clientCode"`
+	DocumentNumber             string                   `json:"documentNumber"`
+	PhoneNumber                string                   `json:"phoneNumber"`
+	Email                      string                   `json:"email"`
+	MotherName                 string                   `json:"motherName"`
+	FullName                   string                   `json:"fullName"`
+	SocialName                 string                   `json:"socialName"`
+	BirthDate                  string                   `json:"birthDate"`
+	Address                    CustomerAddress          `json:"address"`
+	IsPoliticallyExposedPerson bool                     `json:"isPoliticallyExposedPerson"`
+	OnboardingType             string                   `json:"onboardingType"`
+	Files                      []CustomerFilesMigration `json:"files"`
+}
+
+type CustomerFilesMigration struct {
+	Type string `json:"type"`
+	Data string `json:"data"`
 }
 
 // CustomerOnboardingResponse ... representa a resposta do onboarding de customer
