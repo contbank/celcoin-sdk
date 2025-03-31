@@ -16,8 +16,8 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 
-	"github.com/contbank/grok"
 	"github.com/patrickmn/go-cache"
+	"software.sslmate.com/src/go-pkcs12"
 )
 
 const (
@@ -94,11 +94,11 @@ func NewSession(config Config) (*Session, error) {
 		config.Scopes = String("")
 	}
 
-	if config.Mtls != nil {
+	/*if config.Mtls != nil {
 		if *config.Mtls {
 			config.ClientID = &config.Certificate.ClientID
 		}
-	}
+	}*/
 
 	if config.Environment == nil {
 		config.Environment = String(CelcoinEnvSandbox)
@@ -122,18 +122,22 @@ func NewSession(config Config) (*Session, error) {
 // CreateMtlsHTTPClient ...
 func CreateMtlsHTTPClient(cert *Certificate, session *Session) *http.Client {
 
-	caCertPool := x509.NewCertPool()
-	caCertPool.AppendCertsFromPEM([]byte(cert.CertificateChain))
-
-	certificate, err := grok.LoadCertificate([]byte(cert.Certificate), []byte(cert.PrivateKey), cert.Passphrase)
+	// Carregar o certificado e a chave privada
+	tlsCert, err := tls.X509KeyPair([]byte(cert.Certificate), []byte(cert.PrivateKey))
 	if err != nil {
-		panic(err)
+		panic("Erro ao carregar o certificado e a chave privada")
+	}
+
+	// Criar um pool de certificados confiáveis (opcional, para validar o servidor)
+	caCertPool := x509.NewCertPool()
+	if !caCertPool.AppendCertsFromPEM([]byte(cert.Certificate)) {
+		panic("Erro ao adicionar o certificado ao pool de CA")
 	}
 
 	mtlsTransport := &http.Transport{
 		TLSClientConfig: &tls.Config{
 			RootCAs:            caCertPool,
-			Certificates:       []tls.Certificate{*certificate},
+			Certificates:       []tls.Certificate{tlsCert},
 			InsecureSkipVerify: true,
 		},
 	}
@@ -249,4 +253,36 @@ func (t *oauthTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	t.mutex.Unlock()
 
 	return t.underlyingTransport.RoundTrip(req)
+}
+
+// Verifica se o certificado está no formato PKCS#12
+func isPKCS12(cert []byte) bool {
+	// PKCS#12 é um formato binário, então verificamos se o conteúdo não é texto legível
+	for _, b := range cert {
+		if b < 32 && b != '\n' && b != '\r' && b != '\t' {
+			return true
+		}
+	}
+	return false
+}
+
+// Carrega certificado no formato PKCS#12
+func loadPKCS12Certificate(cert []byte, passphrase string) (*tls.Certificate, error) {
+	privateKey, certificate, caCerts, err := pkcs12.DecodeChain(cert, passphrase)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode PKCS#12: %w", err)
+	}
+
+	// Converter para o formato tls.Certificate
+	tlsCert := &tls.Certificate{
+		Certificate: [][]byte{certificate.Raw},
+		PrivateKey:  privateKey,
+	}
+
+	// Adicionar certificados intermediários, se existirem
+	for _, caCert := range caCerts {
+		tlsCert.Certificate = append(tlsCert.Certificate, caCert.Raw)
+	}
+
+	return tlsCert, nil
 }
