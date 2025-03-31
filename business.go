@@ -597,3 +597,94 @@ func (c *Business) UpdateAccountStatus(ctx context.Context,
 		Error("error updating account status")
 	return nil, ErrDefaultBusinessAccounts
 }
+
+// CreateAccountMigration ... cria uma nova conta de cliente
+func (c *Business) CreateAccountMigration(ctx context.Context, businessData *BusinessOnboardingMigrationRequest) (*BusinessOnboardingResponse, error) {
+	requestID, _ := ctx.Value("Request-Id").(string)
+	fields := logrus.Fields{
+		"request_id": requestID,
+		"interface":  "CreateAccount",
+		"service":    "business",
+	}
+
+	endpoint := c.session.APIEndpoint
+	reqBody, err := json.Marshal(businessData)
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).
+			Error("error marshalling request body")
+		return nil, err
+	}
+
+	logrus.WithFields(fields).Info("request body marshalled successfully")
+
+	url, err := url.Parse(endpoint)
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).
+			Error("error parsing endpoint")
+		return nil, err
+	}
+
+	url.Path = path.Join(url.Path, LegalPersonOnboardingPath)
+
+	logrus.WithFields(fields).WithField("celcoin_endpoint", url.String()).
+		WithField("celcoin_request", businessData).Info("requesting create business account")
+
+	req, err := http.NewRequestWithContext(ctx, "POST", url.String(), strings.NewReader(string(reqBody)))
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).
+			Error("error creating request")
+		return nil, err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	logrus.WithFields(fields).
+		Info("request created successfully")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).
+			Error("error executing request")
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	logrus.WithFields(fields).
+		Info("request executed successfully")
+
+	respBody, _ := ioutil.ReadAll(resp.Body)
+
+	logrus.WithFields(fields).
+		Infof("response received with status code %d", resp.StatusCode)
+
+	if resp.StatusCode == http.StatusOK {
+		var response BusinessOnboardingResponse
+		if err := json.Unmarshal(respBody, &response); err != nil {
+			logrus.WithFields(fields).WithError(err).
+				Error("error unmarshalling response")
+			return nil, err
+		}
+
+		logrus.WithFields(fields).WithField("celcoin_response", response).
+			Info("response with success")
+		return &response, nil
+	}
+
+	var errResponse *ErrorDefaultResponse
+	if err := json.Unmarshal(respBody, &errResponse); err != nil {
+		logrus.WithFields(fields).WithError(err).
+			Error("error unmarshalling error response")
+		return nil, err
+	}
+
+	if errResponse != nil && errResponse.Error != nil && len(*errResponse.Error.ErrorCode) > 0 {
+		err := FindOnboardingError(*errResponse.Error.ErrorCode, &resp.StatusCode)
+		logrus.WithFields(fields).WithError(err).
+			Error("error creating business account")
+		return nil, err
+	}
+
+	logrus.WithFields(fields).
+		Error("error creating business account")
+	return nil, ErrDefaultBusinessAccounts
+}
