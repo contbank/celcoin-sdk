@@ -113,7 +113,9 @@ func (s *WebhooksService) CreateSubscription(ctx context.Context, req WebhookSub
 			Error("error creating http request")
 		return nil, fmt.Errorf("error creating http request: %v", err)
 	}
-	httpReq.Header.Add("api-version", s.session.APIVersion)
+
+	httpReq.Header.Add("Content-Type", "application/json")
+	//httpReq.Header.Add("api-version", s.session.APIVersion)
 
 	resp, err := s.httpClient.Do(httpReq)
 	if err != nil {
