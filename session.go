@@ -17,7 +17,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 
 	"github.com/patrickmn/go-cache"
-	"software.sslmate.com/src/go-pkcs12"
 )
 
 const (
@@ -121,7 +120,6 @@ func NewSession(config Config) (*Session, error) {
 
 // CreateMtlsHTTPClient ...
 func CreateMtlsHTTPClient(cert *Certificate, session *Session) *http.Client {
-
 	// Carregar o certificado e a chave privada
 	tlsCert, err := tls.X509KeyPair([]byte(cert.Certificate), []byte(cert.PrivateKey))
 	if err != nil {
@@ -142,7 +140,7 @@ func CreateMtlsHTTPClient(cert *Certificate, session *Session) *http.Client {
 		},
 	}
 
-	// Obter o token inicial
+	// Obter o token inicial usando o transporte mTLS
 	token, expiration, err := fetchAccessToken(&http.Client{Transport: mtlsTransport}, session)
 	if err != nil {
 		panic(fmt.Sprintf("Erro ao obter token de acesso: %v", err))
@@ -185,9 +183,7 @@ func CreateOAuth2HTTPClient(session *Session) *http.Client {
 	return httpClient
 }
 
-// fetchAccessToken realiza a requisição para obter o token de acesso
 func fetchAccessToken(client *http.Client, session *Session) (string, time.Time, error) {
-
 	var data []byte
 
 	if session.Mtls {
@@ -240,49 +236,18 @@ func fetchAccessToken(client *http.Client, session *Session) (string, time.Time,
 // RoundTrip ... adiciona o cabeçalho Authorization e renova o token se necessário
 func (t *oauthTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	t.mutex.Lock()
+	defer t.mutex.Unlock()
+
 	if time.Now().After(t.tokenExpiration.Add(-1 * time.Minute)) { // Renova o token antes de expirar
-		newToken, newExpiration, err := fetchAccessToken(&http.Client{}, t.session)
+		client := &http.Client{Transport: t.underlyingTransport}
+		newToken, newExpiration, err := fetchAccessToken(client, t.session)
 		if err != nil {
-			t.mutex.Unlock()
 			return nil, fmt.Errorf("falha ao renovar o token: %w", err)
 		}
 		t.token = newToken
 		t.tokenExpiration = newExpiration
 	}
+
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", t.token))
-	t.mutex.Unlock()
-
 	return t.underlyingTransport.RoundTrip(req)
-}
-
-// Verifica se o certificado está no formato PKCS#12
-func isPKCS12(cert []byte) bool {
-	// PKCS#12 é um formato binário, então verificamos se o conteúdo não é texto legível
-	for _, b := range cert {
-		if b < 32 && b != '\n' && b != '\r' && b != '\t' {
-			return true
-		}
-	}
-	return false
-}
-
-// Carrega certificado no formato PKCS#12
-func loadPKCS12Certificate(cert []byte, passphrase string) (*tls.Certificate, error) {
-	privateKey, certificate, caCerts, err := pkcs12.DecodeChain(cert, passphrase)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode PKCS#12: %w", err)
-	}
-
-	// Converter para o formato tls.Certificate
-	tlsCert := &tls.Certificate{
-		Certificate: [][]byte{certificate.Raw},
-		PrivateKey:  privateKey,
-	}
-
-	// Adicionar certificados intermediários, se existirem
-	for _, caCert := range caCerts {
-		tlsCert.Certificate = append(tlsCert.Certificate, caCert.Raw)
-	}
-
-	return tlsCert, nil
 }
