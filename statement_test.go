@@ -100,7 +100,7 @@ func (s *StatementTestSuite) TestGetStatements() {
 		Account:        &accountNumber,
 		DateFrom:       &dateFrom,
 		DateTo:         &dateTo,
-		LimitPerPage:   aws.String("10"),
+		LimitPerPage:   aws.Int64(10),
 	}
 
 	response, err := s.statement.GetStatements(ctx, statementRequest)

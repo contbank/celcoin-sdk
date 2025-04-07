@@ -30,7 +30,7 @@ type Webhooks interface {
 // Webhooks ...
 type WebhooksService struct {
 	session        Session
-	httpClient     *http.Client
+	httpClient     *LoggingHTTPClient
 	authentication *Authentication
 }
 
@@ -38,7 +38,7 @@ type WebhooksService struct {
 func NewWebhooks(httpClient *http.Client, session Session) Webhooks {
 	return &WebhooksService{
 		session:        session,
-		httpClient:     httpClient,
+		httpClient:     NewLoggingHTTPClient(httpClient),
 		authentication: NewAuthentication(httpClient, session),
 	}
 }
@@ -113,7 +113,9 @@ func (s *WebhooksService) CreateSubscription(ctx context.Context, req WebhookSub
 			Error("error creating http request")
 		return nil, fmt.Errorf("error creating http request: %v", err)
 	}
-	httpReq.Header.Add("api-version", s.session.APIVersion)
+
+	httpReq.Header.Add("Content-Type", "application/json")
+	//httpReq.Header.Add("api-version", s.session.APIVersion)
 
 	resp, err := s.httpClient.Do(httpReq)
 	if err != nil {

@@ -9,205 +9,284 @@ import (
 	"net/http"
 	"net/url"
 	"path"
+
+	"github.com/contbank/grok"
+	"github.com/sirupsen/logrus"
 )
 
-// Boletos defines the interface:.
-type Boletos interface {
-	Create(ctx context.Context, req CreateBoletoRequest) (CreateBoletoResponse, error)
-	Query(ctx context.Context, transactionID string) (QueryBoletoResponse, error)
-	DownloadPDF(ctx context.Context, transactionID string) ([]byte, error)
-	Cancel(ctx context.Context, transactionID, reason string) error
-}
-
-// boletosService
-type boletosService struct {
+// Boletos provides methods to create, cancel, query, and download boleto (charge) documents.
+type Boletos struct {
 	session    Session
-	httpClient *http.Client
+	httpClient *LoggingHTTPClient
 }
 
-// NewBoletos
-func NewBoletos(httpClient *http.Client, session Session) Boletos {
-	return &boletosService{
+// NewBoletos creates and returns a new instance of Boletos using the given httpClient and session.
+func NewBoletos(httpClient *http.Client, session Session) *Boletos {
+	return &Boletos{
 		session:    session,
-		httpClient: httpClient,
+		httpClient: NewLoggingHTTPClient(httpClient),
 	}
 }
 
-// Create calls POST /charge with a CreateBoletoRequest.
-func (b *boletosService) Create(ctx context.Context, req CreateBoletoRequest) (CreateBoletoResponse, error) {
-	endpoint, err := b.buildEndpoint("charge", nil)
-	if err != nil {
-		return CreateBoletoResponse{}, err
+// CreateBoleto sends a request to create a new boleto (charge).
+// It expects a CreateBoletoRequest and returns the unwrapped CreateBoletoResponse.
+func (b *Boletos) CreateBoleto(ctx context.Context, req CreateBoletoRequest) (*CreateBoletoResponse, error) {
+	// Validate the request payload.
+	if err := grok.Validator.Struct(req); err != nil {
+		logrus.WithError(err).Error("CreateBoleto: validation error")
+		return nil, grok.FromValidationErros(err)
 	}
+
+	// Build the endpoint URL: {APIEndpoint}/baas/v2/charge
+	endpoint := fmt.Sprintf("%s/baas/v2/charge", b.session.APIEndpoint)
+	logrus.WithField("endpoint", endpoint).Info("CreateBoleto endpoint")
 
 	payload, err := json.Marshal(req)
 	if err != nil {
-		return CreateBoletoResponse{}, fmt.Errorf("failed to marshal request: %w", err)
+		return nil, fmt.Errorf("CreateBoleto: error serializing request: %v", err)
 	}
 
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(payload))
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", endpoint, bytes.NewReader(payload))
 	if err != nil {
-		return CreateBoletoResponse{}, fmt.Errorf("failed to create request: %w", err)
+		return nil, fmt.Errorf("CreateBoleto: error creating HTTP request: %v", err)
 	}
+
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("Accept", "application/json")
+	// The injected httpClient handles authentication.
 
 	resp, err := b.httpClient.Do(httpReq)
 	if err != nil {
-		return CreateBoletoResponse{}, fmt.Errorf("request failed: %w", err)
-	}
-	defer resp.Body.Close()
-
-	// Accept 200..202 as success
-	if resp.StatusCode < 200 || resp.StatusCode > 202 {
-		errBody, _ := io.ReadAll(resp.Body)
-		return CreateBoletoResponse{}, fmt.Errorf("failed with status %d: %s", resp.StatusCode, string(errBody))
-	}
-
-	var raw struct {
-		Body struct {
-			TransactionID string `json:"transactionId"`
-		} `json:"body"`
-		Version string `json:"version"`
-		Status  string `json:"status"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
-		return CreateBoletoResponse{}, fmt.Errorf("failed to decode response: %w", err)
-	}
-
-	return CreateBoletoResponse{
-		TransactionID: raw.Body.TransactionID,
-		Status:        raw.Status,
-	}, nil
-}
-
-// Query calls GET /charge?TransactionId=xxx to retrieve Boleto data.
-func (b *boletosService) Query(ctx context.Context, transactionID string) (QueryBoletoResponse, error) {
-	queryParams := map[string]string{"TransactionId": transactionID}
-	endpoint, err := b.buildEndpoint("charge", queryParams)
-	if err != nil {
-		return QueryBoletoResponse{}, err
-	}
-
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
-	if err != nil {
-		return QueryBoletoResponse{}, fmt.Errorf("failed to create request: %w", err)
-	}
-	httpReq.Header.Set("Accept", "application/json")
-
-	resp, err := b.httpClient.Do(httpReq)
-	if err != nil {
-		return QueryBoletoResponse{}, fmt.Errorf("request failed: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		errBody, _ := io.ReadAll(resp.Body)
-		return QueryBoletoResponse{}, fmt.Errorf("failed with status %d: %s", resp.StatusCode, string(errBody))
-	}
-
-	var raw struct {
-		Body struct {
-			TransactionID string `json:"transactionId"`
-			Status        string `json:"status"`
-		} `json:"body"`
-		Version string `json:"version"`
-		Status  string `json:"status"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
-		return QueryBoletoResponse{}, fmt.Errorf("failed to decode response: %w", err)
-	}
-
-	return QueryBoletoResponse{
-		TransactionID: raw.Body.TransactionID,
-		Status:        raw.Body.Status,
-	}, nil
-}
-
-// DownloadPDF calls GET /charge/pdf/:transactionID to download the PDF/HTML content.
-func (b *boletosService) DownloadPDF(ctx context.Context, transactionID string) ([]byte, error) {
-	// build URL with subpath "charge/pdf/{transactionID}"
-	endpoint, err := b.buildEndpoint(path.Join("charge", "pdf", transactionID), nil)
-	if err != nil {
+		logrus.WithError(err).Error("CreateBoleto: error performing HTTP request")
 		return nil, err
 	}
-
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
-
-	resp, err := b.httpClient.Do(httpReq)
-	if err != nil {
-		return nil, fmt.Errorf("request failed: %w", err)
-	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		errBody, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("failed with status %d: %s", resp.StatusCode, string(errBody))
-	}
-
-	pdfBytes, err := io.ReadAll(resp.Body)
+	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read PDF bytes: %w", err)
+		return nil, fmt.Errorf("CreateBoleto: error reading response body: %v", err)
 	}
 
-	return pdfBytes, nil
+	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("CreateBoleto: request failed with status %d, body: %s", resp.StatusCode, string(respBody))
+	}
+
+	// Unwrap the response envelope.
+	var envelope struct {
+		Body    CreateBoletoResponse `json:"body"`
+		Version string               `json:"version"`
+		Status  string               `json:"status"`
+	}
+	if err := json.Unmarshal(respBody, &envelope); err != nil {
+		return nil, fmt.Errorf("CreateBoleto: error unmarshaling response: %v", err)
+	}
+
+	return &envelope.Body, nil
 }
 
-// Cancel calls DELETE /charge/{transactionID} with a JSON body containing { "reason": "..."}.
-func (b *boletosService) Cancel(ctx context.Context, transactionID, reason string) error {
-	endpoint, err := b.buildEndpoint(path.Join("charge", transactionID), nil)
+// CancelBoleto sends a request to cancel an existing boleto given its transaction ID and a cancellation reason.
+func (b *Boletos) CancelBoleto(ctx context.Context, transactionID string, reason string) error {
+	cancelPayload := CancelInput{Reason: reason}
+	payload, err := json.Marshal(cancelPayload)
 	if err != nil {
-		return err
+		return fmt.Errorf("CancelBoleto: error serializing request: %v", err)
 	}
 
-	payload := CancelInput{Reason: reason}
-	bodyBytes, err := json.Marshal(payload)
+	// Build the endpoint URL: {APIEndpoint}/baas/v2/charge/{transactionID}
+	endpoint := fmt.Sprintf("%s/baas/v2/charge/%s", b.session.APIEndpoint, transactionID)
+	logrus.WithField("endpoint", endpoint).Info("CancelBoleto endpoint")
+
+	httpReq, err := http.NewRequestWithContext(ctx, "DELETE", endpoint, bytes.NewReader(payload))
 	if err != nil {
-		return fmt.Errorf("failed to marshal payload: %w", err)
+		return fmt.Errorf("CancelBoleto: error creating HTTP request: %v", err)
 	}
 
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodDelete, endpoint, bytes.NewReader(bodyBytes))
-	if err != nil {
-		return fmt.Errorf("failed to create request: %w", err)
-	}
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("Accept", "application/json")
+	// Authentication handled automatically.
 
 	resp, err := b.httpClient.Do(httpReq)
 	if err != nil {
-		return fmt.Errorf("request failed: %w", err)
+		return fmt.Errorf("CancelBoleto: HTTP request error: %v", err)
 	}
 	defer resp.Body.Close()
 
-	// Usually 200 on success
-	if resp.StatusCode != http.StatusOK {
-		errBody, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("failed with status %d: %s", resp.StatusCode, string(errBody))
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
+		respBody, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("CancelBoleto: request failed with status %d, body: %s", resp.StatusCode, string(respBody))
 	}
+
 	return nil
 }
 
-// buildEndpoint is a helper method
-func (b *boletosService) buildEndpoint(basePath string, queryParams map[string]string) (string, error) {
-	u, err := url.Parse(b.session.APIEndpoint)
+// QueryBoleto queries a boleto by its transaction ID.
+// It returns a QueryBoletoResponse containing the charge status.
+func (b *Boletos) QueryBoleto(ctx context.Context, transactionID string) (*QueryBoletoResponse, error) {
+	base, err := url.Parse(b.session.APIEndpoint)
 	if err != nil {
-		return "", err
+		return nil, fmt.Errorf("QueryBoleto: error parsing API endpoint: %v", err)
+	}
+	base.Path = path.Join(base.Path, "baas/v2/charge")
+	q := base.Query()
+	q.Set("TransactionId", transactionID)
+	base.RawQuery = q.Encode()
+	endpoint := base.String()
+
+	logrus.WithField("endpoint", endpoint).Info("QueryBoleto endpoint")
+
+	httpReq, err := http.NewRequestWithContext(ctx, "GET", endpoint, nil)
+	if err != nil {
+		return nil, fmt.Errorf("QueryBoleto: error creating HTTP request: %v", err)
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+	// Authentication handled by httpClient.
+
+	resp, err := b.httpClient.Do(httpReq)
+	if err != nil {
+		return nil, fmt.Errorf("QueryBoleto: HTTP request error: %v", err)
+	}
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("QueryBoleto: error reading response body: %v", err)
 	}
 
-	// join: basePath might be "charge" or "charge/pdf/xxx"
-	u.Path = path.Join(u.Path, basePath)
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("QueryBoleto: request failed with status %d, body: %s", resp.StatusCode, string(respBody))
+	}
 
-	if queryParams != nil {
-		q := u.Query()
-		for k, v := range queryParams {
-			if v != "" {
-				q.Set(k, v)
-			}
+	var envelope struct {
+		Body    QueryBoletoResponse `json:"body"`
+		Version string              `json:"version"`
+		Status  string              `json:"status"`
+	}
+	if err := json.Unmarshal(respBody, &envelope); err != nil {
+		return nil, fmt.Errorf("QueryBoleto: error unmarshaling response: %v", err)
+	}
+
+	return &envelope.Body, nil
+}
+
+// DownloadBoletoPDF downloads the boleto PDF file and writes its content to the provided writer.
+func (b *Boletos) DownloadBoletoPDF(ctx context.Context, transactionID string, writer io.Writer) error {
+	// Build the endpoint URL: {APIEndpoint}/baas/v2/charge/pdf/{transactionID}
+	endpoint := fmt.Sprintf("%s/baas/v2/charge/pdf/%s", b.session.APIEndpoint, transactionID)
+	logrus.WithField("endpoint", endpoint).Info("DownloadBoletoPDF endpoint")
+
+	httpReq, err := http.NewRequestWithContext(ctx, "GET", endpoint, nil)
+	if err != nil {
+		return fmt.Errorf("DownloadBoletoPDF: error creating HTTP request: %v", err)
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+	// Authentication is handled automatically.
+
+	resp, err := b.httpClient.Do(httpReq)
+	if err != nil {
+		return fmt.Errorf("DownloadBoletoPDF: HTTP request error: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		respBody, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("DownloadBoletoPDF: request failed with status %d, body: %s", resp.StatusCode, string(respBody))
+	}
+
+	_, err = io.Copy(writer, resp.Body)
+	if err != nil {
+		return fmt.Errorf("DownloadBoletoPDF: error writing PDF to writer: %v", err)
+	}
+
+	return nil
+}
+
+// GetCharge ...
+func (r *Boletos) GetCharge(ctx context.Context,
+	request *ChargeRequest) (*ChargeResponse, error) {
+
+	requestID, _ := ctx.Value("Request-Id").(string)
+	fields := logrus.Fields{
+		"request_id": requestID,
+		"interface":  "GetCharge",
+		"service":    "charge",
+	}
+
+	if request != nil && request.TransactionID != nil && len(*request.TransactionID) > 0 {
+		fields["transaction_id"] = request.TransactionID
+	}
+
+	if request != nil && request.ExternalID != nil && len(*request.ExternalID) > 0 {
+		fields["external_id"] = request.ExternalID
+	}
+
+	u, err := url.Parse(r.session.APIEndpoint)
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).
+			Error("error parsing charge api endpoint")
+		return nil, err
+	}
+
+	u.Path = path.Join(u.Path, BaasV2ChargePath)
+
+	q := u.Query()
+
+	if request != nil && request.TransactionID != nil && len(*request.TransactionID) > 0 {
+		q.Set("transactionId", *request.TransactionID)
+	}
+
+	if request != nil && request.ExternalID != nil && len(*request.ExternalID) > 0 {
+		q.Set("externalId", *request.ExternalID)
+	}
+
+	u.RawQuery = q.Encode()
+	endpoint := u.String()
+
+	req, err := http.NewRequest("GET", endpoint, nil)
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).
+			Error("error creating charge request")
+		return nil, err
+	}
+
+	req.Header.Set("accept", "application/json")
+
+	resp, err := r.httpClient.Do(req)
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).
+			Error("error making charge request")
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).
+			Error("error reading charge response body")
+		return nil, err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		var errResponse *ErrorDefaultResponse
+		if err := json.Unmarshal(bodyBytes, &errResponse); err != nil {
+			logrus.WithFields(fields).WithError(err).
+				Error("error unmarshal charge response")
+			return nil, err
 		}
-		u.RawQuery = q.Encode()
+
+		if errResponse != nil && errResponse.Error != nil && len(*errResponse.Error.ErrorCode) > 0 {
+			err := FindChargeError(*errResponse.Error.ErrorCode, &resp.StatusCode)
+			logrus.WithFields(fields).WithError(err).
+				Error("error getting charge response")
+			return nil, err
+		}
 	}
-	return u.String(), nil
+
+	var chargeResponse *ChargeResponse
+	if err := json.Unmarshal(bodyBytes, &chargeResponse); err != nil {
+		logrus.WithFields(fields).WithError(err).
+			Error("error unmarshal charge response")
+		return nil, err
+	}
+
+	return chargeResponse, nil
 }

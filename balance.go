@@ -15,14 +15,14 @@ import (
 type Balance struct {
 	session        Session
 	authentication *Authentication
-	httpClient     *http.Client
+	httpClient     *LoggingHTTPClient
 }
 
 // NewBalance ...
 func NewBalance(httpClient *http.Client, session Session) *Balance {
 	return &Balance{
 		session:        session,
-		httpClient:     httpClient,
+		httpClient:     NewLoggingHTTPClient(httpClient),
 		authentication: NewAuthentication(httpClient, session),
 	}
 }
@@ -32,6 +32,8 @@ func (c *Balance) Balance(ctx context.Context, accountNumber string) (*BalanceRe
 	requestID, _ := ctx.Value("Request-Id").(string)
 	fields := logrus.Fields{
 		"request_id": requestID,
+		"interface":  "Balance",
+		"service":    "Balance",
 	}
 
 	u, err := url.Parse(c.session.APIEndpoint)
@@ -50,25 +52,15 @@ func (c *Balance) Balance(ctx context.Context, accountNumber string) (*BalanceRe
 	u.RawQuery = q.Encode()
 	endpoint := u.String()
 
+	logrus.WithFields(fields).WithField("celcoin_endpoint", endpoint).
+		Info("requesting balance")
+
 	req, err := http.NewRequestWithContext(ctx, "GET", endpoint, nil)
 	if err != nil {
-		logrus.
-			WithFields(fields).
-			WithError(err).
+		logrus.WithFields(fields).WithError(err).
 			Error("error new request")
 		return nil, err
 	}
-
-	/*token, err := c.authentication.Token(ctx)
-	if err != nil {
-		logrus.
-			WithFields(fields).
-			WithError(err).
-			Error("error authentication")
-		return nil, err
-	}
-
-	req = setRequestHeader(req, token, &c.session.APIVersion, nil)*/
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -90,6 +82,9 @@ func (c *Balance) Balance(ctx context.Context, accountNumber string) (*BalanceRe
 			return nil, ErrDefaultBalance
 		}
 
+		logrus.WithFields(fields).WithField("celcoin_response", response).
+			Info("received celcoin response")
+
 		return response, nil
 	}
 
@@ -106,8 +101,7 @@ func (c *Balance) Balance(ctx context.Context, accountNumber string) (*BalanceRe
 
 	if errResponse.Error != nil {
 		err := FindBalanceError(*errResponse.Error.ErrorCode, *errResponse.Error.Message)
-		logrus.WithField("celcoin_error", errResponse.Error).
-			WithFields(fields).WithError(err).
+		logrus.WithField("celcoin_error", errResponse.Error).WithFields(fields).WithError(err).
 			Error("celcoin get balance error")
 		return nil, err
 	}

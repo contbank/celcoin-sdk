@@ -4,28 +4,29 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"github.com/contbank/grok"
-	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"path"
 	"strconv"
 	"strings"
+
+	"github.com/contbank/grok"
+	"github.com/sirupsen/logrus"
 )
 
 // Transfers ...
 type Transfers struct {
 	session        Session
 	authentication *Authentication
-	httpClient     *http.Client
+	httpClient     *LoggingHTTPClient
 }
 
 // NewTransfers ...
 func NewTransfers(httpClient *http.Client, session Session) *Transfers {
 	return &Transfers{
 		session:        session,
-		httpClient:     httpClient,
+		httpClient:     NewLoggingHTTPClient(httpClient),
 		authentication: NewAuthentication(httpClient, session),
 	}
 }
@@ -75,6 +76,7 @@ func (t *Transfers) createTransferOperation(ctx context.Context, requestID strin
 			Error("error getting api endpoint")
 		return nil, err
 	}
+	logrus.WithField("endpoint", *endpoint).Info("Endpoint built successfully")
 
 	reqbyte, err := json.Marshal(model)
 	if err != nil {
@@ -90,15 +92,7 @@ func (t *Transfers) createTransferOperation(ctx context.Context, requestID strin
 		return nil, err
 	}
 
-	token, err := t.authentication.Token(ctx)
-	if err != nil {
-		logrus.WithFields(fields).WithError(err).
-			Error("error authentication")
-		return nil, err
-	}
-
-	req.Header.Add("Authorization", token)
-	req.Header.Add("Content-type", "application/json")
+	req.Header.Set("Content-Type", "application/json")
 	req.Header.Add("api-version", t.session.APIVersion)
 	req.Header.Add("x-correlation-id", requestID)
 
@@ -220,14 +214,7 @@ func (t *Transfers) findInternalOrExternalTransferByCode(ctx context.Context, re
 	if err != nil {
 		return nil, err
 	}
-
-	token, err := t.authentication.Token(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Add("Authorization", token)
-	req.Header.Add("Content-type", "application/json")
+	req.Header.Set("Content-Type", "application/json")
 	req.Header.Add("api-version", t.session.APIVersion)
 	req.Header.Add("x-correlation-id", *requestID)
 
@@ -296,18 +283,23 @@ func (t *Transfers) getTransfersAPIEndpoint(correlationID string,
 
 	if isInternalTransfer {
 		u.Path = path.Join(u.Path, InternalTransfersPath)
+		if transferAuthenticationCode != nil && transferRequestID != nil {
+			u.Path = path.Join(u.Path, "status")
+			q := u.Query()
+			q.Set("id", *transferAuthenticationCode)
+			q.Set("ClientRequestId", *transferRequestID)
+			u.RawQuery = q.Encode()
+		}
 	} else {
 		u.Path = path.Join(u.Path, ExternalTransfersPath)
+		if transferAuthenticationCode != nil && transferRequestID != nil {
+			u.Path = path.Join(u.Path, "status")
+			q := u.Query()
+			q.Set("id", *transferAuthenticationCode)
+			q.Set("clientCode", *transferRequestID)
+			u.RawQuery = q.Encode()
+		}
 	}
-
-	if transferAuthenticationCode != nil && transferRequestID != nil {
-		u.Path = path.Join(u.Path, "status")
-		q := u.Query()
-		q.Set("id", *transferAuthenticationCode)
-		q.Set("clientCode", *transferRequestID)
-		u.RawQuery = q.Encode()
-	}
-
 	endpoint := u.String()
 	return &endpoint, nil
 }

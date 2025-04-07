@@ -14,7 +14,7 @@ const (
 	// CelcoinBankISPB ...
 	CelcoinBankISPB string = "13935893"
 	// CelcoinBankName ...
-	CelcoinBankName string = "Contbank S.A. (Celcoin Instituição De Pagamento S.A.)"
+	CelcoinBankName string = "Celcoin Instituição De Pagamento S.A."
 
 	// LoginPath ...
 	LoginPath string = "v5/token"
@@ -30,6 +30,10 @@ const (
 	ProposalsPath string = "/onboarding/v1/onboarding-proposal"
 	// ProposalFilesPath ...
 	ProposalFilesPath string = "/onboarding/v1/onboarding-proposal/files"
+	// CancelAccountPath ...
+	CancelAccountPath string = "/baas-accountmanager/v1/account/close"
+	// UpdateAccountStatusPath ...
+	UpdateAccountStatusPath string = "/baas-accountmanager/v1/account/status"
 	//NaturalPersonOnboardingPath ...
 	NaturalPersonOnboardingPath string = "/onboarding/v1/onboarding-proposal/natural-person"
 	// LegalPersonOnboardingPath ...
@@ -40,12 +44,17 @@ const (
 	InternalTransfersPath string = "/baas-wallet-transactions-webservice/v1/wallet/internal/transfer"
 
 	// Pix ...
-	PixDictPath         string = "/celcoin-baas-pix-dict-webservice/v1/pix/dict/entry"
-	PixCashOutPath      string = "/baas-wallet-transactions-webservice/v1/pix/payment"
-	PixCashInPath       string = "/pix/v2/receivement/v2"
-	PixEmvPath          string = "/pix/v1/emv"
-	PixStaticPath       string = "/pix/v1/brcode/static"
-	PixCashInStatusPath string = "/pix/v2/receivement/v2/devolution/status"
+	PixClaimPath          string = "/celcoin-baas-pix-dict-webservice/v1/pix/dict/claim"
+	PixDictPath           string = "/celcoin-baas-pix-dict-webservice/v1/pix/dict/entry"
+	PixDictDueDatePath    string = "/pix/v1/dict/v2/key"
+	PixCashOutPath        string = "/baas-wallet-transactions-webservice/v1/pix/payment"
+	PixCashInPath         string = "/pix/v2/receivement/v2"
+	PixEmvPath            string = "/pix/v1/emv"
+	PixStaticPath         string = "/pix/v1/brcode/static"
+	PixCashInStatusPath   string = "/pix/v2/receivement/v2/devolution/status"
+	PixEmvUrl             string = "/pix/v1/collection"
+	PixCashInDynamicPath  string = "/pix/v1/collection"
+	PixQrCodeLocationPath string = "/pix/v1/location"
 
 	// StatementPath ...
 	StatementPath string = "/baas-walletreports/v1/wallet/movement"
@@ -56,29 +65,43 @@ const (
 	// Webhook
 	WebhookPath string = "/baas-webhookmanager/v1/webhook"
 
+	//BaasV2ChargePath ...
+	BaasV2ChargePath string = "/baas/v2/charge"
+
 	// ONBOARDING CONSTANTS
 	// OnboardingStatusProcessing ...
 	OnboardingStatusProcessing string = "PROCESSING"
+
 	// OnboardingStatusApproved ...
 	OnboardingStatusApproved string = "APPROVED"
+
 	// OnboardingStatusReproved ...
 	OnboardingStatusReproved string = "REPROVED"
+
 	// OnboardingStatusPending ...
 	OnboardingStatusPending string = "PENDING"
+
 	//ProposalTypeNaturalPerson ...
 	ProposalTypeNaturalPerson string = "NATURAL_PERSON"
+
 	// ProposalTypeLegalPerson ...
 	ProposalTypeLegalPerson string = "LEGAL_PERSON"
+
 	// LegalPersonOwnerTypeSocio ...
 	LegalPersonOwnerTypeSocio string = "SOCIO"
+
 	// LegalPersonOwnerTypeRepresentante ...
 	LegalPersonOwnerTypeRepresentante string = "REPRESENTANTE"
+
 	// LegalPersonOwnerTypeDemaisSocios...
 	LegalPersonOwnerTypeDemaisSocios string = "DEMAIS_SOCIOS"
+
 	// ProposalTypePF...
 	ProposalTypePF string = "PF"
+
 	// ProposalTypePJ...
 	ProposalTypePJ string = "PJ"
+
 	// OnboardingProposalCompanyTypes...
 	CompanyTypeME     CompanyType = "ME"
 	CompanyTypeMEI    CompanyType = "MEI"
@@ -88,8 +111,14 @@ const (
 	CompanyTypeEI     CompanyType = "EI"
 	CompanyTypeEIRELI CompanyType = "EIRELI"
 	CompanyTypePJ     CompanyType = "PJ"
+
 	// DefaultOnboardingType ...
 	DefaultOnboardingType string = "BAAS"
+
+	// ChargeDiscountModalityFixed ...
+	ChargeDiscountModalityFixed string = "FIXED"
+	// ChargeDiscountModalityPercentage ...
+	ChargeDiscountModalityPercentage string = "PERCENT"
 )
 
 const (
@@ -135,6 +164,49 @@ const (
 	TransfersBetweenSameOwnershipClientFinality ClientFinality = "110"
 	// Others 99999 - Outros
 	OthersClientFinality ClientFinality = "99999"
+)
+
+type PixType string
+
+const (
+	// PixCNPJ ...
+	PixCNPJ PixType = "CNPJ"
+	// PixCPF ...
+	PixCPF PixType = "CPF"
+	// PixEMAIL ...
+	PixEMAIL PixType = "EMAIL"
+	// PixPHONE ...
+	PixPHONE PixType = "PHONE"
+	//  PixEVP ...
+	PixEVP PixType = "EVP"
+)
+
+type PixClaimType string
+
+const (
+	Portability PixClaimType = "PORTABILITY"
+	Ownership   PixClaimType = "OWNERSHIP"
+)
+
+type StatusClaim string
+
+const (
+	Open              StatusClaim = "OPEN"
+	WaitingResolution StatusClaim = "WAITING_RESOLUTION"
+	Confirmed         StatusClaim = "CONFIRMED"
+	CanceledClaim     StatusClaim = "CANCELED"
+	CompletedClaim    StatusClaim = "COMPLETED"
+)
+
+type CancelReason string
+
+const (
+	UserRequested    CancelReason = "USER_REQUESTED"
+	ClaimerRequest   CancelReason = "CLAIMER_REQUEST"
+	DonorRequest     CancelReason = "DONOR_REQUEST"
+	AccountClosure   CancelReason = "ACCOUNT_CLOSURE"
+	Fraud            CancelReason = "FRAUD"
+	DefaultOperation CancelReason = "DEFAULT_OPERATION"
 )
 
 // AuthenticationResponse ...
@@ -460,6 +532,21 @@ type BusinessOnboardingRequest struct {
 	OnboardingType  string  `json:"onboardingType"`
 }
 
+// BusinessOnboardingRequest ... representa o payload para o onboarding de uma empresa na migração.
+type BusinessOnboardingMigrationRequest struct {
+	ClientCode      string                   `json:"clientCode"`
+	ContactNumber   string                   `json:"contactNumber"`
+	DocumentNumber  string                   `json:"documentNumber"`
+	BusinessEmail   string                   `json:"businessEmail"`
+	BusinessName    string                   `json:"businessName"`
+	TradingName     string                   `json:"tradingName"`
+	CompanyType     string                   `json:"companyType"`
+	Owner           []Owner                  `json:"owner"`
+	BusinessAddress Address                  `json:"businessAddress"`
+	OnboardingType  string                   `json:"onboardingType"`
+	Files           []CustomerFilesMigration `json:"files"`
+}
+
 // Owner ...
 type Owner struct {
 	OwnerType                  string  `json:"ownerType"`
@@ -532,6 +619,27 @@ type Customer struct {
 	OnboardingType             string          `json:"onboardingType"`
 }
 
+// CustomerMigration ... representa o cliente a ser migrado
+type CustomerMigration struct {
+	ClientCode                 string                   `json:"clientCode"`
+	DocumentNumber             string                   `json:"documentNumber"`
+	PhoneNumber                string                   `json:"phoneNumber"`
+	Email                      string                   `json:"email"`
+	MotherName                 string                   `json:"motherName"`
+	FullName                   string                   `json:"fullName"`
+	SocialName                 string                   `json:"socialName"`
+	BirthDate                  string                   `json:"birthDate"`
+	Address                    CustomerAddress          `json:"address"`
+	IsPoliticallyExposedPerson bool                     `json:"isPoliticallyExposedPerson"`
+	OnboardingType             string                   `json:"onboardingType"`
+	Files                      []CustomerFilesMigration `json:"files"`
+}
+
+type CustomerFilesMigration struct {
+	Type string `json:"type"`
+	Data string `json:"data"`
+}
+
 // CustomerOnboardingResponse ... representa a resposta do onboarding de customer
 type CustomerOnboardingResponse struct {
 	Body    CustomerOnboardingResponseBody `json:"body"`
@@ -591,6 +699,18 @@ type OnboardingProposalFilesResponse struct {
 	Body    OnboardingProposalFilesResponseBody `json:"body"`
 	Version string                              `json:"version"`
 	Status  string                              `json:"status"`
+}
+
+// CancelAccountResponse ... representa a resposta do método CancelAccount
+type CancelAccountResponse struct {
+	Version string `json:"version"`
+	Status  string `json:"status"`
+}
+
+// UpdateAccountStatusResponse ... representa a resposta do método CancelAccount
+type UpdateAccountStatusResponse struct {
+	Version string `json:"version"`
+	Status  string `json:"status"`
 }
 
 // OnboardingProposalFilesResponseBody ... representa o corpo da resposta do método GetOnboardingProposalFiles
@@ -662,6 +782,13 @@ type PixKeyAccount struct {
 	AccountType string    `json:"accountType"`
 	CreateDate  time.Time `json:"createDate"`
 }
+type PixExternalKeyAccount struct {
+	Participant string    `json:"participant"`
+	Branch      int       `json:"branch"`
+	Account     string    `json:"accountNumber"`
+	AccountType string    `json:"accountType"`
+	OpeningDate time.Time `json:"openingDate"`
+}
 
 // PixKeyOwner representa as informações do proprietário da Pix Key.
 type PixKeyOwner struct {
@@ -720,6 +847,17 @@ type PixExternalKeyResponseBody struct {
 type PixExternalKeyErrorResponse struct {
 	ErrorCode string `json:"errorCode"`
 	Message   string `json:"message"`
+}
+
+// PixExternalKeyDueDateResponse representa a resposta de uma consulta de chave Pix externa (COBV - DUEDATE).
+type PixExternalKeyDueDateResponse struct {
+	Key              string                `json:"key"`
+	KeyType          string                `json:"keyType"`
+	Account          PixExternalKeyAccount `json:"account"`
+	Owner            PixKeyOwner           `json:"owner"`
+	EndToEndId       string                `json:"endtoendid"`
+	CreationDate     time.Time             `json:"creationDate"`
+	KeyOwnershipDate time.Time             `json:"keyOwnershipDate"`
 }
 
 // PixCashOutRequest representa os dados para realizar um Pix Cash-Out.
@@ -782,15 +920,18 @@ type PixCashOutErrorResponse struct {
 
 // PixCashOutResponseBody...
 type PixCashOutResponseBody struct {
-	InitiationType            string                 `json:"initiationType" `
-	TransactionIdentification *string                `json:"transactionIdentification,omitempty" `
-	Status                    string                 `json:"status"`
-	Amount                    float64                `json:"amount"`
-	Currency                  string                 `json:"currency"`
-	CreationDate              string                 `json:"creationDate"`
-	CompletionDate            *string                `json:"completionDate,omitempty"`
-	ErrorDetails              *ErrorDetails          `json:"errorDetails,omitempty"`
-	AdditionalInfo            map[string]interface{} `json:"additionalInfo,omitempty"`
+	ID                        string      `json:"id"` // id transação retornado para ser usado em get posteriormente
+	Amount                    float64     `json:"amount"`
+	ClientCode                string      `json:"clientCode"` // identificador unico fornecido pelo cliente na requisição de payment.
+	TransactionIdentification *string     `json:"transactionIdentification,omitempty"`
+	EndToEndID                string      `json:"endToEndId"` // identificador ponta-a-ponta da transação. O mesmo retornado na consulta DICT e no retorno do endpoint de pagamento (/baas-wallet-transactions-webservice/v1/pix/payment).
+	InitiationType            string      `json:"initiationType"`
+	PaymentType               string      `json:"paymentType"`
+	Urgency                   string      `json:"urgency"`
+	TransactionType           string      `json:"transactionType"`
+	DebitParty                DebitParty  `json:"debitParty"`
+	CreditParty               CreditParty `json:"creditParty"`
+	RemittanceInformation     string      `json:"remittanceInformation"`
 }
 
 // ErrorDetails ...
@@ -874,14 +1015,6 @@ type PixCashInStaticRequest struct {
 	Withdrawal                bool        `json:"withdrawal"`
 }
 
-// PixMerchant representa as informações do comerciante no Pix Cash-in.
-type PixMerchant struct {
-	PostalCode           string `json:"postalCode" validate:"required"`
-	City                 string `json:"city" validate:"required"`
-	MerchantCategoryCode int    `json:"merchantCategoryCode"`
-	Name                 string `json:"name" validate:"required"`
-}
-
 // PixCashInStaticResponse representa a resposta ao realizar um Pix Cash-in por Cobrança Estática.
 type PixCashInStaticResponse struct {
 	TransactionId             int    `json:"transactionId"`
@@ -889,10 +1022,378 @@ type PixCashInStaticResponse struct {
 	TransactionIdentification string `json:"transactionIdentification"`
 }
 
+// PixAddressKeyResponse...
+type PixAddressKeyResponse struct {
+	EndToEndID    string       `json:"endToEndId"`
+	AddressingKey PixTypeValue `json:"addressingKey"`
+	Holder        PixHolder    `json:"holder"`
+	Status        string       `json:"status"`
+	CreatedAt     time.Time    `json:"createdAt"`
+	OwnedAt       time.Time    `json:"ownedAt"`
+}
+
+type PixTypeValue struct {
+	Type  PixType `json:"type"`
+	Value string  `json:"value"`
+}
+
+type PixHolder struct {
+	Type       string       `json:"type"`
+	Name       string       `json:"name"`
+	SocialName string       `json:"socialName,omitempty"`
+	Document   PixTypeValue `json:"document"`
+}
+
+type QRCodeImmediateResponse struct {
+	Status             string           `json:"status"`
+	InfoAdicionais     *string          `json:"infoAdicionais,omitempty"`
+	TxID               string           `json:"txid"`
+	Chave              string           `json:"chave"`
+	SolicitacaoPagador *string          `json:"solicitacaoPagador,omitempty"`
+	Valor              QRCodeValor      `json:"valor"`
+	Calendario         QRCodeCalendario `json:"calendario"`
+	Revisao            int              `json:"revisao"`
+}
+
+type QRCodeValor struct {
+	Original            string  `json:"original"`
+	Abatimento          string  `json:"abatimento"`
+	Desconto            string  `json:"desconto"`
+	Multa               string  `json:"multa"`
+	Juros               string  `json:"juros"`
+	Final               string  `json:"final"`
+	ModalidadeAlteracao int     `json:"modalidadeAlteracao"`
+	Retirada            *string `json:"retirada,omitempty"`
+}
+
+type QRCodeCalendario struct {
+	Criacao                string `json:"criacao"`
+	Expiracao              int    `json:"expiracao"`
+	Apresentacao           string `json:"apresentacao"`
+	ValidadeAposVencimento int    `json:"validadeAposVencimento"`
+}
+
+// QRCodeDueDateResponse representa a resposta do endpoint de dueDate.
+type QRCodeDueDateResponse struct {
+	Calendar              PixCalendar         `json:"calendar"`
+	Debtor                PixDebtor           `json:"debtor"`
+	Receiver              PixReceiver         `json:"receiver"`
+	TransactionID         string              `json:"transactionIdentification"`
+	Revision              string              `json:"revision"`
+	Status                string              `json:"status"`
+	Key                   string              `json:"key"`
+	Amount                PixQrCodeAmount     `json:"amount"`
+	AdditionalInformation []PixAdditionalInfo `json:"additionalInformation"`
+}
+
+// Receiver representa os detalhes do recebedor.
+type PixReceiver struct {
+	CNPJ        string `json:"cnpj,omitempty"`
+	CPF         string `json:"cpf,omitempty"`
+	FantasyName string `json:"fantasyName,omitempty"`
+	PublicArea  string `json:"publicArea,omitempty"`
+	City        string `json:"city,omitempty"`
+	State       string `json:"state,omitempty"`
+	PostalCode  string `json:"postalCode,omitempty"`
+	Name        string `json:"name"`
+	Email       string `json:"email,omitempty"`
+}
+
+// Amount representa os valores relacionados à transação.
+type PixAmount struct {
+	Original   *string            `json:"original,omitempty"`
+	Abatement  *PixChargeFee      `json:"abatement,omitempty"`
+	Discount   *PixAmountDiscount `json:"discount,omitempty"`
+	Interest   *PixChargeFee      `json:"interest,omitempty"`
+	Fine       *PixChargeFee      `json:"fine,omitempty"`
+	Final      *string            `json:"final,omitempty"`
+	ChangeType int                `json:"changeType"`
+	Withdrawal *PixWithdrawal     `json:"withdrawal,omitempty"`
+	Change     *PixChangeDetails  `json:"change,omitempty"`
+}
+
+// Amount representa os valores relacionados à transação.
+type PixAmountCashIn struct {
+	Original   *float64           `json:"original,omitempty"`
+	Abatement  *PixChargeFee      `json:"abatement,omitempty"`
+	Discount   *PixAmountDiscount `json:"discount,omitempty"`
+	Interest   *PixChargeFee      `json:"interest,omitempty"`
+	Fine       *PixChargeFee      `json:"fine,omitempty"`
+	Final      *float64           `json:"final,omitempty"`
+	ChangeType int                `json:"changeType"`
+	Withdrawal *PixWithdrawal     `json:"withdrawal,omitempty"`
+	Change     *PixChangeDetails  `json:"change,omitempty"`
+}
+
+// Amount representa os valores relacionados à transação.
+type PixQrCodeAmount struct {
+	Original  *string `json:"original,omitempty"`
+	Abatement *string `json:"abatement,omitempty"`
+	Discount  *string `json:"discount,omitempty"`
+	Interest  *string `json:"interest,omitempty"`
+	Fine      *string `json:"fine,omitempty"`
+	Final     *string `json:"final,omitempty"`
+}
+type PixWithdrawal struct {
+	VldnAmount                *float64 `json:"vldnAmount"`
+	AgentMode                 *string  `json:"agentMode,omitempty"`
+	WithdrawalServiceProvider *string  `json:"withdrawalServiceProvider,omitempty"`
+	ChangeType                int      `json:"changeType"`
+}
+
+type PixChangeDetails struct {
+	VldnAmount                *float64 `json:"vldnAmount"`
+	VlcpAmount                *float64 `json:"vlcpAmount"`
+	AgentMode                 *string  `json:"agentMode,omitempty"`
+	WithdrawalServiceProvider *string  `json:"withdrawalServiceProvider,omitempty"`
+	ChangeType                int      `json:"changeType"`
+}
+
+// AdditionalInfo representa informações adicionais incluídas na transação.
+type PixAdditionalInfo struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+}
+
+// PixCashInDueDateResponse ...
+type PixCashInDueDateResponse struct {
+	TransactionIdentification string              `json:"transactionIdentification"`
+	TransactionID             int64               `json:"transactionId"`
+	ClientRequestID           string              `json:"clientRequestId"`
+	Status                    string              `json:"status"`
+	LastUpdate                *time.Time          `json:"lastUpdate,omitempty"`
+	PayerQuestion             string              `json:"payerQuestion"`
+	AdditionalInformation     []PixAdditionalInfo `json:"additionalInformation"`
+	Debtor                    PixDebtor           `json:"debtor"`
+	Amount                    PixAmountCashIn     `json:"amount"`
+	Location                  *PixLocation        `json:"location,omitempty"` // Campo opcional
+	Key                       string              `json:"key"`
+	Receiver                  PixReceiver         `json:"receiver"`
+	Calendar                  PixCalendar         `json:"calendar"`
+	CreateAt                  time.Time           `json:"createAt"`
+}
+
+type PixDebtor struct {
+	Name       string  `json:"name,omitempty"`
+	CPF        *string `json:"cpf,omitempty"`
+	CNPJ       string  `json:"cnpj,omitempty"`
+	City       string  `json:"city,omitempty"`
+	PublicArea string  `json:"publicArea,omitempty"`
+	State      string  `json:"state,omitempty"`
+	PostalCode string  `json:"postalCode,omitempty"`
+	Email      string  `json:"email,omitempty"`
+}
+type PixChargeFee struct {
+	AmountPerc *string `json:"amountPerc,omitempty"` // Aceita string ou número
+	Modality   *string `json:"modality"`
+}
+
+type PixLocation struct {
+	Merchant   PixMerchant `json:"merchant"`
+	URL        string      `json:"url"`
+	EMV        string      `json:"emv"`
+	Type       string      `json:"type"`
+	LocationID string      `json:"locationId"`
+	ID         *string     `json:"id,omitempty"`
+}
+
+// PixMerchant representa as informações do comerciante no Pix Cash-in.
+type PixMerchant struct {
+	PostalCode           string `json:"postalCode" validate:"required"`
+	City                 string `json:"city" validate:"required"`
+	MerchantCategoryCode string `json:"merchantCategoryCode"`
+	Name                 string `json:"name" validate:"required"`
+}
+
+// Calendar representa os detalhes do calendário da transação.
+type PixCalendar struct {
+	ExpirationAfterPayment  string `json:"expirationAfterPayment,omitempty"`
+	CreatedAt               string `json:"createdAt,omitempty"`
+	DueDate                 string `json:"dueDate,omitempty"`
+	ValidateAfterExpiration int    `json:"validateAfterExpiration,omitempty"`
+	Presentation            string `json:"presentation,omitempty"`
+	Expiration              int    `json:"expiration,omitempty"`
+}
+
+type PixCashInDueDateRequest struct {
+	PayerQuestion          string              `json:"payerQuestion"`
+	ClientRequestID        string              `json:"clientRequestId"`
+	ExpirationAfterPayment int                 `json:"expirationAfterPayment"`
+	DueDate                string              `json:"duedate"`
+	Debtor                 PixDebtor           `json:"debtor"`
+	Receiver               PixReceiver         `json:"receiver"`
+	LocationID             int64               `json:"locationId"`
+	Amount                 float64             `json:"amount"`
+	AdditionalInformation  []PixAdditionalInfo `json:"additionalInformation"`
+	AmountInterest         PixAmountInterest   `json:"amountInterest"`
+	AmountDiscount         PixAmountDiscount   `json:"amountDicount"`
+	AmountAbatement        PixAmountAbatement  `json:"amountAbatement"`
+	AmountFine             PixAmountFine       `json:"amountFine"`
+	Key                    string              `json:"key"`
+}
+
+type PixAmountInterest struct {
+	HasCondition bool   `json:"hasInterest"`
+	AmountPerc   string `json:"amountPerc"`
+	Modality     string `json:"modality"`
+}
+
+type PixAmountDiscount struct {
+	HasCondition      bool                   `json:"hasDicount"`
+	AmountPerc        string                 `json:"amountPerc"`
+	Modality          string                 `json:"modality"`
+	DiscountDateFixed []PixDiscountDateFixed `json:"discountDateFixed"`
+}
+
+type PixDiscountDateFixed struct {
+	Date       string `json:"date"`
+	AmountPerc string `json:"amountPerc"`
+}
+type PixAmountAbatement struct {
+	HasCondition bool   `json:"hasAbatement"`
+	AmountPerc   string `json:"amountPerc"`
+	Modality     string `json:"modality"`
+}
+type PixAmountFine struct {
+	HasCondition bool   `json:"hasFine"`
+	AmountPerc   string `json:"amountPerc"`
+	Modality     string `json:"modality"`
+}
+
+type PixCashInImmediateRequest struct {
+	ClientRequestID       string              `json:"clientRequestId"`
+	PayerQuestion         string              `json:"payerQuestion"`
+	Key                   string              `json:"key"`
+	LocationID            int64               `json:"locationId"`
+	Debtor                PixDebtor           `json:"debtor"`
+	Amount                PixAmount           `json:"amount"`
+	Calendar              PixCalendar         `json:"calendar"`
+	AdditionalInformation []PixAdditionalInfo `json:"additionalInformation"`
+}
+
+type PixCashInImmediateResponse struct {
+	Revision                  int64               `json:"revision"`
+	TransactionID             int64               `json:"transactionId"`
+	ClientRequestID           string              `json:"clientRequestId"`
+	Status                    string              `json:"status"`
+	LastUpdate                *time.Time          `json:"lastUpdate,omitempty"`
+	PayerQuestion             string              `json:"payerQuestion"`
+	AdditionalInformation     []PixAdditionalInfo `json:"additionalInformation"`
+	Debtor                    PixDebtor           `json:"debtor"`
+	Amount                    PixAmount           `json:"amount"`
+	Location                  PixLocation         `json:"location"`
+	Key                       string              `json:"key"`
+	Calendar                  PixCalendar         `json:"calendar"`
+	CreatedAt                 time.Time           `json:"createAt"`
+	TransactionIdentification string              `json:"transactionIdentification"`
+}
+
+// PixDeleteResponse representa a resposta da API para a exclusão do Pix.
+type PixDeleteResponse struct {
+	Message       string `json:"message"`
+	TransactionID int64  `json:"transactionId"`
+	Status        int    `json:"status"`
+}
+
+type PixQrCodeLocationRequest struct {
+	ClientRequestID string            `json:"clientRequestId" validate:"required,uuid4"`
+	Type            string            `json:"type" validate:"required,oneof=COB COBV"`
+	Merchant        PixQrCodeMerchant `json:"merchant" validate:"required"`
+}
+
+// QrCodeMerchant representa as informações do comerciante no request
+type PixQrCodeMerchant struct {
+	MerchantCategoryCode string `json:"merchantCategoryCode" validate:"required"`
+	PostalCode           string `json:"postalCode" validate:"required"`
+	City                 string `json:"city" validate:"required"`
+	Name                 string `json:"name" validate:"required"`
+}
+
+// QrCodeLocationResponse representa a resposta da criação do QR Code Location
+type PixQrCodeLocationResponse struct {
+	LocationID      int64             `json:"locationId"`
+	Status          string            `json:"status"`
+	ClientRequestID string            `json:"clientRequestId"`
+	URL             string            `json:"url"`
+	EMV             string            `json:"emv"`
+	Type            string            `json:"type"`
+	Merchant        PixQrCodeMerchant `json:"merchant"`
+}
+
+// PixClaimRequest representa o payload para requisições de portabilidade de chave Pix.
+type PixClaimRequest struct {
+	Key       string `json:"key" validate:"required"`
+	KeyType   string `json:"keyType" validate:"required,oneof=EMAIL CPF CNPJ PHONE EVP"`
+	Account   string `json:"account" validate:"required"`
+	ClaimType string `json:"claimType" validate:"required,oneof=OWNERSHIP"`
+}
+
+// PixClaimResponse representa a resposta de operações individuais de portabilidade de chave Pix.
+type PixClaimResponse struct {
+	Version string               `json:"version"`
+	Status  string               `json:"status"`
+	Body    PixClaimResponseBody `json:"body"`
+}
+
+// PixClaimResponseBody representa o corpo da resposta de uma única portabilidade de chave Pix.
+type PixClaimResponseBody struct {
+	ID                  string             `json:"id"`
+	ClaimType           string             `json:"claimType"`
+	Key                 string             `json:"key"`
+	KeyType             string             `json:"keyType"`
+	ClaimerAccount      PixClaimKeyAccount `json:"claimerAccount"`
+	Claimer             PixClaimKeyOwner   `json:"claimer"`
+	DonorParticipant    string             `json:"donorParticipant"`
+	Status              string             `json:"status"`
+	CreateTimestamp     string             `json:"createTimestamp"`
+	CompletionPeriodEnd string             `json:"completionPeriodEnd"`
+	ResolutionPeriodEnd string             `json:"resolutionPeriodEnd"`
+	LastModified        string             `json:"lastModified"`
+	ConfirmReason       string             `json:"confirmReason,omitempty"`
+	CancelReason        string             `json:"cancelReason,omitempty"`
+	CancelledBy         string             `json:"cancelledBy,omitempty"`
+	DonorAccount        PixClaimKeyAccount `json:"donorAccount,omitempty"`
+}
+
+// PixClaimListResponse representa a resposta da consulta de lista de reivindicações de chaves Pix.
+type PixClaimListResponse struct {
+	Version string                   `json:"version"`
+	Status  string                   `json:"status"`
+	Body    PixClaimListResponseBody `json:"body"`
+}
+
+// PixClaimListResponseBody representa o corpo da resposta da consulta de lista de reivindicações de chaves Pix.
+type PixClaimListResponseBody struct {
+	Claims []PixClaimResponseBody `json:"claims"`
+}
+
+// PixClaimActionRequest representa requisições para confirmação ou cancelamento de portabilidade.
+type PixClaimActionRequest struct {
+	ID     string `json:"id" validate:"required"`
+	Reason string `json:"reason" validate:"required"`
+}
+
+// PixKeyAccount representa os detalhes da conta bancária associada a uma chave Pix.
+type PixClaimKeyAccount struct {
+	Participant string `json:"participant,omitempty"`
+	Branch      string `json:"branch"`
+	Account     string `json:"account"`
+	AccountType string `json:"accountType,omitempty"`
+	TaxID       string `json:"taxId,omitempty"`
+	Name        string `json:"name,omitempty"`
+}
+
+// PixKeyOwner representa o proprietário da chave Pix.
+type PixClaimKeyOwner struct {
+	PersonType string `json:"personType"`
+	TaxID      string `json:"taxId"`
+	Name       string `json:"name"`
+}
+
 /* TRANSFERS */
 // TransfersRequest ...
 type TransfersRequest struct {
-	Amount          int64                       `validate:"required" json:"amount"`
+	Amount          float64                     `validate:"required" json:"amount"`
 	ClientCode      string                      `validate:"required" json:"clientCode"`
 	ClientRequestId string                      `json:"clientRequestId"`
 	DebitParty      TransfersDebitPartyRequest  `validate:"required,dive" json:"debitParty"`
@@ -937,7 +1438,7 @@ type TransfersCreditPartyResponse struct {
 // TransfersBodyResponse ...
 type TransfersBodyResponse struct {
 	ID              string                       `json:"id"`
-	Amount          int64                        `json:"amount"`
+	Amount          float64                      `json:"amount"`
 	ClientCode      string                       `json:"clientCode"`
 	ClientRequestId string                       `json:"clientRequestId"`
 	DebitParty      TransfersDebitPartyResponse  `json:"debitParty"`
@@ -964,14 +1465,14 @@ type TransfersError struct {
 
 // CreateBoletoRequest is the payload to create a new Celcoin charge/boleto.
 type CreateBoletoRequest struct {
-	ExternalID             string       `json:"externalId"`
-	ExpirationAfterPayment int          `json:"expirationAfterPayment"`
-	DueDate                string       `json:"dueDate"`
-	Amount                 float64      `json:"amount"`
-	Key                    string       `json:"key,omitempty"` // optional
-	Debtor                 Debtor       `json:"debtor"`
-	Receiver               Receiver     `json:"receiver"`
-	Instructions           Instructions `json:"instructions"`
+	ExternalID             *string       `json:"externalId,omitempty"`
+	ExpirationAfterPayment *int          `json:"expirationAfterPayment,omitempty"`
+	DueDate                *string       `json:"dueDate,omitempty"`
+	Amount                 *float64      `json:"amount,omitempty"`
+	Key                    *string       `json:"key,omitempty"` // optional
+	Debtor                 *Debtor       `json:"debtor,omitempty"`
+	Receiver               *Receiver     `json:"receiver,omitempty"`
+	Instructions           *Instructions `json:"instructions,omitempty"`
 }
 
 type Debtor struct {
@@ -991,15 +1492,15 @@ type Receiver struct {
 }
 
 type Instructions struct {
-	Fine     float64  `json:"fine"`
-	Interest float64  `json:"interest"`
-	Discount Discount `json:"discount"`
+	Fine     *float64  `json:"fine,omitempty"`
+	Interest *float64  `json:"interest,omitempty"`
+	Discount *Discount `json:"discount,omitempty"`
 }
 
 type Discount struct {
-	Amount    float64 `json:"amount"`
-	Modality  string  `json:"modality"`  // "fixed" or "percent"
-	LimitDate string  `json:"limitDate"` // e.g. "2025-01-20T00:00:00.0000000"
+	Amount    *float64 `json:"amount,omitempty"`
+	Modality  *string  `json:"modality,omitempty"`  // "fixed" or "percent"
+	LimitDate *string  `json:"limitDate,omitempty"` // e.g. "2025-01-20T00:00:00.0000000"
 }
 
 // CreateBoletoResponse is the simplified response from POST /charge.
@@ -1058,7 +1559,8 @@ type StatementRequest struct {
 	DateFrom       *string `json:"DateFrom"`
 	DateTo         *string `json:"DateTo"`
 	DocumentNumber *string `json:"DocumentNumber"`
-	LimitPerPage   *string `json:"LimitPerPage"`
+	LimitPerPage   *int64  `json:"LimitPerPage"`
+	Page           *int64  `json:"Page"`
 }
 
 // IncomeReportPayerSource ... define a estrutura da fonte pagadora.
@@ -1106,67 +1608,406 @@ type IncomeReportResponse struct {
 	Body    IncomeReportBody `json:"body"`
 }
 
+///PAYMENT
+
+// ValidatePaymentRequest representa a requisição para validar um pagamento.
+// No SDK do Bankly este modelo possui o campo Code; adapte-o se o payload da Celcoin exigir outro nome.
+type ValidatePaymentRequest struct {
+	BarCode *BarcodeData `json:"barCode,omitempty"`
+}
+
+// BarcodeData representa os dados do código de barras.
+type BarcodeData struct {
+	DigitableLine *string `json:"digitable,omitempty"`
+	BarCode       *string `json:"barCode,omitempty"`
+}
+
+// ValidatePaymentResponse..
+type ValidatePaymentResponse struct {
+	ID                *string  `json:"id,omitempty"`
+	Assignor          *string  `json:"assignor,omitempty"`
+	Code              *string  `json:"code,omitempty"`
+	Digitable         *string  `json:"digitable,omitempty"`
+	Amount            *float64 `json:"amount,omitempty"`
+	OriginalAmount    *float64 `json:"originalAmount,omitempty"`
+	MinAmount         *float64 `json:"minAmount,omitempty"`
+	MaxAmount         *float64 `json:"maxAmount,omitempty"`
+	AllowChangeAmount *bool    `json:"allowChangeAmount,omitempty"`
+	DueDate           *string  `json:"dueDate,omitempty"`
+	SettleDate        *string  `json:"settleDate,omitempty"`
+	NextSettle        *bool    `json:"nextSettle,omitempty"`
+}
+
+// ConfirmPaymentRequest..
+type ConfirmPaymentRequest struct {
+	ID          *string  `validate:"required" json:"id,omitempty"`
+	Amount      *float64 `validate:"required" json:"amount,omitempty"`
+	Description *string  `json:"description,omitempty"`
+	BankBranch  *string  `validate:"required" json:"bankBranch,omitempty"`
+	BankAccount *string  `validate:"required" json:"bankAccount,omitempty"`
+}
+
+// ConfirmPaymentResponse..
+type ConfirmPaymentResponse struct {
+	AuthenticationCode *string    `json:"authenticationCode,omitempty"`
+	SettledDate        *time.Time `json:"settledDate,omitempty"`
+}
+
+// FilterPaymentsRequest..
+type FilterPaymentsRequest struct {
+	BankBranch  *string `validate:"required" json:"bankBranch"`
+	BankAccount *string `validate:"required" json:"bankAccount"`
+	PageSize    *int    `validate:"required" json:"pageSize"`
+	PageToken   *string `json:"pageToken,omitempty"`
+}
+
+// FilterPaymentsResponse..
+type FilterPaymentsResponse struct {
+	NextPageToken *string            `json:"nextPage,omitempty"`
+	Data          []*PaymentResponse `json:"data,omitempty"`
+}
+
+// DetailPaymentRequest..
+type DetailPaymentRequest struct {
+	BankBranch         string `validate:"required" json:"bankBranch"`
+	BankAccount        string `validate:"required" json:"bankAccount"`
+	AuthenticationCode string `validate:"required" json:"authenticationCode"`
+}
+
+// PaymentPayer, BusinessHours e Charges (auxiliares, seguindo padrão existente)
+type PaymentPayer struct {
+	Name           string `json:"name,omitempty"`
+	DocumentNumber string `json:"documentNumber,omitempty"`
+}
+
+type BusinessHours struct {
+	Start string `json:"start,omitempty"`
+	End   string `json:"end,omitempty"`
+}
+
+type Charges struct {
+	InterestAmountCalculated float64 `json:"interestAmountCalculated,omitempty"`
+	FineAmountCalculated     float64 `json:"fineAmountCalculated,omitempty"`
+	DiscountAmount           float64 `json:"discountAmount,omitempty"`
+}
+
+// ChargeRequest ... define a estrutura da requisição de cobrança.
+type ChargeRequest struct {
+	TransactionID *string `json:"transactionId"`
+	ExternalID    *string `json:"externalId"`
+}
+
+// ChargeDebtor ... define a estrutura do devedor.
+type ChargeDebtor struct {
+	Name         string `json:"name"`
+	Document     string `json:"document"`
+	PostalCode   string `json:"postalCode"`
+	PublicArea   string `json:"publicArea"`
+	Number       string `json:"number"`
+	Neighborhood string `json:"neighborhood"`
+	City         string `json:"city"`
+	State        string `json:"state"`
+}
+
+// ChargeReceiver ... define a estrutura do recebedor.
+type ChargeReceiver struct {
+	Name       string `json:"name"`
+	Document   string `json:"document"`
+	PostalCode string `json:"postalCode"`
+	PublicArea string `json:"publicArea"`
+	City       string `json:"city"`
+	State      string `json:"state"`
+	Account    string `json:"account"`
+}
+
+// ChargeDiscount ... define a estrutura do desconto.
+type ChargeDiscount struct {
+	Amount    float64 `json:"amount"`
+	Modality  string  `json:"modality"`
+	LimitDate string  `json:"limitDate"`
+}
+
+// ChargeInstructions ... define a estrutura das instruções.
+type ChargeInstructions struct {
+	Fine     float64        `json:"fine"`
+	Interest float64        `json:"interest"`
+	Discount ChargeDiscount `json:"discount"`
+}
+
+// ChargeDetails ... define a estrutura dos detalhes do boleto.
+type ChargeDetails struct {
+	TransactionID string `json:"transactionId"`
+	Status        string `json:"status"`
+	BankEmissor   string `json:"bankEmissor"`
+	BankNumber    string `json:"bankNumber"`
+	BankAgency    string `json:"bankAgency"`
+	BankAccount   string `json:"bankAccount"`
+	BarCode       string `json:"barCode"`
+	BankLine      string `json:"bankLine"`
+	BankAssignor  string `json:"bankAssignor"`
+}
+
+// ChargePix ... define a estrutura do Pix.
+type ChargePix struct {
+	TransactionID             string `json:"transactionId"`
+	TransactionIdentification string `json:"transactionIdentification"`
+	Status                    string `json:"status"`
+	Key                       string `json:"key"`
+	Emv                       string `json:"emv"`
+}
+
+// ChargeBody ... define a estrutura do corpo do boleto.
+type ChargeBody struct {
+	TransactionID string             `json:"transactionId"`
+	ExternalID    string             `json:"externalId"`
+	Amount        float64            `json:"amount"`
+	DueDate       string             `json:"duedate"`
+	Status        string             `json:"status"`
+	Debtor        ChargeDebtor       `json:"debtor"`
+	Receiver      ChargeReceiver     `json:"receiver"`
+	Instructions  ChargeInstructions `json:"instructions"`
+	Boleto        ChargeDetails      `json:"boleto"`
+	Pix           ChargePix          `json:"pix"`
+	Split         []interface{}      `json:"split"` // Defina os campos necessários para a estrutura Split, se houver
+}
+
+// ChargeResponse ... define a estrutura da resposta do boleto.
+type ChargeResponse struct {
+	Body    ChargeBody `json:"body"`
+	Version string     `json:"version"`
+	Status  string     `json:"status"`
+}
+
+// =================================================================================
+// PAYMENT SERVICE MODELS DEFINITIONS
+// =================================================================================
+
+type PaymentCategory int
+
+const (
+
+	// BillPaymentConfirmBasePath ...
+	BillPaymentConfirmBasePath = "/baas/v2/billpayment"
+	// BillPaymentAuthorizeBasePath ...
+	BillPaymentAuthorizeBasePath = "/v5/transactions/billpayments"
+	// BillPaymenStatusBasePath ...
+	BillPaymenStatusBasePath = "/baas/v2/billpayment"
+	// BillPaymentAuthorizePath ...
+	BillPaymentAuthorizePath = "authorize"
+	// BillPaymentStatusPath ...
+	BillPaymentStatusPath = "status"
+
+	// PaymentCategoryConcessionaireAndTaxes
+	PaymentCategoryConcessionaireAndTaxes PaymentCategory = 1
+	// PaymentCategoryCompensationForm ...
+	PaymentCategoryCompensationForm PaymentCategory = 2
+)
+
+// GetPaymentRequest ... define a estrutura da requisição para executar consulta de uam cobrança.
+type GetPaymentRequest struct {
+	ClientRequestID string `json:"clientRequestId"`
+	TransactionID   string `json:"id"`
+}
+
+// GetPaymentTag ... define a estrutura das tags.
+type GetPaymentTag struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+}
+
+// GetPaymentBarCodeInfo ... define a estrutura das informações do código de barras.
+type GetPaymentBarCodeInfo struct {
+	Digitable string `json:"digitable"`
+}
+
+// GetPaymentError ... define a estrutura do erro.
+type GetPaymentError struct {
+	ErrorCode string `json:"errorCode"`
+	Message   string `json:"message"`
+}
+
+// GetPaymentResponseBody ... define a estrutura do corpo da resposta de obtenção de pagamento.
+type GetPaymentResponseBody struct {
+	ID                     string                `json:"id"`
+	ClientRequestID        string                `json:"clientRequestId"`
+	Account                int                   `json:"account"`
+	Amount                 float64               `json:"amount"`
+	TransactionIDAuthorize int                   `json:"transactionIdAuthorize"`
+	HasOccurrence          bool                  `json:"hasOccurrence"`
+	Tags                   []GetPaymentTag       `json:"tags"`
+	BarCodeInfo            GetPaymentBarCodeInfo `json:"barCodeInfo"`
+	Error                  GetPaymentError       `json:"error"`
+	PaymentDate            string                `json:"paymentDate"`
+}
+
+// GetPaymentResponse define a estrutura da resposta de obtenção de pagamento.
+type GetPaymentResponse struct {
+	Body    GetPaymentResponseBody `json:"body"`
+	Status  string                 `json:"status"`
+	Version string                 `json:"version"`
+}
+
+// PaymentCode ... define a estrutura do código de barras.
+type PaymentCode struct {
+	Type      PaymentCategory `json:"type"`
+	Digitable string          `json:"digitable"`
+	BarCode   string          `json:"barCode"`
+}
+
+// PaymentAuthorizeRequest ... define a estrutura da requisição para autorizar um pagamento.
+type PaymentAuthorizeRequest struct {
+	ExternalTerminal string      `json:"externalTerminal"` // Terminal de identificação externa do sistema do cliente, Ex: CPF
+	ExternalNSU      int         `json:"externalNSU"`      // Identificador da transação do sistema cliente
+	BarCode          PaymentCode `json:"barCode"`
+}
+
+// PaymentRegisterData ... define a estrutura dos dados de registro do pagamento.
+type PaymentRegisterData struct {
+	DocumentRecipient       string  `json:"documentRecipient"`
+	DocumentPayer           string  `json:"documentPayer"`
+	PayDueDate              string  `json:"payDueDate"`
+	NextBusinessDay         *string `json:"nextBusinessDay"`
+	DueDateRegister         string  `json:"dueDateRegister"`
+	AllowChangeValue        bool    `json:"allowChangeValue"`
+	Recipient               string  `json:"recipient"`
+	Payer                   string  `json:"payer"`
+	DiscountValue           float64 `json:"discountValue"`
+	InterestValueCalculated float64 `json:"interestValueCalculated"`
+	MaxValue                float64 `json:"maxValue"`
+	MinValue                float64 `json:"minValue"`
+	FineValueCalculated     float64 `json:"fineValueCalculated"`
+	OriginalValue           float64 `json:"originalValue"`
+	TotalUpdated            float64 `json:"totalUpdated"`
+	TotalWithDiscount       float64 `json:"totalWithDiscount"`
+	TotalWithAdditional     float64 `json:"totalWithAdditional"`
+	TotalPaymentPaid        int     `json:"totalPaymentPaid"`
+	TotalValuePaid          float64 `json:"totalValuePaid"`
+	MaxPartialsAccepts      int     `json:"maxPartialsAccepts"`
+	PaymentSpecies          int     `json:"paymentSpecies"`
+	DocumentFinalRecipient  *string `json:"documentFinalRecipient"`
+	FinalRecipient          *string `json:"finalRecipient"`
+}
+
+// PaymentResponse ... define a estrutura da resposta do pagamento.
+type PaymentResponse struct {
+	Assignor      *string              `json:"assignor,omitempty"`
+	RegisterData  *PaymentRegisterData `json:"registerData,omitempty"`
+	SettleDate    *string              `json:"settleDate,omitempty"`
+	DueDate       *time.Time           `json:"dueDate,omitempty"`
+	EndHour       *string              `json:"endHour,omitempty"`
+	IniteHour     *string              `json:"initeHour,omitempty"`
+	NextSettle    *string              `json:"nextSettle,omitempty"`
+	Digitable     *string              `json:"digitable,omitempty"`
+	TransactionID *int                 `json:"transactionId,omitempty"`
+	Type          *int                 `json:"type,omitempty"`
+	Value         *float64             `json:"value,omitempty"`
+	MaxValue      *float64             `json:"maxValue,omitempty"`
+	MinValue      *float64             `json:"minValue,omitempty"`
+	ErrorCode     *string              `json:"errorCode,omitempty"`
+	Message       *string              `json:"message,omitempty"`
+	Status        *int                 `json:"status,omitempty"`
+}
+
+// ExecPaymentTag define a estrutura das tags.
+type ExecPaymentTag struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+}
+
+// ExecPaymentBarCodeInfo define a estrutura das informações do código de barras.
+type ExecPaymentBarCodeInfo struct {
+	Digitable string `json:"digitable"`
+	BarCode   string `json:"barCode"`
+}
+
+// ExecPaymentRequest define a estrutura da requisição para executar um pagamento.
+type ExecPaymentRequest struct {
+	ClientRequestID        string                 `json:"clientRequestId"`
+	Amount                 float64                `json:"amount"`
+	Account                string                 `json:"account"`
+	TransactionIDAuthorize int                    `json:"transactionIdAuthorize"`
+	Tags                   []ExecPaymentTag       `json:"tags"`
+	BarCodeInfo            ExecPaymentBarCodeInfo `json:"barCodeInfo"`
+}
+
+// ExecPaymentResponseBody define a estrutura do corpo da resposta de execução de pagamento.
+type ExecPaymentResponseBody struct {
+	ID                     string                 `json:"id"`
+	ClientRequestID        string                 `json:"clientRequestId"`
+	Amount                 float64                `json:"amount"`
+	TransactionIDAuthorize int                    `json:"transactionIdAuthorize"`
+	Tags                   []ExecPaymentTag       `json:"tags"`
+	BarCodeInfo            ExecPaymentBarCodeInfo `json:"barCodeInfo"`
+}
+
+// ExecPaymentResponse define a estrutura da resposta de execução de pagamento.
+type ExecPaymentResponse struct {
+	Body    ExecPaymentResponseBody `json:"body"`
+	Status  string                  `json:"status"`
+	Version string                  `json:"version"`
+}
+
 /* CARDS */
 
 type CardStatus string
 
 const (
 	// CREATED Criado no sistema
-	Created CardStatus = "CREATED"
+	CreatedCardStatus CardStatus = "CREATED"
 	// NORMAL Ativo e elegível para transações. Padrão para cartões virtuais.
-	Normal CardStatus = "NORMAL"
+	NormalCardStatus CardStatus = "NORMAL"
 	// REISSUED O cartão foi reemitido
-	Reissued CardStatus = "REISSUED"
+	ReissuedCardStatus CardStatus = "REISSUED"
 	// BLOCKED Temporariamente bloqueado. Um cartão pode ser bloqueado, por exemplo, se o titular do cartão tiver excedido suas tentativas permitidas de inserir uma senha.
-	Blocked CardStatus = "BLOCKED"
+	BlockedCardStatus CardStatus = "BLOCKED"
 	// PENDING Cartão em processo de criação. Esse status ocorre entre o momento da solicitação e efetivação da criação de cartão.
-	Pending CardStatus = "PENDING"
+	PendingCardStatus CardStatus = "PENDING"
 	// WARNING Um sinalizador de alerta geral é definido e as transações são desabilitadas, geralmente em casos de suspeita de fraude.
-	Warning CardStatus = "WARNING"
+	WarningCardStatus CardStatus = "WARNING"
 	// LOST	Perda relatada
-	Lost CardStatus = "LOST"
+	LostCardStatus CardStatus = "LOST"
 	// ROBBED Status em casos de roubo
-	Robbed CardStatus = "ROBBED"
+	RobbedCardStatus CardStatus = "ROBBED"
 	// EXPIRED Cartão com data de expiração vencida
-	Expired CardStatus = "EXPIRED"
+	ExpiredCardStatus CardStatus = "EXPIRED"
 	// DAMAGED Avariado
-	Damaged CardStatus = "DAMAGED"
+	DamagedCardStatus CardStatus = "DAMAGED"
 	// FRAUD Suspeita de fraude
-	Fraud CardStatus = "FRAUD"
+	FraudCardStatus CardStatus = "FRAUD"
 	// CANCELED	Cancelado
-	Canceled CardStatus = "CANCELED"
+	CanceledCardStatus CardStatus = "CANCELED"
 	// DELETED Deletado
-	Deleted CardStatus = "DELETED"
+	DeletedCardStatus CardStatus = "DELETED"
 	// BROKEN Não é mais fisicamente utilizável
-	Broken CardStatus = "BROKEN"
+	BrokenCardStatus CardStatus = "BROKEN"
 	// THEFT Status em casos de roubo
-	Theft CardStatus = "THEFT"
+	TheftCardStatus CardStatus = "THEFT"
 	// DEFECT Defeito
-	Defect CardStatus = "DEFECT"
+	DefectCardStatus CardStatus = "DEFECT"
 )
 
 // IsTerminalStatus ...
 func IsTerminalStatus(status CardStatus) bool {
 	switch status {
-	case Lost:
+	case LostCardStatus:
 		return true
-	case Robbed:
+	case RobbedCardStatus:
 		return true
-	case Expired:
+	case ExpiredCardStatus:
 		return true
-	case Damaged:
+	case DamagedCardStatus:
 		return true
-	case Fraud:
+	case FraudCardStatus:
 		return true
-	case Canceled:
+	case CanceledCardStatus:
 		return true
-	case Deleted:
+	case DeletedCardStatus:
 		return true
-	case Broken:
+	case BrokenCardStatus:
 		return true
-	case Theft:
+	case TheftCardStatus:
 		return true
-	case Defect:
+	case DefectCardStatus:
 		return true
 	default:
 		return false

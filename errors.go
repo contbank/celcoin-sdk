@@ -80,7 +80,7 @@ var (
 	// ErrDefaultFindTransfers ...
 	ErrDefaultFindTransfers = grok.NewError(http.StatusConflict, "FIND_TRANSFERS_ERROR", "error find transfers")
 	// ErrDefaultPayment ...
-	ErrDefaultPayment = grok.NewError(http.StatusInternalServerError, "PAYMENT_ERROR", "error payment")
+	ErrDefaultPayment = grok.NewError(http.StatusInternalServerError, "PAYMENT_ERROR", "payment intenral server error")
 	// ErrDefaultBusinessAccounts ...
 	ErrDefaultBusinessAccounts = grok.NewError(http.StatusConflict, "BUSINESS_ACCOUNTS_ERROR", "error business accounts")
 	// ErrDefaultCorporationBusinessAccounts ...
@@ -326,37 +326,6 @@ type TransferError struct {
 	grokError            *grok.Error
 }
 
-var transferErrorList = []TransferError{
-	{
-		celcoinTransferError: CelcoinTransferError{Key: "x-correlation-id"},
-		grokError:            ErrInvalidCorrelationID,
-	},
-	{
-		celcoinTransferError: CelcoinTransferError{Key: "$.amount"},
-		grokError:            ErrInvalidAmount,
-	},
-	{
-		celcoinTransferError: CelcoinTransferError{Key: "INSUFFICIENT_BALANCE"},
-		grokError:            ErrInsufficientBalance,
-	},
-	{
-		celcoinTransferError: CelcoinTransferError{Key: "CASH_OUT_NOT_ALLOWED_OUT_OF_BUSINESS_PERIOD"},
-		grokError:            ErrOutOfServicePeriod,
-	},
-	{
-		celcoinTransferError: CelcoinTransferError{Key: "CASHOUT_LIMIT_NOT_ENOUGH"},
-		grokError:            ErrCashoutLimitNotEnough,
-	},
-	{
-		celcoinTransferError: CelcoinTransferError{Key: "Recipient.Branch"},
-		grokError:            ErrInvalidRecipientBranch,
-	},
-	{
-		celcoinTransferError: CelcoinTransferError{Key: "Recipient.Account"},
-		grokError:            ErrInvalidRecipientAccount,
-	},
-}
-
 // FindError Find errors.
 func FindError(code string, messages ...string) *Error {
 	code = verifyInvalidParameter(code, messages)
@@ -460,18 +429,6 @@ func mapBalanceErrorCode(code string, message string) string {
 		}
 	}
 	return code // Retorna o código original se nenhuma correspondência for encontrada.
-}
-
-// errorIncomeReportList ...
-var errorIncomeReportList = []Error{
-	{
-		ErrorKey:  "INVALID_CALENDAR_FOR_INCOME_REPORT",
-		GrokError: ErrInvalidIncomeReportCalendar,
-	},
-	{
-		ErrorKey:  "INVALID_PARAMETER_INCOME_REPORT",
-		GrokError: ErrInvalidIncomeReportParameter,
-	},
 }
 
 // verifyInvalidIncomeReportParameter Find the correspondent error message for income reports.
@@ -892,6 +849,22 @@ var PixErrorMappings = map[string]struct {
 	"CBE159":  {"BLOCKED_ACCOUNT", "Lançamento não permitido.Sua conta esta bloqueada."},
 	"PBE7055": {"RECEIVER_INSTITUTION_NOT_RESPONDING", "Instituição recebedora não está respondendo"},
 	"CBE150":  {"INVALID_PARAMETERS", "É necessário informar pelo menos um dos campos: id, clientCode, ou endtoendId."},
+	"DE004":   {"INVALID_TRANSACTIONID", "Nao foi possivel excluir, location não encontrado"},
+	"CBE224":  {"INVALID_JSON_FORMAT", "Formato do JSON está fora do padrão. Verifique a documentação."},
+	"CBE286":  {"CLAIM_NOT_ALLOWED_FOR_EVP", "Não é permitido realizar pedido de Claim para chave EVP."},
+	"CBE287":  {"CLAIM_NOT_ALLOWED_FOR_CPF_CNPJ", "Não é permitido realizar pedido de Claim para chave CPF/CNPJ."},
+	"CBE290":  {"ACTIVE_CLAIM_EXISTS", "A chave já possui uma solicitação de reivindicação ativa."},
+	"CBE293":  {"PORTABILITY_REQUEST_EXISTS", "Já existe uma solicitação de portabilidade para essa chave."},
+	"CBE295":  {"PORTABILITY_NOT_ALLOWED", "Não é possível solicitar uma portabilidade para uma chave que pertence a outra pessoa."},
+	"CBE346":  {"MISSING_CLAIM_TYPE", "O campo ClaimType é obrigatório."},
+	"CBE349":  {"INVALID_CLAIM_TYPE", "O valor do claimType não é válido. O claimType deve ser 'OWNERSHIP' ou 'PORTABILITY'."},
+	"CBE345":  {"KYC_PENDING_ISSUE", "Cadastro com pendências no KYC, favor verificar."},
+	"CBE303":  {"MISSING_CLAIM_ID", "É preciso informar o campo: claimId."},
+	"CBE351":  {"CLAIM_NOT_FOUND", "Não foi possível encontrar dados relacionados à Claim informada."},
+	"CBE301":  {"INVALID_REASON", "Reason fornecido inválido."},
+	"CBE306":  {"CLAIM_NOT_PENDING", "Não foi possível confirmar essa Claim, pois a mesma não está mais pendente."},
+	"CBE320":  {"CLAIM_NOT_FOUND", "Claim não encontrada."},
+	"CBE348":  {"ACCOUNT_BLOCKED", "Operação não permitida. Conta está bloqueada."},
 }
 
 // FindPixError ... retorna a mensagem de erro correspondente ao código de erro de Pix
@@ -946,6 +919,8 @@ var StatementErrorMappings = map[string]struct {
 	"CBE376": {"DATE_RANGE_TOO_LARGE", "Consulta conta não permitida. Diferença entre dateFrom e dateTo não pode ultrapassar 7 dias."},
 	"CBE080": {"INVALID_PAGE", "Page invalido"},
 	"CBE088": {"INVALID_LIMIT", "Limit invalido"},
+	"CBE151": {"STATEMENTS_NOT_FOUND", "Não localizamos nenhum lançamento para o periodo informado."},
+	"CBE152": {"STATEMENTS_NOT_FOUND", "Página informada não contem lançamentos"},
 	"CIE999": {"INTERNAL_API_ERROR", "Ocorreu um erro interno durante a chamada da api."},
 }
 
@@ -972,6 +947,111 @@ var IncomeReportErrorMappings = map[string]struct {
 // FindIncomeReportError ... retorna a mensagem de erro correspondente ao código de erro de informes de rendimento
 func FindIncomeReportError(code string, responseStatus *int) *grok.Error {
 	if mapping, exists := IncomeReportErrorMappings[code]; exists {
+		return grok.NewError(*responseStatus, mapping.ContbankCode, mapping.Description)
+	}
+	return grok.NewError(http.StatusInternalServerError, "UNKNOWN_ERROR", "unknown error")
+}
+
+// ChargeErrorMappings ... mapeia os códigos de erro do parceiro Celcoin para os códigos de erro do Contbank com descrição
+var ChargeErrorMappings = map[string]struct {
+	ContbankCode string
+	Description  string
+}{
+	"CSE001": {"INVALID_REQUEST_MISSING_FIELDS", "É necessário informar um dos campos: transactionId ou externalId."},
+	"CSE002": {"CHARGE_NOT_FOUND", "Não foi encontrado registro para o identificador informado."},
+	"AUE002": {"BEARER_TOKEN_NOT_FOUND", "Authorization Header não localizado."},
+}
+
+// FindChargeError ... retorna a mensagem de erro correspondente ao código de erro de cobrança
+func FindChargeError(code string, responseStatus *int) *grok.Error {
+	if mapping, exists := ChargeErrorMappings[code]; exists {
+		return grok.NewError(*responseStatus, mapping.ContbankCode, mapping.Description)
+	}
+	return grok.NewError(http.StatusInternalServerError, "UNKNOWN_ERROR", "unknown error")
+}
+
+var PaymentErrorMappings = map[string]struct {
+	ContbankCode string
+	Description  string
+}{
+	"PCE001": {"MISSING_CLIENT_REQUEST_ID", "É obrigatório informar o campo clientRequestId."},
+	"PCE002": {"ACCOUNT_MAX_LENGTH_EXCEEDED", "O campo account ultrapassou os 20 caracteres permitidos."},
+	"PCE003": {"MISSING_ACCOUNT_FIELD", "É obrigatório informar o campo account."},
+	"PCE004": {"MISSING_BARCODE_INFO", "É necessário informar o campo barcodeInfo.digitable ou barcodeInfo.barcode."},
+	"PCE005": {"EXCLUSIVE_BARCODE_INFO", "Apenas um dos campos devem estar preenchido, barcodeInfo.digitable ou barcodeInfo.barcode."},
+	"PCE006": {"ACCOUNT_CLOSED", "Conta informada está encerrada."},
+	"PCE007": {"ACCOUNT_BLOCKED", "Conta informada está bloqueada."},
+	"PCE008": {"ACCOUNT_KYC_PENDING", "Conta informada está com pendências no KYC."},
+	"PCE009": {"MISSING_TRANSACTION_ID_AUTHORIZE", "O campo transactionIdAuthorize é obrigatório."},
+	"PCE010": {"ACCOUNT_NOT_FOUND", "Conta não encontrada."},
+	"PCE011": {"CLIENT_REQUEST_ID_MAX_LENGTH_EXCEEDED", "O campo clientRequestId não pode conter mais de 20 caracteres."},
+	"PCE012": {"INVALID_AMOUNT", "O campo amount está inválido."},
+	"PCE013": {"MISSING_AMOUNT_FIELD", "É obrigatório informar o campo amount."},
+	"PCE014": {"INVALID_AMOUNT_VALUE", "O campo amount deve ser a partir de 0.01."},
+	"PCE015": {"CLIENT_NOT_ACTIVE", "Cliente não está ativo para utilizar a API."},
+	"PCE016": {"MISSING_CLIENT_REQUEST_ID_OR_ID", "É obrigatório informar o clientRequestId ou id."},
+	"PCE018": {"TRANSACTION_NOT_FOUND", "Não foi encontrada nenhuma transação com os parâmetros informados."},
+	"PCE019": {"OPERATION_NOT_AUTHORIZED", "Operação não realizada. Cliente não está autorizado para esse produto."},
+	"PCE024": {"INVALID_REQUEST_FORMAT", "Request fora do padrão. Favor verificar a documentação."},
+	"PCE025": {"DUPLICATE_CLIENT_REQUEST_ID", "Já existe um pagamento com o mesmo clientRequestId."},
+	"PCE026": {"DUPLICATE_TRANSACTION_ID_AUTHORIZE", "Já existe um pagamento com o mesmo transactionIdAuthorize."},
+}
+
+// FindPaymentError ... retorna a mensagem de erro correspondente ao código de erro de pagamentos
+func FindPaymentError(code string, responseStatus *int) *grok.Error {
+	if mapping, exists := PaymentErrorMappings[code]; exists {
+		return grok.NewError(*responseStatus, mapping.ContbankCode, mapping.Description)
+	}
+	return grok.NewError(http.StatusInternalServerError, "UNKNOWN_ERROR", "unknown error")
+}
+
+// CancelAccountErrorMappings ... mapeia os códigos de erro do parceiro Celcoin para os códigos de erro do Contbank com descrição
+var CancelAccountErrorMappings = map[string]struct {
+	ContbankCode string
+	Description  string
+}{
+	"CBE078": {"ACCOUNT_NUMBER_NOT_FOUND", "Nenhuma conta foi encontrada."},
+	"CBE073": {"ACCOUNT_OR_DOCUMENT_NUMBER_NOT_FOUND", "É necessário informar pelo menos um dos campos: account, ou documentNumber."},
+	"CBE074": {"REASON_NOT_FOUND", "reason é obrigatório."},
+	"CBE062": {"BALANCE_PENDING", "Não é permitido encerrar conta com saldo."},
+	"CBE075": {"ACCOUNT_ALREADY_CANCELLED", "Conta já foi encerrada."},
+	"CBE039": {"ACCOUNT_INVALID", "Account invalido."},
+	"CBE040": {"DOCUMENT_NUMBER_INVALID", "DocumentNumber invalido."},
+	"CBE041": {"ACCOUNT_MAX_SIZE_EXCEEDED", "Account possui tamanho maximo de 20 caracteres."},
+	"CBE042": {"DOCUMENT_NUMBER_SIZE_EXCEEDED", "DocumentNumber possui tamanho maximo de 14 caracteres."},
+	"CBE043": {"REASON_MAX_SIZE_EXCEEDED", "Reason possui tamanho maximo de 300 caracteres."},
+	"CBE281": {"CANCEL_NOT_ALLOWED_PIX_KEY_REMAINING", "Encerramento de conta não permitido. Identificamos Chave Pix cadastrado para essa conta, favor excluir as chaves antes para prosseguir com o encerramento de conta."},
+}
+
+// FindCancelAccountError ... retorna a mensagem de erro correspondente ao código de erro de cancelamento de conta
+func FindCancelAccountError(code string, responseStatus *int) *grok.Error {
+	if mapping, exists := CancelAccountErrorMappings[code]; exists {
+		return grok.NewError(*responseStatus, mapping.ContbankCode, mapping.Description)
+	}
+	return grok.NewError(http.StatusInternalServerError, "UNKNOWN_ERROR", "unknown error")
+}
+
+// UpdateAccountStatusAccountErrorMappings ... mapeia os códigos de erro do parceiro Celcoin para os códigos de erro do Contbank com descrição
+var UpdateAccountStatusAccountErrorMappings = map[string]struct {
+	ContbankCode string
+	Description  string
+}{
+	"CBE078": {"ACCOUNT_NUMBER_NOT_FOUND", "Nenhuma conta foi encontrada."},
+	"CBE073": {"ACCOUNT_OR_DOCUMENT_NUMBER_NOT_FOUND", "É necessário informar pelo menos um dos campos: account, ou documentNumber."},
+	"CBE074": {"REASON_NOT_FOUND", "reason é obrigatório."},
+	"CBE062": {"BALANCE_PENDING", "Não é permitido encerrar conta com saldo."},
+	"CBE075": {"ACCOUNT_ALREADY_CANCELLED", "Conta já foi encerrada."},
+	"CBE039": {"ACCOUNT_INVALID", "Account invalido."},
+	"CBE040": {"DOCUMENT_NUMBER_INVALID", "DocumentNumber invalido."},
+	"CBE041": {"ACCOUNT_MAX_SIZE_EXCEEDED", "Account possui tamanho maximo de 20 caracteres."},
+	"CBE042": {"DOCUMENT_NUMBER_SIZE_EXCEEDED", "DocumentNumber possui tamanho maximo de 14 caracteres."},
+	"CBE043": {"REASON_MAX_SIZE_EXCEEDED", "Reason possui tamanho maximo de 300 caracteres."},
+	"CBE281": {"CANCEL_NOT_ALLOWED_PIX_KEY_REMAINING", "Encerramento de conta não permitido. Identificamos Chave Pix cadastrado para essa conta, favor excluir as chaves antes para prosseguir com o encerramento de conta."},
+}
+
+// FindUpdateAccountStatusAccountErrors ... retorna a mensagem de erro correspondente ao código de erro de cancelamento de conta
+func FindUpdateAccountStatusAccountErrors(code string, responseStatus *int) *grok.Error {
+	if mapping, exists := UpdateAccountStatusAccountErrorMappings[code]; exists {
 		return grok.NewError(*responseStatus, mapping.ContbankCode, mapping.Description)
 	}
 	return grok.NewError(http.StatusInternalServerError, "UNKNOWN_ERROR", "unknown error")

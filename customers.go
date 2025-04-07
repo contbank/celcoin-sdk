@@ -15,7 +15,7 @@ import (
 // Customers ...
 type Customers struct {
 	session        Session
-	httpClient     *http.Client
+	httpClient     *LoggingHTTPClient
 	authentication *Authentication
 }
 
@@ -23,9 +23,122 @@ type Customers struct {
 func NewCustomers(httpClient *http.Client, session Session) *Customers {
 	return &Customers{
 		session:        session,
-		httpClient:     httpClient,
+		httpClient:     NewLoggingHTTPClient(httpClient),
 		authentication: NewAuthentication(httpClient, session),
 	}
+}
+
+// UpdateAccountStatus ... faz atualização do status da conta
+func (c *Customers) UpdateAccountStatus(ctx context.Context,
+	accountNumber *string, documentNumber *string, reason *string, status *string) (*UpdateAccountStatusResponse, error) {
+
+	requestID, _ := ctx.Value("Request-Id").(string)
+	fields := logrus.Fields{
+		"request_id": requestID,
+		"interface":  "CancelAccount",
+		"service":    "business",
+	}
+
+	if accountNumber != nil {
+		fields["account"] = accountNumber
+	}
+
+	if documentNumber != nil {
+		fields["document_number"] = documentNumber
+	}
+
+	endpoint := c.session.APIEndpoint
+	u, err := url.Parse(endpoint)
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).
+			Error("error parsing endpoint")
+		return nil, err
+	}
+
+	u.Path = path.Join(u.Path, UpdateAccountStatusPath)
+
+	q := u.Query()
+	if accountNumber != nil {
+		q.Set("account", *accountNumber)
+	}
+
+	if documentNumber != nil {
+		q.Set("documentNumber", *documentNumber)
+	}
+
+	u.RawQuery = q.Encode()
+
+	logrus.WithFields(fields).WithField("celcoin_endpoint", u.String()).
+		Info("celcoin update account status request")
+
+	bodyPayload := struct {
+		Status string `json:"status"`
+		Reason string `json:"reason"`
+	}{
+		Status: *status,
+		Reason: *reason,
+	}
+
+	reqBody, err := json.Marshal(bodyPayload)
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).
+			Error("error marshalling request body")
+		return nil, err
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "PUT", u.String(), strings.NewReader(string(reqBody)))
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).
+			Error("error creating request")
+		return nil, err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).
+			Error("error executing request")
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	respBody, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).
+			Error("error reading response body")
+		return nil, err
+	}
+
+	if resp.StatusCode == http.StatusOK {
+		var response UpdateAccountStatusResponse
+		if err := json.Unmarshal(respBody, &response); err != nil {
+			logrus.WithFields(fields).WithError(err).
+				Error("error unmarshalling response")
+			return nil, err
+		}
+
+		logrus.WithFields(fields).WithField("celcoin_response", response).
+			Info("response with success")
+		return &response, nil
+	}
+
+	var errResponse *ErrorDefaultResponse
+	if err := json.Unmarshal(respBody, &errResponse); err != nil {
+		logrus.WithFields(fields).WithError(err).Error("error unmarshalling error response")
+		return nil, err
+	}
+
+	if errResponse != nil && errResponse.Error != nil && len(*errResponse.Error.ErrorCode) > 0 {
+		err := FindUpdateAccountStatusAccountErrors(*errResponse.Error.ErrorCode, &resp.StatusCode)
+		logrus.WithFields(fields).WithError(err).
+			Error("error updating account status")
+		return nil, err
+	}
+
+	logrus.WithFields(fields).
+		Error("error updating account status")
+	return nil, ErrDefaultBusinessAccounts
 }
 
 // FindAccounts ...
@@ -35,6 +148,8 @@ func (c *Customers) FindAccounts(ctx context.Context,
 	requestID, _ := ctx.Value("Request-Id").(string)
 	fields := logrus.Fields{
 		"request_id": requestID,
+		"interface":  "FindAccounts",
+		"service":    "customers",
 	}
 
 	if documentNumber != nil {
@@ -51,6 +166,9 @@ func (c *Customers) FindAccounts(ctx context.Context,
 			Error("error getting customer api endpoint")
 		return nil, err
 	}
+
+	logrus.WithFields(fields).WithField("celcoin_endpoint", endpoint).
+		Info("natural person find account request")
 
 	req, err := http.NewRequestWithContext(ctx, "GET", *endpoint, nil)
 	if err != nil {
@@ -79,8 +197,7 @@ func (c *Customers) FindAccounts(ctx context.Context,
 			return nil, err
 		}
 
-		fields["response"] = response
-		logrus.WithFields(fields).
+		logrus.WithFields(fields).WithField("celcoin_response", response).
 			Info("response with success")
 
 		return &response, nil
@@ -100,11 +217,14 @@ func (c *Customers) FindAccounts(ctx context.Context,
 
 	if len(bodyErr.Errors) > 0 {
 		errModel := bodyErr.Errors[0]
-		return nil, FindError(errModel.Code, errModel.Messages...)
+		err := FindError(errModel.Code, errModel.Messages...)
+		logrus.WithFields(fields).WithError(err).
+			Error("error finding customers account")
+		return nil, err
 	}
 
 	logrus.WithFields(fields).
-		Error("error default customers accounts - FindAccounts")
+		Error("error finding customers account")
 
 	return nil, ErrDefaultCustomersAccounts
 }
@@ -114,36 +234,44 @@ func (c *Customers) CreateAccount(ctx context.Context, customerData *Customer) (
 	requestID, _ := ctx.Value("Request-Id").(string)
 	fields := logrus.Fields{
 		"request_id": requestID,
-		"service":    "celcoin_customers.CreateAccount",
-		"context":    "celcoin_customers",
+		"interface":  "CreateAccount",
+		"service":    "customers",
 	}
 
 	endpoint := c.session.APIEndpoint
 	reqBody, err := json.Marshal(customerData)
 	if err != nil {
-		logrus.WithFields(fields).WithError(err).Error("error marshalling request body")
+		logrus.WithFields(fields).WithError(err).
+			Error("error marshalling request body")
 		return nil, err
 	}
 
-	logrus.WithFields(fields).Info("request body marshalled successfully")
+	logrus.WithFields(fields).
+		Info("request body marshalled successfully")
 
 	url, err := url.Parse(endpoint)
 	if err != nil {
-		logrus.WithFields(fields).WithError(err).Error("error parsing endpoint")
+		logrus.WithFields(fields).WithError(err).
+			Error("error parsing endpoint")
 		return nil, err
 	}
 
 	url.Path = path.Join(url.Path, NaturalPersonOnboardingPath)
 
+	logrus.WithFields(fields).WithField("celcoin_endpoint", url.String()).
+		Info("natural person proposal request")
+
 	req, err := http.NewRequestWithContext(ctx, "POST", url.String(), strings.NewReader(string(reqBody)))
 	if err != nil {
-		logrus.WithFields(fields).WithError(err).Error("error creating request")
+		logrus.WithFields(fields).WithError(err).
+			Error("error creating request")
 		return nil, err
 	}
 
 	req.Header.Set("Content-Type", "application/json")
 
-	logrus.WithFields(fields).Info("request created successfully")
+	logrus.WithFields(fields).
+		Info("request created successfully")
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -152,11 +280,13 @@ func (c *Customers) CreateAccount(ctx context.Context, customerData *Customer) (
 	}
 	defer resp.Body.Close()
 
-	logrus.WithFields(fields).Info("request executed successfully")
+	logrus.WithFields(fields).
+		Info("request executed successfully")
 
 	respBody, _ := ioutil.ReadAll(resp.Body)
 
-	logrus.WithFields(fields).Infof("response received with status code %d", resp.StatusCode)
+	logrus.WithFields(fields).
+		Infof("response received with status code %d", resp.StatusCode)
 
 	if resp.StatusCode == http.StatusOK {
 		var response CustomerOnboardingResponse
@@ -165,22 +295,27 @@ func (c *Customers) CreateAccount(ctx context.Context, customerData *Customer) (
 			return nil, err
 		}
 
-		fields["response"] = response
-		logrus.WithFields(fields).Info("response with success")
+		logrus.WithFields(fields).WithField("celcoin_response", response).
+			Info("response with success")
 		return &response, nil
 	}
 
 	var errResponse *ErrorDefaultResponse
 	if err := json.Unmarshal(respBody, &errResponse); err != nil {
-		logrus.WithFields(fields).WithError(err).Error("error unmarshalling error response")
+		logrus.WithFields(fields).WithError(err).
+			Error("error unmarshalling error response")
 		return nil, err
 	}
 
 	if errResponse != nil && errResponse.Error != nil && len(*errResponse.Error.ErrorCode) > 0 {
-		return nil, FindOnboardingError(*errResponse.Error.ErrorCode, &resp.StatusCode)
+		err := FindOnboardingError(*errResponse.Error.ErrorCode, &resp.StatusCode)
+		logrus.WithFields(fields).WithError(err).
+			Error("error creating natural person onboarding proposal")
+		return nil, err
 	}
 
-	logrus.WithFields(fields).Error("error default create account")
+	logrus.WithFields(fields).
+		Error("error default create account")
 	return nil, ErrDefaultCustomersAccounts
 }
 
@@ -189,13 +324,16 @@ func (c *Customers) GetOnboardingProposal(ctx context.Context, proposalId string
 	requestID, _ := ctx.Value("Request-Id").(string)
 	fields := logrus.Fields{
 		"request_id":  requestID,
+		"interface":   "GetOnboardingProposal",
+		"service":     "customers",
 		"proposal_id": proposalId,
 	}
 
 	endpoint := c.session.APIEndpoint
 	u, err := url.Parse(endpoint)
 	if err != nil {
-		logrus.WithFields(fields).WithError(err).Error("error parsing endpoint")
+		logrus.WithFields(fields).WithError(err).
+			Error("error parsing endpoint")
 		return nil, err
 	}
 
@@ -204,6 +342,9 @@ func (c *Customers) GetOnboardingProposal(ctx context.Context, proposalId string
 	q := u.Query()
 	q.Set("proposalId", proposalId)
 	u.RawQuery = q.Encode()
+
+	logrus.WithFields(fields).WithField("celcoin_endpoint", u.String()).
+		Info("natural person get onboarding proposal")
 
 	req, err := http.NewRequestWithContext(ctx, "GET", u.String(), nil)
 	if err != nil {
@@ -227,22 +368,28 @@ func (c *Customers) GetOnboardingProposal(ctx context.Context, proposalId string
 			return nil, err
 		}
 
-		fields["response"] = response
-		logrus.WithFields(fields).Info("response with success")
+		logrus.WithFields(fields).WithField("celcoin_response", response).
+			Info("response with success")
 		return &response, nil
 	}
 
 	var errResponse *ErrorDefaultResponse
 	if err := json.Unmarshal(respBody, &errResponse); err != nil {
-		logrus.WithFields(fields).WithError(err).Error("error unmarshalling error response")
+		logrus.WithFields(fields).WithError(err).
+			Error("error unmarshalling error response")
 		return nil, err
 	}
 
 	if errResponse != nil && errResponse.Error != nil && len(*errResponse.Error.ErrorCode) > 0 {
-		return nil, FindOnboardingError(*errResponse.Error.ErrorCode, &resp.StatusCode)
+		err := FindOnboardingError(*errResponse.Error.ErrorCode, &resp.StatusCode)
+		logrus.WithFields(fields).WithError(err).
+			Error("error getting natural person onboarding proposal")
+		return nil, err
 	}
 
-	logrus.WithFields(fields).Error("error default onboarding proposal")
+	logrus.WithFields(fields).
+		Error("error default onboarding proposal")
+
 	return nil, ErrDefaultCustomersAccounts
 }
 
@@ -251,6 +398,8 @@ func (c *Customers) GetOnboardingProposalFiles(ctx context.Context, proposalId s
 	requestID, _ := ctx.Value("Request-Id").(string)
 	fields := logrus.Fields{
 		"request_id":  requestID,
+		"interface":   "GetOnboardingProposalFiles",
+		"service":     "customers",
 		"proposal_id": proposalId,
 	}
 
@@ -267,6 +416,9 @@ func (c *Customers) GetOnboardingProposalFiles(ctx context.Context, proposalId s
 	q := u.Query()
 	q.Set("proposalId", proposalId)
 	u.RawQuery = q.Encode()
+
+	logrus.WithFields(fields).WithField("celcoin_endpoint", u.String()).
+		Info("natural person get onboarding proposal files")
 
 	req, err := http.NewRequestWithContext(ctx, "GET", u.String(), nil)
 	if err != nil {
@@ -298,23 +450,27 @@ func (c *Customers) GetOnboardingProposalFiles(ctx context.Context, proposalId s
 			return nil, err
 		}
 
-		fields["response"] = response
-		logrus.WithFields(fields).Info("response with success")
+		logrus.WithFields(fields).WithField("celcoin_response", response).
+			Info("response with success")
 		return &response, nil
 	}
 
 	var errResponse *ErrorDefaultResponse
 	if err := json.Unmarshal(respBody, &errResponse); err != nil {
-		logrus.WithFields(fields).WithError(err).Error("error unmarshalling error response")
+		logrus.WithFields(fields).WithError(err).
+			Error("error unmarshalling error response")
 		return nil, err
 	}
 
 	if errResponse != nil && errResponse.Error != nil && len(*errResponse.Error.ErrorCode) > 0 {
-		return nil, FindOnboardingError(*errResponse.Error.ErrorCode, &resp.StatusCode)
+		err := FindOnboardingError(*errResponse.Error.ErrorCode, &resp.StatusCode)
+		logrus.WithFields(fields).WithError(err).
+			Error("error getting natural person onboarding proposal files")
+		return nil, err
 	}
 
 	logrus.WithFields(fields).
-		Error("error default onboarding proposal files")
+		Error("error getting natural person onboarding proposal files")
 	return nil, ErrDefaultCustomersAccounts
 }
 
@@ -353,4 +509,198 @@ func (c *Customers) getCustomerAPIEndpoint(requestID string, documentNumber *str
 	logrus.WithFields(fields).Info("get endpoint success")
 
 	return &endpoint, nil
+}
+
+// CancelAccount ... consulta os arquivos do proposalId
+func (c *Customers) CancelAccount(ctx context.Context,
+	accountNumber *string, documentNumber *string, reason *string) (*CancelAccountResponse, error) {
+
+	requestID, _ := ctx.Value("Request-Id").(string)
+	fields := logrus.Fields{
+		"request_id": requestID,
+		"interface":  "CancelAccount",
+		"service":    "business",
+	}
+
+	if accountNumber != nil {
+		fields["account_number"] = accountNumber
+	}
+
+	if reason != nil {
+		fields["reason"] = reason
+	}
+
+	if documentNumber != nil {
+		fields["document_number"] = documentNumber
+	}
+
+	endpoint := c.session.APIEndpoint
+	u, err := url.Parse(endpoint)
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).
+			Error("error parsing endpoint")
+		return nil, err
+	}
+
+	u.Path = path.Join(u.Path, CancelAccountPath)
+
+	q := u.Query()
+	if accountNumber != nil {
+		q.Set("account", *accountNumber)
+	}
+
+	if reason != nil {
+		q.Set("reason", *reason)
+	}
+
+	if documentNumber != nil && accountNumber == nil {
+		q.Set("documentNumber", *documentNumber)
+	}
+
+	u.RawQuery = q.Encode()
+
+	logrus.WithFields(fields).WithField("celcoin_endpoint", u.String()).
+		Info("celcoin cancel account request")
+
+	req, err := http.NewRequestWithContext(ctx, "DELETE", u.String(), nil)
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).
+			Error("error creating request")
+		return nil, err
+	}
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).
+			Error("error executing request")
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	respBody, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).
+			Error("error reading response body")
+		return nil, err
+	}
+
+	if resp.StatusCode == http.StatusOK {
+		var response CancelAccountResponse
+		if err := json.Unmarshal(respBody, &response); err != nil {
+			logrus.WithFields(fields).WithError(err).
+				Error("error unmarshalling response")
+			return nil, err
+		}
+
+		logrus.WithFields(fields).WithField("celcoin_response", response).
+			Info("response with success")
+		return &response, nil
+	}
+
+	var errResponse *ErrorDefaultResponse
+	if err := json.Unmarshal(respBody, &errResponse); err != nil {
+		logrus.WithFields(fields).WithError(err).Error("error unmarshalling error response")
+		return nil, err
+	}
+
+	if errResponse != nil && errResponse.Error != nil && len(*errResponse.Error.ErrorCode) > 0 {
+		err := FindCancelAccountError(*errResponse.Error.ErrorCode, &resp.StatusCode)
+		logrus.WithFields(fields).WithError(err).
+			Error("error cancel account")
+		return nil, err
+	}
+
+	logrus.WithFields(fields).
+		Error("error cancel account")
+	return nil, ErrDefaultBusinessAccounts
+}
+
+// CreateAccountMigration ... cria uma nova conta de cliente
+func (c *Customers) CreateAccountMigration(ctx context.Context, customerData *CustomerMigration) (*CustomerOnboardingResponse, error) {
+	requestID, _ := ctx.Value("Request-Id").(string)
+	fields := logrus.Fields{
+		"request_id": requestID,
+		"interface":  "CreateAccount",
+		"service":    "customers",
+	}
+
+	endpoint := c.session.APIEndpoint
+	reqBody, err := json.Marshal(customerData)
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).
+			Error("error marshalling request body")
+		return nil, err
+	}
+
+	logrus.WithFields(fields).
+		Info("request body marshalled successfully")
+
+	url, err := url.Parse(endpoint)
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).
+			Error("error parsing endpoint")
+		return nil, err
+	}
+
+	url.Path = path.Join(url.Path, NaturalPersonOnboardingPath)
+
+	logrus.WithFields(fields).WithField("celcoin_endpoint", url.String()).
+		Info("natural person proposal request")
+
+	req, err := http.NewRequestWithContext(ctx, "POST", url.String(), strings.NewReader(string(reqBody)))
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).
+			Error("error creating request")
+		return nil, err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	logrus.WithFields(fields).
+		Info("request created successfully")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).Error("error executing request")
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	logrus.WithFields(fields).
+		Info("request executed successfully")
+
+	respBody, _ := ioutil.ReadAll(resp.Body)
+
+	logrus.WithFields(fields).
+		Infof("response received with status code %d", resp.StatusCode)
+
+	if resp.StatusCode == http.StatusOK {
+		var response CustomerOnboardingResponse
+		if err := json.Unmarshal(respBody, &response); err != nil {
+			logrus.WithFields(fields).WithError(err).Error("error unmarshalling response")
+			return nil, err
+		}
+
+		logrus.WithFields(fields).WithField("celcoin_response", response).
+			Info("response with success")
+		return &response, nil
+	}
+
+	var errResponse *ErrorDefaultResponse
+	if err := json.Unmarshal(respBody, &errResponse); err != nil {
+		logrus.WithFields(fields).WithError(err).
+			Error("error unmarshalling error response")
+		return nil, err
+	}
+
+	if errResponse != nil && errResponse.Error != nil && len(*errResponse.Error.ErrorCode) > 0 {
+		err := FindOnboardingError(*errResponse.Error.ErrorCode, &resp.StatusCode)
+		logrus.WithFields(fields).WithError(err).
+			Error("error creating natural person onboarding proposal")
+		return nil, err
+	}
+
+	logrus.WithFields(fields).
+		Error("error default create account")
+	return nil, ErrDefaultCustomersAccounts
 }

@@ -16,7 +16,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 
-	"github.com/contbank/grok"
 	"github.com/patrickmn/go-cache"
 )
 
@@ -94,11 +93,11 @@ func NewSession(config Config) (*Session, error) {
 		config.Scopes = String("")
 	}
 
-	if config.Mtls != nil {
+	/*if config.Mtls != nil {
 		if *config.Mtls {
 			config.ClientID = &config.Certificate.ClientID
 		}
-	}
+	}*/
 
 	if config.Environment == nil {
 		config.Environment = String(CelcoinEnvSandbox)
@@ -121,24 +120,27 @@ func NewSession(config Config) (*Session, error) {
 
 // CreateMtlsHTTPClient ...
 func CreateMtlsHTTPClient(cert *Certificate, session *Session) *http.Client {
-
-	caCertPool := x509.NewCertPool()
-	caCertPool.AppendCertsFromPEM([]byte(cert.CertificateChain))
-
-	certificate, err := grok.LoadCertificate([]byte(cert.Certificate), []byte(cert.PrivateKey), cert.Passphrase)
+	// Carregar o certificado e a chave privada
+	tlsCert, err := tls.X509KeyPair([]byte(cert.Certificate), []byte(cert.PrivateKey))
 	if err != nil {
-		panic(err)
+		panic("Erro ao carregar o certificado e a chave privada")
+	}
+
+	// Criar um pool de certificados confiáveis (opcional, para validar o servidor)
+	caCertPool := x509.NewCertPool()
+	if !caCertPool.AppendCertsFromPEM([]byte(cert.Certificate)) {
+		panic("Erro ao adicionar o certificado ao pool de CA")
 	}
 
 	mtlsTransport := &http.Transport{
 		TLSClientConfig: &tls.Config{
 			RootCAs:            caCertPool,
-			Certificates:       []tls.Certificate{*certificate},
+			Certificates:       []tls.Certificate{tlsCert},
 			InsecureSkipVerify: true,
 		},
 	}
 
-	// Obter o token inicial
+	// Obter o token inicial usando o transporte mTLS
 	token, expiration, err := fetchAccessToken(&http.Client{Transport: mtlsTransport}, session)
 	if err != nil {
 		panic(fmt.Sprintf("Erro ao obter token de acesso: %v", err))
@@ -181,9 +183,7 @@ func CreateOAuth2HTTPClient(session *Session) *http.Client {
 	return httpClient
 }
 
-// fetchAccessToken realiza a requisição para obter o token de acesso
 func fetchAccessToken(client *http.Client, session *Session) (string, time.Time, error) {
-
 	var data []byte
 
 	if session.Mtls {
@@ -236,17 +236,18 @@ func fetchAccessToken(client *http.Client, session *Session) (string, time.Time,
 // RoundTrip ... adiciona o cabeçalho Authorization e renova o token se necessário
 func (t *oauthTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	t.mutex.Lock()
+	defer t.mutex.Unlock()
+
 	if time.Now().After(t.tokenExpiration.Add(-1 * time.Minute)) { // Renova o token antes de expirar
-		newToken, newExpiration, err := fetchAccessToken(&http.Client{}, t.session)
+		client := &http.Client{Transport: t.underlyingTransport}
+		newToken, newExpiration, err := fetchAccessToken(client, t.session)
 		if err != nil {
-			t.mutex.Unlock()
 			return nil, fmt.Errorf("falha ao renovar o token: %w", err)
 		}
 		t.token = newToken
 		t.tokenExpiration = newExpiration
 	}
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", t.token))
-	t.mutex.Unlock()
 
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", t.token))
 	return t.underlyingTransport.RoundTrip(req)
 }
