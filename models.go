@@ -1105,3 +1105,422 @@ type IncomeReportResponse struct {
 	Status  string           `json:"status"`
 	Body    IncomeReportBody `json:"body"`
 }
+
+/* CARDS */
+
+type CardStatus string
+
+const (
+	// CREATED Criado no sistema
+	Created CardStatus = "CREATED"
+	// NORMAL Ativo e elegível para transações. Padrão para cartões virtuais.
+	Normal CardStatus = "NORMAL"
+	// REISSUED O cartão foi reemitido
+	Reissued CardStatus = "REISSUED"
+	// BLOCKED Temporariamente bloqueado. Um cartão pode ser bloqueado, por exemplo, se o titular do cartão tiver excedido suas tentativas permitidas de inserir uma senha.
+	Blocked CardStatus = "BLOCKED"
+	// PENDING Cartão em processo de criação. Esse status ocorre entre o momento da solicitação e efetivação da criação de cartão.
+	Pending CardStatus = "PENDING"
+	// WARNING Um sinalizador de alerta geral é definido e as transações são desabilitadas, geralmente em casos de suspeita de fraude.
+	Warning CardStatus = "WARNING"
+	// LOST	Perda relatada
+	Lost CardStatus = "LOST"
+	// ROBBED Status em casos de roubo
+	Robbed CardStatus = "ROBBED"
+	// EXPIRED Cartão com data de expiração vencida
+	Expired CardStatus = "EXPIRED"
+	// DAMAGED Avariado
+	Damaged CardStatus = "DAMAGED"
+	// FRAUD Suspeita de fraude
+	Fraud CardStatus = "FRAUD"
+	// CANCELED	Cancelado
+	Canceled CardStatus = "CANCELED"
+	// DELETED Deletado
+	Deleted CardStatus = "DELETED"
+	// BROKEN Não é mais fisicamente utilizável
+	Broken CardStatus = "BROKEN"
+	// THEFT Status em casos de roubo
+	Theft CardStatus = "THEFT"
+	// DEFECT Defeito
+	Defect CardStatus = "DEFECT"
+)
+
+// IsTerminalStatus ...
+func IsTerminalStatus(status CardStatus) bool {
+	switch status {
+	case Lost:
+		return true
+	case Robbed:
+		return true
+	case Expired:
+		return true
+	case Damaged:
+		return true
+	case Fraud:
+		return true
+	case Canceled:
+		return true
+	case Deleted:
+		return true
+	case Broken:
+		return true
+	case Theft:
+		return true
+	case Defect:
+		return true
+	default:
+		return false
+	}
+}
+
+type CardType string
+
+const (
+	PlasticCardType CardType = "PLASTIC"
+	VirtualCardType CardType = "VIRTUAL"
+)
+
+type CardModelType string
+
+const (
+	SingleCardModelType CardModelType = "SINGLE"
+	CreditCardModelType CardModelType = "CREDIT"
+	DebitCardModelType  CardModelType = "DEBIT"
+	ComboCardModelType  CardModelType = "COMBO"
+)
+
+// CreateCardRequest ...
+type CreateCardRequest struct {
+	AccountID  string `validate:"required" json:"account"`
+	CustomerID string `validate:"required" json:"customer"`
+	CardBodyRequest
+}
+
+// CardBodyRequest ...
+type CardBodyRequest struct {
+	Name                     string        `validate:"required" json:"name"`
+	PrintedName              string        `json:"printedName"`
+	Type                     CardType      `validate:"required" json:"type"`
+	CVVRotationIntervalHours int           `json:"cvvRotationIntervalHours"`
+	EmbossingGroup           string        `json:"embossingGroup"`
+	ABUEnabled               bool          `json:"abuEnabled"`
+	TransactionLimit         int           `json:"transactionLimit"`
+	AnotherCustomerId        int           `json:"customerId"`
+	ContactlessEnabled       bool          `json:"contactlessEnabled"`
+	TemplateId               int           `json:"templateId"`
+	ProgramId                int           `json:"programid"`
+	ModelType                CardModelType `json:"modelType"`
+	Metadata                 []string      `json:"metadata"`
+}
+
+// CreateCardResponse ...
+type CreateCardResponse struct {
+	Version string            `json:"version"`
+	Status  int               `json:"status"`
+	Body    *CardBodyResponse `json:"body,omitempty"`
+	Error   *CardsError       `json:"error,omitempty"`
+}
+
+// CardBodyResponse ...
+type CardBodyResponse struct {
+	CustomerId               int           `json:"customerId"`
+	Name                     string        `json:"name"`
+	PrintedName              string        `json:"printedName"`
+	Type                     CardType      `json:"type"`
+	CVVRotationIntervalHours int           `json:"cvvRotationIntervalHours"`
+	TransactionLimit         int           `json:"transactionLimit"`
+	ContactlessEnabled       bool          `json:"contactlessEnabled"`
+	ModeType                 CardModelType `json:"modeType"`
+	ProgramId                int           `json:"programid"`
+}
+
+// CardsError ...
+type CardsError struct {
+	ErrorCode string `json:"errorCode"`
+	Message   string `json:"message"`
+}
+
+// ListCardsRequest ...
+type ListCardsRequest struct {
+	Page      int32         `json:"page"`
+	PerPage   int32         `json:"perPage"`
+	Status    CardStatus    `json:"status"`
+	CardModel CardModelType `json:"modes"`
+	CardType  CardType      `json:"type"`
+}
+
+// ListCardsResponse ...
+type ListCardsResponse struct {
+	Version bool `json:"version"`
+	Status  int  `json:"status"`
+	Body    struct {
+		Data []struct {
+			CardID                   string         `json:"id"`
+			Name                     string         `json:"name"`
+			PrintedName              string         `json:"printedName"`
+			FirstDigits              *string        `json:"firstDigits"`
+			LastDigits               *string        `json:"lastDigits"`
+			Status                   CardStatus     `json:"status"`
+			Function                 *CardModelType `json:"function"`
+			Bin                      *string        `json:"bin"`
+			Type                     CardType       `json:"type"`
+			ExpirationDate           *string        `json:"expirationDate"`
+			ContactlessEnabled       *bool          `json:"contactlessEnabled"`
+			CVVRotationIntervalHours *int           `json:"cvvRotationIntervalHours"`
+		} `json:"data"`
+		Links struct {
+			First string  `json:"first"`
+			Last  string  `json:"last"`
+			Prev  *string `json:"prev"`
+			Next  *string `json:"next"`
+		} `json:"links"`
+		Meta struct {
+			CurrentPage int `json:"current_page"`
+			From        int `json:"from"`
+			LastPage    int `json:"last_page"`
+			Links       []struct {
+				Url    *string `json:"url"`
+				Label  string  `json:"label"`
+				Active bool    `json:"active"`
+			} `json:"links"`
+			Path    string `json:"path"`
+			PerPage int    `json:"per_page"`
+			To      int    `json:"to"`
+			Total   int    `json:"total"`
+		} `json:"meta"`
+	} `json:"body"`
+}
+
+// GetCardRequest ...
+type GetCardRequest struct {
+	Account    string     `json:"account"`
+	Customer   string     `json:"customer"`
+	CardID     string     `json:"cardId"`
+	Identifier string     `json:"document"`
+	Status     CardStatus `json:"status"`
+	Type       CardType   `json:"type"`
+}
+
+// GetCardResponse ...
+type GetCardResponse struct {
+	Version string `json:"version"`
+	Status  int    `json:"status"`
+	Body    struct {
+		CardID         string        `json:"id"`
+		FirstDigits    string        `json:"firstDigits"`
+		LastDigits     string        `json:"lastDigits"`
+		Status         CardStatus    `json:"status"`
+		Model          CardModelType `json:"function"`
+		Bin            string        `json:"bin"`
+		Type           CardType      `json:"type"`
+		ExpirationDate string        `json:"expirationDate"`
+	} `json:"body"`
+}
+
+// UpdateCardRequest ...
+type UpdateCardRequest struct {
+	AccountID          string   `json:"accountId"`
+	CustomerID         string   `json:"customerId"`
+	CardID             string   `json:"cardId"`
+	ContactlessEnabled bool     `json:"contactlessEnabled"`
+	ABUEnabled         bool     `json:"abuEnabled"`
+	Metadata           []string `json:"metadata"`
+	Name               string   `json:"name"`
+	PrintedName        string   `json:"printedName"`
+	TransactionLimit   int      `json:"transactionLimit"`
+}
+
+// UpdateCardResponse ...
+type UpdateCardResponse struct {
+	ContactlessEnabled bool   `json:"contactlessEnabled"`
+	Name               string `json:"name"`
+	PrintedName        string `json:"printedName"`
+	TransactionLimit   int    `json:"transactionLimit"`
+}
+
+// ActiveCardRequest ...
+type ActiveCardRequest struct {
+	AccountID  string `validate:"required" json:"accountId"`
+	CustomerID string `validate:"required" json:"customerId"`
+	CardID     string `validate:"required" json:"cardId"`
+}
+
+// ActiveCardResponse ...
+type ActiveCardResponse struct {
+	Version int `json:"version"`
+	Status  int `json:"status"`
+	Body    struct {
+		CardID   int        `json:"id"`
+		StatusID int        `json:"statusId"`
+		Status   CardStatus `json:"status"`
+	} `json:"body"`
+}
+
+// UpdateCardStatusRequest ...
+type UpdateCardStatusRequest struct {
+	AccountID  string     `validate:"required" json:"accountId"`
+	CustomerID string     `validate:"required" json:"customerId"`
+	CardID     string     `validate:"required" json:"cardId"`
+	Status     CardStatus `validate:"required" json:"status"`
+}
+
+// UpdateCardStatusResponse ...
+type UpdateCardStatusResponse struct {
+	Version int `json:"version"`
+	Status  int `json:"status"`
+	Body    struct {
+		CardID   int        `json:"id"`
+		StatusID int        `json:"statusId"`
+		Status   CardStatus `json:"status"`
+	} `json:"body"`
+}
+
+// BlockCardRequest ...
+type BlockCardRequest struct {
+	AccountID  string `validate:"required" json:"accountId"`
+	CustomerID string `validate:"required" json:"customerId"`
+	CardID     string `validate:"required" json:"cardId"`
+}
+
+// BlockCardResponse ...
+type BlockCardResponse struct {
+	Version bool `json:"version"`
+	Status  int  `json:"status"`
+	Body    struct {
+		CardID int        `json:"id"`
+		Status CardStatus `json:"status"`
+	} `json:"body"`
+}
+
+// UnblockCardRequest ...
+type UnblockCardRequest struct {
+	AccountID  string `validate:"required" json:"accountId"`
+	CustomerID string `validate:"required" json:"customerId"`
+	CardID     string `validate:"required" json:"cardId"`
+}
+
+// UnblockCardResponse ...
+type UnblockCardResponse struct {
+	Version bool `json:"version"`
+	Status  int  `json:"status"`
+	Body    struct {
+		CardID int        `json:"id"`
+		Status CardStatus `json:"status"`
+	} `json:"body"`
+}
+
+// CancelCardRequest ...
+type CancelCardRequest struct {
+	AccountID  string `validate:"required" json:"accountId"`
+	CustomerID string `validate:"required" json:"customerId"`
+	CardID     string `validate:"required" json:"cardId"`
+}
+
+// CancelCardResponse ...
+type CancelCardResponse struct {
+	Version bool `json:"version"`
+	Status  int  `json:"status"`
+	Body    struct {
+		CardID int        `json:"id"`
+		Status CardStatus `json:"status"`
+	} `json:"body"`
+}
+
+// ReissueCardRequest ...
+type ReissueCardRequest struct {
+	AccountID                string        `validate:"required" json:"accountId"`
+	CustomerID               string        `validate:"required" json:"customerId"`
+	CardID                   string        `validate:"required" json:"cardId"`
+	ReasonId                 int           `validate:"required" json:"reasonId"`
+	PrintedName              string        `json:"printedName"`
+	CVVRotationIntervalHours int           `json:"cvvRotationIntervalHours"`
+	EmbossingGroup           string        `json:"embossingGroup"`
+	ABUEnabled               bool          `json:"abuEnabled"`
+	ContactlessEnabled       bool          `json:"contactlessEnabled"`
+	TemplateId               int           `json:"templateId"`
+	ModeType                 CardModelType `json:"modeType"`
+	Metadata                 []string      `json:"metadata"`
+}
+
+// ReissueCardResonse ...
+type ReissueCardResonse struct {
+	Version string `json:"version"`
+	Status  int    `json:"status"`
+	Body    struct {
+		ReasonID                 int           `json:"reasonId"`
+		Name                     string        `json:"name"`
+		PrintedName              string        `json:"printedName"`
+		Type                     CardType      `json:"type"`
+		CVVRotationIntervalHours int           `json:"cvvRotationIntervalHours"`
+		EmbossingGroup           string        `json:"embossingGroup"`
+		ABUEnabled               bool          `json:"abuEnabled"`
+		TransactionLimit         int           `json:"transactionLimit"`
+		ContactlessEnabled       bool          `json:"contactlessEnabled"`
+		ModeType                 CardModelType `json:"modeType"`
+		Metadata                 []string      `json:"metadata"`
+	} `json:"body"`
+}
+
+// ChangeCardPasswordRequest ...
+type ChangeCardPasswordRequest struct {
+	AccountID  string `validate:"required" json:"accountId"`
+	CustomerID string `validate:"required" json:"customerId"`
+	CardID     string `validate:"required" json:"cardId"`
+	Pin        string `validate:"required" json:"pin"`
+}
+
+// ChangeCardPasswordResponse ...
+type ChangeCardPasswordResponse struct {
+	Version string `json:"version"`
+	Status  int    `json:"status"`
+	Body    struct {
+		Message string `json:"message"`
+	} `json:"body"`
+}
+
+// ViewCardPasswordRequest ...
+type ViewCardPasswordRequest struct {
+	AccountID  string `validate:"required" json:"accountId"`
+	CustomerID string `validate:"required" json:"customerId"`
+	CardID     string `validate:"required" json:"cardId"`
+	Pin        string `validate:"required" json:"pin"`
+}
+
+// ViewCardPasswordResponse ...
+type ViewCardPasswordResponse struct {
+	Version string `json:"version"`
+	Status  int    `json:"status"`
+	Body    struct {
+		CardID    string `json:"cardId"`
+		AccountID string `json:"accountId"`
+		Pin       string `json:"pin"`
+		Pan       string `json:"pan"`
+	} `json:"body"`
+}
+
+// InfoCardRequest ...
+type InfoCardRequest struct {
+	AccountID  string `validate:"required" json:"accountId"`
+	CustomerID string `validate:"required" json:"customerId"`
+	CardID     string `validate:"required" json:"cardId"`
+}
+
+// InfoCardResponse ...
+type InfoCardResponse struct {
+	Version bool `json:"version"`
+	Status  int  `json:"status"`
+	Body    struct {
+		AccountID                string    `json:"accountId"`
+		CardID                   string    `json:"cardId"`
+		Type                     CardType  `json:"type"`
+		PrintedName              string    `json:"printedName"`
+		ValidUntil               time.Time `json:"validUntil"`
+		ExpirationDate           string    `json:"expirationDate"`
+		CardNumber               string    `json:"cardNumber"`
+		IssuingDate              time.Time `json:"issuingDate"`
+		CVV                      string    `json:"cvv"`
+		CVVNextRotationDate      time.Time `json:"cvvNextRotationDate"`
+		CVVRotationIntervalHours int       `json:"cvvRotationIntervalHours"`
+		PasswordUpdated          bool      `json:"passwordUpdated"`
+	} `json:"body"`
+}
