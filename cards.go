@@ -1742,3 +1742,109 @@ func (t *Cards) GetCardInfo(ctx context.Context, requestID string,
 	logrus.WithFields(fields).Error("default cards error")
 	return nil, ErrDefaultCards
 }
+
+// ResetCardPasswordTries
+func (t *Cards) ResetCardPasswordTries(ctx context.Context, requestID string,
+	model ResetCardPasswordTriesRequest) (*ResetCardPasswordTriesResponse, error) {
+
+	fields := logrus.Fields{
+		"request_id": requestID,
+		"model":      model,
+		"method":     "ResetCardPasswordTries",
+	}
+
+	err := grok.Validator.Struct(model)
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).
+			Error("error validating model")
+		return nil, grok.FromValidationErros(err)
+	}
+
+	apiEndpoint := t.session.APIEndpoint
+	u, err := url.Parse(apiEndpoint)
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).
+			Error("error parsing endpoint")
+		return nil, err
+	}
+
+	u.Path = path.Join(u.Path, CardsPath)
+	u.Path = path.Join(u.Path, fmt.Sprint("/accounts/", model.AccountID))
+	u.Path = path.Join(u.Path, fmt.Sprint("/customers/", model.CustomerID))
+	u.Path = path.Join(u.Path, fmt.Sprint("/card/", model.CardID))
+	u.Path = path.Join(u.Path, fmt.Sprint("/resetPasswordTries"))
+
+	endpoint := u.String()
+
+	logrus.WithFields(fields).WithField("celcoin_endpoint", endpoint).
+		Info("celcoin reset card password tries request")
+
+	// model marshal
+	reqbyte, err := json.Marshal(model)
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).
+			Error("error marshal model")
+		return nil, err
+	}
+
+	// PATCH request
+	req, err := http.NewRequestWithContext(ctx, "PATCH", endpoint, bytes.NewReader(reqbyte))
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).
+			Error("error new request")
+		return nil, err
+	}
+
+	// token
+	token, err := t.authentication.Token(ctx)
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).
+			Error("error authentication")
+		return nil, err
+	}
+
+	// request header
+	req.Header.Add("Authorization", token)
+	// req.Header.Add("X-Requested-With", "XMLHttpRequest")
+	req.Header.Add("Content-type", "application/json")
+	req.Header.Add("api-version", t.session.APIVersion)
+	req.Header.Add("x-correlation-id", requestID)
+
+	resp, err := t.httpClient.Do(req)
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).
+			Error("error http client")
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+
+	respBody, _ := ioutil.ReadAll(resp.Body)
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, ErrEntryNotFound
+	}
+
+	var responseBody *ResetCardPasswordTriesResponse
+
+	err = json.Unmarshal(respBody, &responseBody)
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).
+			Error("error unmarshal")
+		return nil, err
+	}
+
+	// response ok
+	if resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusCreated {
+		return responseBody, nil
+	}
+
+	// error
+	if responseBody.Error != nil {
+		logrus.WithFields(fields).Error("response body error")
+		return nil, grok.NewError(http.StatusInternalServerError, fmt.Sprint("RESET_CARD_PASSWORD_TRIES_ERROR_", responseBody.Error.ErrorCode),
+			fmt.Sprint(responseBody.Error.ErrorCode, " - ", responseBody.Error.Message))
+	}
+
+	logrus.WithFields(fields).Error("default cards error")
+	return nil, ErrDefaultCards
+}

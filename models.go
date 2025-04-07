@@ -2426,7 +2426,7 @@ type GetCardEmbossingResponse struct {
 		PostingDeliveryDate    *string          `json:"postingDeliveryDate"`
 		ResolutionDate         *string          `json:"resolutionDate"`
 		BodyDelivery           *string          `json:"bodyDelivery"`
-		DeliveryStatus         string           `json:"deliveryStatus"`
+		DeliveryStatus         DeliveryStatus   `json:"deliveryStatus"`
 		DeliveryTracking       DeliveryTracking `json:"deliveryTracking"`
 	} `json:"body"`
 	Error *CardsError `json:"error,omitempty"`
@@ -2507,7 +2507,7 @@ type ReissueCardEmbossingResponse struct {
 		PostingDeliveryDate    *string          `json:"postingDeliveryDate"`
 		ResolutionDate         *string          `json:"resolutionDate"`
 		BodyDelivery           *string          `json:"bodyDelivery"`
-		DeliveryStatus         string           `json:"deliveryStatus"`
+		DeliveryStatus         DeliveryStatus   `json:"deliveryStatus"`
 		DeliveryTracking       DeliveryTracking `json:"deliveryTracking"`
 	} `json:"body"`
 	Error *CardsError `json:"error,omitempty"`
@@ -2518,4 +2518,44 @@ type DeliveryTracking struct {
 	DeliveryTrackingId int              `json:"deliveryTrackingId"`
 	TrackingCode       string           `json:"trackingCode"`
 	Events             []TrackingEvents `json:"events"`
+}
+
+type DeliveryStatus string
+
+const (
+	// SOLICITADO Quando o cartão é criado e entra na fila para o processo de fabricação
+	Solicitado DeliveryStatus = "SOLICITADO"
+	// EMBOSSING GERADO	Quando o cartão já foi fabricado com sucesso
+	Embossing DeliveryStatus = "EMBOSSING"
+	// COLETADO	Quando é iniciado o processo logístico após fabricação do cartão
+	Coletado DeliveryStatus = "COLETADO"
+	// POSTADO Significa que a encomenda foi despachada em uma agência
+	Postado DeliveryStatus = "POSTADO"
+	// ENTREGA EM ANDAMENTO	A entrega está em andamento até o destinatário
+	EntregaEmAndamento DeliveryStatus = "ENTREGA EM ANDAMENTO"
+	// ENTREGUE	Foi entregue no destino final
+	Entregue DeliveryStatus = "ENTREGUE"
+	// DEVOLVIDO Foi recusado no destino final
+	Devolvido DeliveryStatus = "DEVOLVIDO"
+	// EXTRAVIADO Cartão foi extraviado
+	Extraviado DeliveryStatus = "EXTRAVIADO"
+	// DESTRUIDO Cartão foi avariado
+	Destruido DeliveryStatus = "DESTRUIDO"
+)
+
+// ResetCardPasswordTriesRequest ...
+type ResetCardPasswordTriesRequest struct {
+	AccountID  string `validate:"required" json:"accountId"`
+	CustomerID string `validate:"required" json:"customerId"`
+	CardID     string `validate:"required" json:"cardId"`
+}
+
+// ResetCardPasswordTriesResponse ...
+type ResetCardPasswordTriesResponse struct {
+	Version bool `json:"version"`
+	Status  int  `json:"status"`
+	Body    struct {
+		Success bool `json:"success"`
+	} `json:"body"`
+	Error *CardsError `json:"error,omitempty"`
 }
