@@ -763,6 +763,7 @@ var OnboardingErrorMappings = map[string]struct {
 	"OBE070": {"USER_NOT_STARTED_WEBVIEW", "Não foram encontrados dados, pois o usuário ainda não iniciou a jornada webview. Tente novamente mais tarde."},
 	"OBE071": {"PARTNER_QUERY_FAILED", "Ocorreu um erro ao consultar parceiro. Favor tentar novamente mais tarde."},
 	"OIE999": {"INTERNAL_API_ERROR", "Ocorreu um erro interno durante a chamada da api"},
+	"OBE076": {"IVALID_CONTRACT_SOCIAL", "O envio do contrato social é obrigatório"},
 }
 
 // FindOnboardingError ... retorna a mensagem de erro correspondente ao código de erro de Onboarding
