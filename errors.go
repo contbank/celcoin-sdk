@@ -768,6 +768,8 @@ var OnboardingErrorMappings = map[string]struct {
 	"CBE024": {"INVALID_ACCOUNTS_PHONE_NUMBER", "Já existe uma conta vinculada a este telefone."},
 	"CBE023": {"INVALID_ACCOUNTS_EMAIL", "Já existe uma conta vinculada a este e-mail."},
 	"OBE088": {"INVALID_FRONT_RG", "O envio de um documento pessoal do tipo FRONT é obrigatório."},
+	"OBE075": {"INVALID_PERSONAL_DOCUMENT", "O envio de um documento pessoal é obrigatório."},
+	"OBE079": {"INVALID_DATA_FILES", "O campo data de files deve conter um valor válido."},
 }
 
 // FindOnboardingError ... retorna a mensagem de erro correspondente ao código de erro de Onboarding
