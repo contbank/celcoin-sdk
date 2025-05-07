@@ -771,6 +771,8 @@ var OnboardingErrorMappings = map[string]struct {
 	"OBE075": {"INVALID_PERSONAL_DOCUMENT", "O envio de um documento pessoal é obrigatório."},
 	"OBE079": {"INVALID_DATA_FILES", "O campo data de files deve conter um valor válido."},
 	"OBE083": {"INVALID_MULTIPLE_DOCUMENTS", "Não é permitido o envio de mais de um documento para o mesmo tipo."},
+	"OBE081": {"INVALID_DOCUMENTS", "Os arquivos enviados são inválidos, por favor verifique a documentação."},
+	"OBE096": {"INVALID_SAME_DOCUMENTS", "Os documentos dos socios não devem ser iguais ao documento da empresa."},
 }
 
 // FindOnboardingError ... retorna a mensagem de erro correspondente ao código de erro de Onboarding
