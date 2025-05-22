@@ -792,6 +792,14 @@ type PixExternalKeyAccount struct {
 	OpeningDate time.Time `json:"openingDate"`
 }
 
+type PixExternalKeyAccountDueDate struct {
+	Participant string    `json:"participant"`
+	Branch      string    `json:"branch"`
+	Account     string    `json:"accountNumber"`
+	AccountType string    `json:"accountType"`
+	OpeningDate time.Time `json:"openingDate"`
+}
+
 // PixKeyOwner representa as informações do proprietário da Pix Key.
 type PixKeyOwner struct {
 	Type           string `json:"type"` // NATURAL_PERSON ou LEGAL_PERSON
@@ -859,13 +867,13 @@ type PixExternalKeyDueDateResponse struct {
 
 // PixExternalKeyDueDateBody representa a resposta de uma consulta de chave Pix externa (COBV - DUEDATE).
 type PixExternalKeyDueDateBody struct {
-	Key              string                `json:"key"`
-	KeyType          string                `json:"keyType"`
-	Account          PixExternalKeyAccount `json:"account"`
-	Owner            PixKeyOwner           `json:"owner"`
-	EndToEndId       string                `json:"endtoendid"`
-	CreationDate     time.Time             `json:"creationDate"`
-	KeyOwnershipDate time.Time             `json:"keyOwnershipDate"`
+	Key              string                       `json:"key"`
+	KeyType          string                       `json:"keyType"`
+	Account          PixExternalKeyAccountDueDate `json:"account"`
+	Owner            PixKeyOwner                  `json:"owner"`
+	EndToEndId       string                       `json:"endtoendid"`
+	CreationDate     time.Time                    `json:"creationDate"`
+	KeyOwnershipDate time.Time                    `json:"keyOwnershipDate"`
 }
 
 // PixCashOutRequest representa os dados para realizar um Pix Cash-Out.
