@@ -851,8 +851,14 @@ type PixExternalKeyErrorResponse struct {
 	Message   string `json:"message"`
 }
 
-// PixExternalKeyDueDateResponse representa a resposta de uma consulta de chave Pix externa (COBV - DUEDATE).
 type PixExternalKeyDueDateResponse struct {
+	Status  string                    `json:"status"`
+	Version string                    `json:"version"`
+	Body    PixExternalKeyDueDateBody `json:"body,omitempty"`
+}
+
+// PixExternalKeyDueDateBody representa a resposta de uma consulta de chave Pix externa (COBV - DUEDATE).
+type PixExternalKeyDueDateBody struct {
 	Key              string                `json:"key"`
 	KeyType          string                `json:"keyType"`
 	Account          PixExternalKeyAccount `json:"account"`

@@ -385,7 +385,8 @@ func (s *Pix) GetExternalPixKey(ctx context.Context, account string, key string,
 }
 
 // GetExternalPixKeyDueDate realiza uma consulta POST para o endpoint Celcoin para obter informações sobre uma chave Pix com vencimento(duedate).
-func (s *Pix) GetExternalPixKeyDueDate(ctx context.Context, account, documentNumberReceiver, key *string) (*PixExternalKeyDueDateResponse, error) {
+func (s *Pix) GetExternalPixKeyDueDate(ctx context.Context,
+	account, documentNumberReceiver, key *string) (*PixExternalKeyDueDateResponse, error) {
 	fields := logrus.Fields{
 		"ownerTaxId": documentNumberReceiver,
 		"key":        key,
