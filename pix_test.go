@@ -22,7 +22,7 @@ type PixsTestSuite struct {
 	assert        *assert.Assertions
 	ctx           context.Context
 	session       *celcoin.Session
-	pixService    celcoin.Pixs
+	pixService    *celcoin.Pix
 	mockTransport *MockRoundTripper
 	client        *http.Client
 }
@@ -55,7 +55,7 @@ func (s *PixsTestSuite) SetupTest() {
 	s.assert.NoError(err)
 	s.session = session
 
-	s.pixService = celcoin.NewPixs(s.client, *s.session)
+	s.pixService = celcoin.NewPix(s.client, *s.session)
 }
 
 // TestCreatePixKey testa o método de criação de chave pix.
@@ -165,7 +165,7 @@ func (s *PixsTestSuite) TestGetPixKeys() {
 
 	s.mockTransport.ExpectedCalls = nil
 
-	s.pixService = celcoin.NewPixs(s.client, *s.session) // Resetando o serviço
+	s.pixService = celcoin.NewPix(s.client, *s.session) // Resetando o serviço
 	mockHTTPError := fmt.Errorf("error making HTTP request")
 	s.mockTransport.
 		On("RoundTrip", mock.Anything).
