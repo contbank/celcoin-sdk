@@ -15,8 +15,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// Pixs define a interface para operações relacionadas ao serviço de Pix.
-type Pixs interface {
+// PixInterface define a interface para operações relacionadas ao serviço de Pix.
+type PixInterface interface {
 	BuildEndpoint(basePath string, queryParams map[string]string, pathParams ...string) (*string, error)
 
 	// CHAVE PIX
@@ -61,16 +61,16 @@ type Pixs interface {
 	CreateQrCodeLocation(ctx context.Context, req PixQrCodeLocationRequest) (*PixQrCodeLocationResponse, error)
 }
 
-// PixsService implementa a interface Pixs.
-type PixsService struct {
+// Pix implementa a interface Pixs.
+type Pix struct {
 	session        Session
 	httpClient     *LoggingHTTPClient
 	authentication *Authentication
 }
 
-// NewPixs cria uma nova instância de PixsService.
-func NewPixs(httpClient *http.Client, session Session) Pixs {
-	return &PixsService{
+// NewPixs cria uma nova instância de Pix.
+func NewPix(httpClient *http.Client, session Session) *Pix {
+	return &Pix{
 		session:        session,
 		httpClient:     NewLoggingHTTPClient(httpClient),
 		authentication: NewAuthentication(httpClient, session),
@@ -78,7 +78,7 @@ func NewPixs(httpClient *http.Client, session Session) Pixs {
 }
 
 // Método genérico para construir URLs
-func (s *PixsService) BuildEndpoint(basePath string, queryParams map[string]string, pathParams ...string) (*string, error) {
+func (s *Pix) BuildEndpoint(basePath string, queryParams map[string]string, pathParams ...string) (*string, error) {
 	u, err := url.Parse(s.session.APIEndpoint)
 	if err != nil {
 		logrus.WithError(err).Error("Error parsing API endpoint")
@@ -106,7 +106,7 @@ func (s *PixsService) BuildEndpoint(basePath string, queryParams map[string]stri
 }
 
 // CreatePixKey cadastra uma nova chave Pix.
-func (s *PixsService) CreatePixKey(ctx context.Context, req PixKeyRequest) (*PixKeyResponse, error) {
+func (s *Pix) CreatePixKey(ctx context.Context, req PixKeyRequest) (*PixKeyResponse, error) {
 	fields := logrus.Fields{"request": req}
 	logrus.WithFields(fields).Info("Create Pix Key")
 
@@ -180,7 +180,7 @@ func (s *PixsService) CreatePixKey(ctx context.Context, req PixKeyRequest) (*Pix
 }
 
 // GetPixKeys consulta as chaves Pix de uma conta.
-func (s *PixsService) GetPixKeys(ctx context.Context, account string) (*PixKeyListResponse, error) {
+func (s *Pix) GetPixKeys(ctx context.Context, account string) (*PixKeyListResponse, error) {
 	fields := logrus.Fields{"account": account}
 	logrus.WithFields(fields).Info("Get Pix Keys")
 
@@ -243,7 +243,7 @@ func (s *PixsService) GetPixKeys(ctx context.Context, account string) (*PixKeyLi
 }
 
 // DeletePixKey exclui uma chave Pix.
-func (s *PixsService) DeletePixKey(ctx context.Context, account, key string) error {
+func (s *Pix) DeletePixKey(ctx context.Context, account, key string) error {
 	fields := logrus.Fields{"account": account, "key": key}
 	logrus.WithFields(fields).Info("Delete Pix Key")
 
@@ -311,7 +311,7 @@ func (s *PixsService) DeletePixKey(ctx context.Context, account, key string) err
 }
 
 // GetExternalPixKey consulta uma chave Pix externa (DICT).
-func (s *PixsService) GetExternalPixKey(ctx context.Context, account string, key string, ownerTaxId string) (*PixExternalKeyResponse, error) {
+func (s *Pix) GetExternalPixKey(ctx context.Context, account string, key string, ownerTaxId string) (*PixExternalKeyResponse, error) {
 	fields := logrus.Fields{
 		"key":        key,
 		"ownerTaxId": ownerTaxId,
@@ -385,7 +385,99 @@ func (s *PixsService) GetExternalPixKey(ctx context.Context, account string, key
 }
 
 // GetExternalPixKeyDueDate realiza uma consulta POST para o endpoint Celcoin para obter informações sobre uma chave Pix com vencimento(duedate).
-func (s *PixsService) GetExternalPixKeyDueDate(ctx context.Context, documentNumberReceiver string, key string) (*PixExternalKeyDueDateResponse, error) {
+func (s *Pix) GetExternalPixKeyDueDate(ctx context.Context, account, documentNumberReceiver, key *string) (*PixExternalKeyDueDateResponse, error) {
+	fields := logrus.Fields{
+		"ownerTaxId": documentNumberReceiver,
+		"key":        key,
+		"account":    account,
+	}
+
+	logrus.WithFields(fields).Info("Get External Pix Key")
+
+	u, err := url.Parse(s.session.APIEndpoint)
+	if err != nil {
+		logrus.WithError(err).Error("Error parsing API endpoint")
+		return nil, err
+	}
+
+	u.Path = path.Join(u.Path, PixDictDueDatePath)
+
+	if account != nil {
+		u.Path = path.Join(u.Path, *account)
+	}
+
+	q := u.Query()
+
+	if documentNumberReceiver != nil {
+		q.Set("ownerTaxId", *documentNumberReceiver)
+	}
+	if key != nil {
+		q.Set("key", *key)
+	}
+
+	q.Set("includeStatistics", "false")
+
+	u.RawQuery = q.Encode()
+
+	endpoint := u.String()
+
+	logrus.WithField("endpoint", endpoint).Info("Endpoint built successfully")
+
+	httpReq, err := http.NewRequestWithContext(ctx, "GET", endpoint, nil)
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).Error("Error creating HTTP request")
+		return nil, fmt.Errorf("error creating HTTP request: %v", err)
+	}
+
+	httpReq.Header.Set("accept", "application/json")
+	httpReq.Header.Set("Content-Type", "application/json-patch+json")
+
+	resp, err := s.httpClient.Do(httpReq)
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).Error("Error in HTTP client")
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	respBody, _ := ioutil.ReadAll(resp.Body)
+
+	if resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusAccepted || resp.StatusCode == http.StatusCreated {
+		var response *PixExternalKeyDueDateResponse
+
+		if err := json.Unmarshal(respBody, &response); err != nil {
+			logrus.WithFields(fields).WithError(err).
+				Error("error decoding json response")
+			return nil, ErrDefaultPix
+		}
+
+		return response, nil
+	}
+
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, ErrEntryNotFound
+	}
+
+	var errResponse *ErrorDefaultResponse
+	if err := json.Unmarshal(respBody, &errResponse); err != nil {
+		logrus.WithFields(fields).WithError(err).
+			Error("error decoding json response")
+		return nil, ErrDefaultPix
+	}
+
+	if errResponse.Error != nil {
+		err := FindPixError(*errResponse.Error.ErrorCode, &resp.StatusCode)
+		logrus.WithField("celcoin_error", errResponse.Error).
+			WithFields(fields).WithError(err).
+			Error("celcoin get pix error")
+		return nil, err
+	}
+
+	return nil, ErrDefaultPix
+}
+
+// Deprecated - Deprecated at 05/05/2025
+// GetExternalPixKeyDueDateDeprecated realiza uma consulta POST para o endpoint Celcoin para obter informações sobre uma chave Pix com vencimento(duedate).
+func (s *Pix) GetExternalPixKeyDueDateDeprecated(ctx context.Context, documentNumberReceiver string, key string) (*PixExternalKeyDueDateResponse, error) {
 	fields := logrus.Fields{
 		"payerId": documentNumberReceiver,
 		"key":     key,
@@ -468,7 +560,7 @@ func (s *PixsService) GetExternalPixKeyDueDate(ctx context.Context, documentNumb
 // Realizar um Pix Cash-Out por Agência e Conta
 // Realizar um Pix Cash-out por QR Code Estático
 // Realizar um Pix Cash-out por QR Code Dinâmico
-func (s *PixsService) PaymentPixCashOut(ctx context.Context, req PixCashOutRequest) (*PixCashOutResponse, error) {
+func (s *Pix) PaymentPixCashOut(ctx context.Context, req PixCashOutRequest) (*PixCashOutResponse, error) {
 
 	// deixando como upper pois contbank usa parametros minusculos mas é obrigatório na celcoin maiusculo
 	req.InitiationType = strings.ToUpper(req.InitiationType)
@@ -541,7 +633,7 @@ func (s *PixsService) PaymentPixCashOut(ctx context.Context, req PixCashOutReque
 }
 
 // DecodeEmvQRCode... Decofificando o qrcode do pix copia e cola
-func (s *PixsService) DecodeEmvQRCode(ctx context.Context, emv string) (*QRCodeResponse, error) {
+func (s *Pix) DecodeEmvQRCode(ctx context.Context, emv string) (*QRCodeResponse, error) {
 	fields := logrus.Fields{"emv": emv}
 	logrus.WithFields(fields).Info("Decoding QR Code")
 
@@ -611,7 +703,7 @@ func (s *PixsService) DecodeEmvQRCode(ctx context.Context, emv string) (*QRCodeR
 }
 
 // GetPixCashoutStatus consulta o status de uma transferência Pix-Out.
-func (s *PixsService) GetPixCashoutStatus(ctx context.Context, id, endtoendId, clientCode string) (*PixCashoutStatusTransactionResponse, error) {
+func (s *Pix) GetPixCashoutStatus(ctx context.Context, id, endtoendId, clientCode string) (*PixCashoutStatusTransactionResponse, error) {
 	fields := logrus.Fields{"id": id, "endtoendId": endtoendId, "clientCode": clientCode}
 	logrus.WithFields(fields).Info("Consultando status do Pix Cashout")
 
@@ -687,7 +779,7 @@ func (s *PixsService) GetPixCashoutStatus(ctx context.Context, id, endtoendId, c
 }
 
 // GetPixCashinStatus consulta o status de uma devolução Pix (Pix Cash-In).
-func (s *PixsService) GetPixCashinStatus(ctx context.Context, returnIdentification, transactionId, clientCode string) (*PixCashinStatusTransactionResponse, error) {
+func (s *Pix) GetPixCashinStatus(ctx context.Context, returnIdentification, transactionId, clientCode string) (*PixCashinStatusTransactionResponse, error) {
 	fields := logrus.Fields{
 		"returnIdentification": returnIdentification,
 		"transactionId":        transactionId,
@@ -767,7 +859,7 @@ func (s *PixsService) GetPixCashinStatus(ctx context.Context, returnIdentificati
 }
 
 // PixCashInStatic realiza um Pix Cash-in por Cobrança Estática.
-func (s *PixsService) PixCashInStatic(ctx context.Context, req PixCashInStaticRequest) (*PixCashInStaticResponse, error) {
+func (s *Pix) PixCashInStatic(ctx context.Context, req PixCashInStaticRequest) (*PixCashInStaticResponse, error) {
 	fields := logrus.Fields{"request": req}
 	logrus.WithFields(fields).Info("Create PixCashInStatic")
 
@@ -844,7 +936,7 @@ func (s *PixsService) PixCashInStatic(ctx context.Context, req PixCashInStaticRe
 }
 
 // PixCashInDueDate realiza um Pix Cash-in por Cobrança com Vencimento.
-func (s *PixsService) CreatePixCashInDueDate(ctx context.Context, req PixCashInDueDateRequest) (*PixCashInDueDateResponse, error) {
+func (s *Pix) CreatePixCashInDueDate(ctx context.Context, req PixCashInDueDateRequest) (*PixCashInDueDateResponse, error) {
 	fields := logrus.Fields{"request": req}
 	logrus.WithFields(fields).Info("Create PixCashInDueDate")
 
@@ -922,7 +1014,7 @@ func (s *PixsService) CreatePixCashInDueDate(ctx context.Context, req PixCashInD
 }
 
 // GetPixCashInDueDate realiza um Pix Cash-in por Cobrança com Vencimento.
-func (s *PixsService) GetPixCashInDueDate(ctx context.Context, transactionId *string) (*PixCashInDueDateResponse, error) {
+func (s *Pix) GetPixCashInDueDate(ctx context.Context, transactionId *string) (*PixCashInDueDateResponse, error) {
 	fields := logrus.Fields{"transactionId": transactionId}
 	logrus.WithFields(fields).Info("Create GetPixCashInDueDate")
 
@@ -993,7 +1085,7 @@ func (s *PixsService) GetPixCashInDueDate(ctx context.Context, transactionId *st
 }
 
 // PutPixCashInDueDate ...
-func (s *PixsService) PutPixCashInDueDate(ctx context.Context, transactionId string, req PixCashInDueDateRequest) (*PixCashInDueDateResponse, error) {
+func (s *Pix) PutPixCashInDueDate(ctx context.Context, transactionId string, req PixCashInDueDateRequest) (*PixCashInDueDateResponse, error) {
 	fields := logrus.Fields{"transactionId": transactionId, "request": req}
 	logrus.WithFields(fields).Info("Create PutPixCashInDueDate")
 
@@ -1076,7 +1168,7 @@ func (s *PixsService) PutPixCashInDueDate(ctx context.Context, transactionId str
 }
 
 // DeletePixCashInDueDate remove um Pix Cash-in por Cobrança com Vencimento.
-func (s *PixsService) DeletePixCashInDueDate(ctx context.Context, transactionId *string) (*PixDeleteResponse, error) {
+func (s *Pix) DeletePixCashInDueDate(ctx context.Context, transactionId *string) (*PixDeleteResponse, error) {
 	fields := logrus.Fields{"transactionId": transactionId}
 	logrus.WithFields(fields).Info("DeletePixCashInDueDate called")
 
@@ -1141,7 +1233,7 @@ func (s *PixsService) DeletePixCashInDueDate(ctx context.Context, transactionId 
 }
 
 // PixCashInImmediate realiza um Pix Cash-in por Cobrança Imediata.
-func (s *PixsService) CreatePixCashInImmediate(ctx context.Context, req PixCashInImmediateRequest) (*PixCashInImmediateResponse, error) {
+func (s *Pix) CreatePixCashInImmediate(ctx context.Context, req PixCashInImmediateRequest) (*PixCashInImmediateResponse, error) {
 	fields := logrus.Fields{"request": req}
 	logrus.WithFields(fields).Info("Create PixCashInImmediate")
 
@@ -1219,7 +1311,7 @@ func (s *PixsService) CreatePixCashInImmediate(ctx context.Context, req PixCashI
 }
 
 // GetPixCashInImmediate realiza um Pix Cash-in por Cobrança imediata.
-func (s *PixsService) GetPixCashInImmediate(ctx context.Context, transactionId *string) (*PixCashInImmediateResponse, error) {
+func (s *Pix) GetPixCashInImmediate(ctx context.Context, transactionId *string) (*PixCashInImmediateResponse, error) {
 	fields := logrus.Fields{"transactionId": transactionId}
 	logrus.WithFields(fields).Info("Create GetPixCashInImmediate")
 
@@ -1290,7 +1382,7 @@ func (s *PixsService) GetPixCashInImmediate(ctx context.Context, transactionId *
 }
 
 // PutPixCashInImmediate ...
-func (s *PixsService) PutPixCashInImmediate(ctx context.Context, transactionId string, req PixCashInImmediateRequest) (*PixCashInImmediateResponse, error) {
+func (s *Pix) PutPixCashInImmediate(ctx context.Context, transactionId string, req PixCashInImmediateRequest) (*PixCashInImmediateResponse, error) {
 	fields := logrus.Fields{"transactionId": transactionId, "request": req}
 	logrus.WithFields(fields).Info("Create PutPixCashInImmediate")
 
@@ -1373,7 +1465,7 @@ func (s *PixsService) PutPixCashInImmediate(ctx context.Context, transactionId s
 }
 
 // DeletePixCashInImmediate remove um Pix Cash-in por Cobrança imediata
-func (s *PixsService) DeletePixCashInImmediate(ctx context.Context, transactionId *string) (*PixDeleteResponse, error) {
+func (s *Pix) DeletePixCashInImmediate(ctx context.Context, transactionId *string) (*PixDeleteResponse, error) {
 	fields := logrus.Fields{"transactionId": transactionId}
 	logrus.WithFields(fields).Info("DeletePixCashInDueDate called")
 
@@ -1437,7 +1529,7 @@ func (s *PixsService) DeletePixCashInImmediate(ctx context.Context, transactionI
 	return nil, ErrDefaultPix
 }
 
-func (s *PixsService) GetAddressKey(ctx context.Context, key, currentIdentity, account string, searchDict *bool) (*PixAddressKeyResponse, error) {
+func (s *Pix) GetAddressKey(ctx context.Context, key, currentIdentity, account string, searchDict *bool) (*PixAddressKeyResponse, error) {
 	var search_dict = false
 	if searchDict == nil {
 		searchDict = &search_dict // valor for null, não devemos buscar no DICT pois pode afetar o balde de fichas
@@ -1479,7 +1571,7 @@ func (s *PixsService) GetAddressKey(ctx context.Context, key, currentIdentity, a
 }
 
 // GetEmvQRCodeImmediate decodifica o QR code e faz uma requisição ao endpoint correspondente.
-func (s *PixsService) GetEmvQRCodeImmediate(ctx context.Context, merchanturl *string) (*QRCodeImmediateResponse, error) {
+func (s *Pix) GetEmvQRCodeImmediate(ctx context.Context, merchanturl *string) (*QRCodeImmediateResponse, error) {
 	fields := logrus.Fields{"merchantAccountInformation.url": merchanturl}
 	logrus.WithFields(fields).Info("Processing GetEmvQRCodeImmediate request")
 
@@ -1564,7 +1656,7 @@ func (s *PixsService) GetEmvQRCodeImmediate(ctx context.Context, merchanturl *st
 }
 
 // GetEmvQRCodeDueDate decodifica o QR code e faz uma requisição ao endpoint correspondente para dueDate.
-func (s *PixsService) GetEmvQRCodeDueDate(ctx context.Context, merchanturl *string) (*QRCodeDueDateResponse, error) {
+func (s *Pix) GetEmvQRCodeDueDate(ctx context.Context, merchanturl *string) (*QRCodeDueDateResponse, error) {
 	fields := logrus.Fields{"merchantAccountInformation.url": merchanturl}
 	logrus.WithFields(fields).Info("Processing GetEmvQRCodeDueDate request")
 
@@ -1648,7 +1740,7 @@ func (s *PixsService) GetEmvQRCodeDueDate(ctx context.Context, merchanturl *stri
 	return nil, ErrDefaultPix
 }
 
-func (s *PixsService) CreateQrCodeLocation(ctx context.Context, req PixQrCodeLocationRequest) (*PixQrCodeLocationResponse, error) {
+func (s *Pix) CreateQrCodeLocation(ctx context.Context, req PixQrCodeLocationRequest) (*PixQrCodeLocationResponse, error) {
 	fields := logrus.Fields{"request": req}
 	logrus.
 		WithFields(fields).
@@ -1725,7 +1817,7 @@ func (s *PixsService) CreateQrCodeLocation(ctx context.Context, req PixQrCodeLoc
 }
 
 // CreatePixClaim cadastra um pedido de portabilidade de chave Pix.
-func (s *PixsService) CreatePixClaim(ctx context.Context, req PixClaimRequest) (*PixClaimResponse, error) {
+func (s *Pix) CreatePixClaim(ctx context.Context, req PixClaimRequest) (*PixClaimResponse, error) {
 	fields := logrus.Fields{"request": req}
 	logrus.WithFields(fields).Info("Create Pix Claim")
 
@@ -1795,7 +1887,7 @@ func (s *PixsService) CreatePixClaim(ctx context.Context, req PixClaimRequest) (
 }
 
 // ConfirmPixClaim confirma um pedido de portabilidade de chave Pix.
-func (s *PixsService) ConfirmPixClaim(ctx context.Context, req PixClaimActionRequest) (*PixClaimResponse, error) {
+func (s *Pix) ConfirmPixClaim(ctx context.Context, req PixClaimActionRequest) (*PixClaimResponse, error) {
 	fields := logrus.Fields{"request": req}
 	logrus.WithFields(fields).Info("Confirm Pix Claim")
 
@@ -1869,7 +1961,7 @@ func (s *PixsService) ConfirmPixClaim(ctx context.Context, req PixClaimActionReq
 }
 
 // CancelPixClaim Cancelar pedido de portabilidade recebido
-func (s *PixsService) CancelPixClaim(ctx context.Context, req PixClaimActionRequest) (*PixClaimResponse, error) {
+func (s *Pix) CancelPixClaim(ctx context.Context, req PixClaimActionRequest) (*PixClaimResponse, error) {
 	fields := logrus.Fields{"request": req}
 	logrus.WithFields(fields).Info("Confirm Pix Claim")
 
@@ -1944,7 +2036,7 @@ func (s *PixsService) CancelPixClaim(ctx context.Context, req PixClaimActionRequ
 }
 
 // GetPixClaim consulta um pedido de portabilidade de chave Pix.
-func (s *PixsService) GetPixClaim(ctx context.Context, claimID string) (*PixClaimResponse, error) {
+func (s *Pix) GetPixClaim(ctx context.Context, claimID string) (*PixClaimResponse, error) {
 	fields := logrus.Fields{"account": claimID}
 	logrus.WithFields(fields).Info("Get Pix Claim")
 
@@ -2006,7 +2098,7 @@ func (s *PixsService) GetPixClaim(ctx context.Context, claimID string) (*PixClai
 }
 
 // GetPixClaimList consulta a lista de pedidos de portabilidade de chave Pix.
-func (s *PixsService) GetPixClaimList(ctx context.Context, dateFrom, dateTo string, limit, page int, status, claimType string) (*PixClaimListResponse, error) {
+func (s *Pix) GetPixClaimList(ctx context.Context, dateFrom, dateTo string, limit, page int, status, claimType string) (*PixClaimListResponse, error) {
 	fields := logrus.Fields{
 		"dateFrom":  dateFrom,
 		"dateTo":    dateTo,

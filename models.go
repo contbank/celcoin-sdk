@@ -44,17 +44,19 @@ const (
 	InternalTransfersPath string = "/baas-wallet-transactions-webservice/v1/wallet/internal/transfer"
 
 	// Pix ...
-	PixClaimPath          string = "/celcoin-baas-pix-dict-webservice/v1/pix/dict/claim"
-	PixDictPath           string = "/celcoin-baas-pix-dict-webservice/v1/pix/dict/entry"
-	PixDictDueDatePath    string = "/pix/v1/dict/v2/key"
-	PixCashOutPath        string = "/baas-wallet-transactions-webservice/v1/pix/payment"
-	PixCashInPath         string = "/pix/v2/receivement/v2"
-	PixEmvPath            string = "/pix/v1/emv"
-	PixStaticPath         string = "/pix/v1/brcode/static"
-	PixCashInStatusPath   string = "/pix/v2/receivement/v2/devolution/status"
-	PixEmvUrl             string = "/pix/v1/collection"
-	PixCashInDynamicPath  string = "/pix/v1/collection"
-	PixQrCodeLocationPath string = "/pix/v1/location"
+	PixClaimPath string = "/celcoin-baas-pix-dict-webservice/v1/pix/dict/claim"
+	PixDictPath  string = "/celcoin-baas-pix-dict-webservice/v1/pix/dict/entry"
+	//Deprecated
+	PixDictDueDatePathDeprecated string = "/pix/v1/dict/v2/key"
+	PixDictDueDatePath           string = "/baas/v2/pix/dict/entry/external"
+	PixCashOutPath               string = "/baas-wallet-transactions-webservice/v1/pix/payment"
+	PixCashInPath                string = "/pix/v2/receivement/v2"
+	PixEmvPath                   string = "/pix/v1/emv"
+	PixStaticPath                string = "/pix/v1/brcode/static"
+	PixCashInStatusPath          string = "/pix/v2/receivement/v2/devolution/status"
+	PixEmvUrl                    string = "/pix/v1/collection"
+	PixCashInDynamicPath         string = "/pix/v1/collection"
+	PixQrCodeLocationPath        string = "/pix/v1/location"
 
 	// StatementPath ...
 	StatementPath string = "/baas-walletreports/v1/wallet/movement"
