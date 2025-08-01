@@ -323,7 +323,7 @@ func validatePixCashOut(req PixCashOutRequest) error {
 	}
 
 	// Validação adicional por TransactionType
-	switch req.TransactionType {
+	/*switch req.TransactionType {
 	case "TRANSFER":
 		if req.VlcpAmount != 0 || req.VldnAmount != 0 || req.WithdrawalAgentMode != "" || req.WithdrawalServiceProvider != "" {
 			return fmt.Errorf("invalid fields for TransactionType TRANSFER: vlcpAmount, vldnAmount, withdrawalAgentMode, and withdrawalServiceProvider must not be filled")
@@ -338,7 +338,7 @@ func validatePixCashOut(req PixCashOutRequest) error {
 		}
 	default:
 		return fmt.Errorf("unknown TransactionType: %s", req.TransactionType)
-	}
+	}*/
 
 	// Validação adicional por PaymentType
 	switch req.PaymentType {
