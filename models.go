@@ -878,11 +878,11 @@ type PixExternalKeyDueDateBody struct {
 
 // PixCashOutRequest representa os dados para realizar um Pix Cash-Out.
 type PixCashOutRequest struct {
-	Amount                    float64     `json:"amount" description:"O valor da transação (required)"`
-	VlcpAmount                float64     `json:"vlcpAmount" description:"O valor da compra (Pix Troco)"`
-	VldnAmount                float64     `json:"vldnAmount" description:"O valor em dinheiro disponibilizado (Pix Troco)"`
-	WithdrawalServiceProvider string      `json:"withdrawalServiceProvider" description:"O Identificador ISPB do serviço de saque (Pix Saque/Troco)"`
-	WithdrawalAgentMode       string      `json:"withdrawalAgentMode" description:"Modo do agente de retirada. AGTEC: Estabelecimento Comercial, AGTOT: Entidade Jurídica cuja atividade é a prestação de serviços auxiliares de serviços financeiros, AGPSS: Participante Pix que presta diretamente o serviço de saque."`
+	Amount float64 `json:"amount" description:"O valor da transação (required)"`
+	//VlcpAmount                float64     `json:"vlcpAmount" description:"O valor da compra (Pix Troco)"`
+	//VldnAmount                float64     `json:"vldnAmount" description:"O valor em dinheiro disponibilizado (Pix Troco)"`
+	//WithdrawalServiceProvider string      `json:"withdrawalServiceProvider" description:"O Identificador ISPB do serviço de saque (Pix Saque/Troco)"`
+	//WithdrawalAgentMode       string      `json:"withdrawalAgentMode" description:"Modo do agente de retirada. AGTEC: Estabelecimento Comercial, AGTOT: Entidade Jurídica cuja atividade é a prestação de serviços auxiliares de serviços financeiros, AGPSS: Participante Pix que presta diretamente o serviço de saque."`
 	ClientCode                string      `json:"clientCode" description:"A identificação única da transacção dada pelo lado do cliente. Este valor não pode ser repetido (required)"`
 	TransactionIdentification string      `json:"transactionIdentification" description:"Identificador do QRCode a ser pago (ver regras de preenchimento)"`
 	EndToEndId                string      `json:"endToEndId" description:"Identificador de ponta a ponta associado a este pedido de iniciação de pagamento. Deve ser o mesmo da consulta ao DICT, quando aplicável."`
