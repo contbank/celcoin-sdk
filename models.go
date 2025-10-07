@@ -60,7 +60,8 @@ const (
 
 	// StatementPath ...
 	StatementPath string = "/baas-walletreports/v1/wallet/movement"
-
+	// DdaSubscriptionPath ...
+	DdaSubscriptionPath string = "/dda-subscription-webservice/v1/subscription/Register"
 	// IncomeReportPath ...
 	IncomeReportPath string = "/baas-accountmanager/v1/account/income-report"
 
@@ -433,6 +434,13 @@ type ErrorDefaultResponse struct {
 	Status  *string       `json:"status"`
 	Version *string       `json:"version"`
 	Error   *ErrorDefault `json:"error"`
+}
+
+// ErroDefaultResponse necessário para tratar erros no dda
+type ErroDefaultResponse struct {
+	Status  *int          `json:"status"`
+	Version *string       `json:"version"`
+	Error   *ErrorDefault `json:"erro"`
 }
 
 // ErrorDefault ...
@@ -1961,4 +1969,35 @@ type ExecPaymentResponse struct {
 	Body    ExecPaymentResponseBody `json:"body"`
 	Status  string                  `json:"status"`
 	Version string                  `json:"version"`
+}
+
+/* DDA */
+// DdaRegisterUserRequest user request for register on DDA
+
+type DdaRegisterUserRequest struct {
+	Document        string `validate:"required" json:"document"`
+	ClientName      string `validate:"required" json:"clientName"`
+	ClientRequestId string `json:"clientRequestId"`
+}
+
+type DdaDeleteUserRequest struct {
+	Document        string `validate:"required" json:"document"`
+	ClientName      string `json:"clientName"`
+	ClientRequestId string `json:"clientRequestId"`
+}
+
+// DdaRegisterUserResponse response from DDA register user
+type DdaRegisterUserResponse struct {
+	Status int                          `json:"status,omitempty"` //201,400
+	Error  *WebhookError                `json:"error,omitempty"`  // Detalhes do erro, se houver
+	Body   *DdaRegisterUserBodyResponse `json:"body,omitempty"`
+}
+
+// DdaRegisterUserBodyResponse ...
+type DdaRegisterUserBodyResponse struct {
+	Document        string `json:"document"`
+	ClientRequestId string `json:"clientRequestId"`
+	ResponseDate    string `json:"responseDate"`
+	Status          string `json:"status"`
+	SubscriptionId  string `json:"subscriptionId"`
 }
