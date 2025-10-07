@@ -219,6 +219,9 @@ var (
 	ErrCorporationBusinessNotAllowed = grok.NewError(http.StatusMethodNotAllowed, "CORPORATION_BUSINESS_NOT_ALLOWED", "corporation business not allowed")
 	// ErrDefaultWebhook ...
 	ErrDefaultWebhook = grok.NewError(http.StatusInternalServerError, "WEBHOOK_ERROR", "error balance")
+
+	// ErrDefaultDda ...
+	ErrDefaultDda = grok.NewError(http.StatusInternalServerError, "DDA_ERROR", "error dda")
 )
 
 // CelcoinError ...
@@ -1062,6 +1065,24 @@ var UpdateAccountStatusAccountErrorMappings = map[string]struct {
 // FindUpdateAccountStatusAccountErrors ... retorna a mensagem de erro correspondente ao código de erro de cancelamento de conta
 func FindUpdateAccountStatusAccountErrors(code string, responseStatus *int) *grok.Error {
 	if mapping, exists := UpdateAccountStatusAccountErrorMappings[code]; exists {
+		return grok.NewError(*responseStatus, mapping.ContbankCode, mapping.Description)
+	}
+	return grok.NewError(http.StatusInternalServerError, "UNKNOWN_ERROR", "unknown error")
+}
+
+var DdaErrorMappings = map[string]struct {
+	ContbankCode string
+	Description  string
+}{
+	"CDDA102": {"DUPLICATED_USER", "Usuário já cadastrado"},
+	"CDDA100": {"MISSING_DDA_FIELD", "Campo [document or clientName] inválido"},
+	"CDDA107": {"MISSING_DDA_FIELD", "Campo [clientRequestId] ja utilizado para esse evento"},
+	"CDDA104": {"DDA_NOT_CANCELABLE", "Não é possível realizar o cancelamento deste documento"},
+}
+
+// FindDdaError ... retorna a mensagem de erro correspondente ao código de erro de DDA
+func FindDdaError(code string, responseStatus *int) *grok.Error {
+	if mapping, exists := DdaErrorMappings[code]; exists {
 		return grok.NewError(*responseStatus, mapping.ContbankCode, mapping.Description)
 	}
 	return grok.NewError(http.StatusInternalServerError, "UNKNOWN_ERROR", "unknown error")
