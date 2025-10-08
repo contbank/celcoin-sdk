@@ -1074,10 +1074,27 @@ var DdaErrorMappings = map[string]struct {
 	ContbankCode string
 	Description  string
 }{
-	"CDDA102": {"DUPLICATED_USER", "Usuário já cadastrado"},
-	"CDDA100": {"MISSING_DDA_FIELD", "Campo [document or clientName] inválido"},
-	"CDDA107": {"MISSING_DDA_FIELD", "Campo [clientRequestId] ja utilizado para esse evento"},
-	"CDDA104": {"DDA_NOT_CANCELABLE", "Não é possível realizar o cancelamento deste documento"},
+	// 401
+	"CDDA301": {"UNAUTHORIZED_REQUEST", "Requisição não autorizada. Verifique a autenticação ou o produto não está ativo."},
+
+	// 403
+	"CDDA302": {"CLIENT_NOT_AUTHORIZED", "Cliente não autorizado para o produto. Entre em contato com o suporte."},
+
+	// 400 - Erros de campos
+	"CDDA001": {"MISSING_REQUIRED_FIELDS", "Campos obrigatórios ausentes. Verifique document e clientName."},
+	"CDDA100": {"INVALID_FIELDS", "Campos [clientName] e/ou [document] inválidos ou com formato incorreto."},
+
+	// 400 - Erros específicos
+	"CDDA101": {"PENDING_REGISTRATION", "Já existe uma solicitação de cadastro pendente para esse documento."},
+	"CDDA102": {"DUPLICATED_USER", "Usuário já cadastrado."},
+	"CDDA103": {"CANNOT_CANCEL_PROCESSING", "Não é possível realizar cancelamento de cadastro em processamento."},
+	"CDDA104": {"DOCUMENT_NOT_FOUND", "Não é possível realizar o cancelamento deste documento. Documento não cadastrado."},
+	"CDDA200": {"REGISTRATION_UNAVAILABLE", "Não é possível realizar o cadastro neste momento. Tente novamente mais tarde."},
+
+	// 500
+	"CDDA999": {"UNEXPECTED_ERROR", "Erro inesperado. Contate o suporte Celcoin."},
+
+	"CDDA107": {"DUPLICATED_CLIENT_REQUEST_ID", "Campo [clientRequestId] já utilizado para esse evento."},
 }
 
 // FindDdaError ... retorna a mensagem de erro correspondente ao código de erro de DDA
