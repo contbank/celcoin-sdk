@@ -66,7 +66,8 @@ const (
 	IncomeReportPath string = "/baas-accountmanager/v1/account/income-report"
 
 	// Webhook
-	WebhookPath string = "/baas-webhookmanager/v1/webhook"
+	WebhookPath    string = "/baas-webhookmanager/v1/webhook"
+	WebhookDdaPath string = "/dda-servicewebhook-webservice/v1/webhook"
 
 	//BaasV2ChargePath ...
 	BaasV2ChargePath string = "/baas/v2/charge"
@@ -277,6 +278,12 @@ type WebhookSubscriptionRequest struct {
 	WebhookURL string      `validate:"required" json:"webhookUrl"` // URL do webhook
 	Auth       WebhookAuth `json:"auth"`                           // Dados de autenticação do webhook
 }
+type WebhookSubscriptionDdaRequest struct {
+	BasicAuthentication *WebhookBasicAuthentication `json:"basicAuthentication"` // identification + password
+	OAuthTwo            *WebhookOAuthTwo            `json:"oAuthTwo,omitempty"`
+	TypeEventWebhook    string                      `json:"typeEventWebhook"` // "Subscription", "Deletion" or "Invoice"
+	URL                 string                      `json:"url"`
+}
 
 // WebhookAuth representa os dados de autenticação para o webhook
 type WebhookAuth struct {
@@ -291,6 +298,41 @@ type WebhookSubscriptionResponse struct {
 	Status  string                   `json:"status"`  // Status da operação (SUCCESS ou ERROR)
 	Body    *WebhookSubscriptionBody `json:"body,omitempty"`
 	Error   *WebhookError            `json:"error,omitempty"` // Detalhes do erro, se houver
+}
+
+// WebhookSubscriptionDdaResponse representa a resposta da rota DDA (formato específico)
+type WebhookSubscriptionDdaResponse struct {
+	Version string                      `json:"version"` // Versão da API
+	Status  int                         `json:"status"`
+	Body    *WebhookSubscriptionDdaBody `json:"body,omitempty"`
+	Error   *WebhookError               `json:"error,omitempty"`
+}
+
+// WebhookSubscriptionDdaBody representa o corpo do response DDA
+type WebhookSubscriptionDdaBody struct {
+	TypeEventWebhook    string                      `json:"typeEventWebhook"`
+	URL                 string                      `json:"url"`
+	BasicAuthentication *WebhookBasicAuthentication `json:"basicAuthentication"`
+	OAuthTwo            *WebhookOAuthTwo            `json:"oAuthTwo,omitempty"`
+}
+
+// WebhookBasicAuthentication representa basic auth no payload DDA
+type WebhookBasicAuthentication struct {
+	Identification string `json:"identification"`
+	Password       string `json:"password"`
+}
+
+// WebhookOAuthTwo representa o objeto oAuthTwo do payload DDA
+type WebhookOAuthTwo struct {
+	Endpoint     string `json:"endpoint"`
+	ClientId     string `json:"clientId"`
+	ClientSecret string `json:"clientSecret"`
+	Scope        string `json:"scope"`
+	State        string `json:"state"`
+	Code         string `json:"code"`
+	RefreshToken string `json:"refreshToken"`
+	ContentType  string `json:"contentType"`
+	GrantType    string `json:"grantType"`
 }
 
 // WebhookSubscriptionBody representa informações do cadastro

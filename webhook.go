@@ -18,6 +18,7 @@ import (
 // Webhooks define a interface para operações relacionadas a webhooks.
 type Webhooks interface {
 	CreateSubscription(ctx context.Context, req WebhookSubscriptionRequest) (*WebhookSubscriptionResponse, error)
+	CreateSubscriptionDda(ctx context.Context, req WebhookSubscriptionDdaRequest) (*WebhookSubscriptionDdaResponse, error)
 	GetSubscriptions(ctx context.Context, entity string, active *bool) (*WebhookQueryResponse, error)
 	UpdateSubscription(ctx context.Context, entity string, req WebhookUpdateRequest) (*WebhookUpdateResponse, error)
 	DeleteSubscription(ctx context.Context, entity string, subscriptionID string) (*WebhookDeleteResponse, error)
@@ -131,6 +132,97 @@ func (s *WebhooksService) CreateSubscription(ctx context.Context, req WebhookSub
 
 	if resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusAccepted {
 		var response WebhookSubscriptionResponse
+		if err := json.Unmarshal(respBody, &response); err != nil {
+			logrus.WithFields(fields).WithError(err).
+				Error("error decoding json response")
+			return nil, ErrDefaultWebhook
+		}
+		return &response, nil
+	}
+
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, ErrEntryNotFound
+	}
+
+	var errResponse *ErrorDefaultResponse
+	if err := json.Unmarshal(respBody, &errResponse); err != nil {
+		logrus.WithFields(fields).WithError(err).
+			Error("error decoding json response")
+		return nil, ErrDefaultWebhook
+	}
+
+	if errResponse.Error != nil {
+		err := FindWebhookError(*errResponse.Error.ErrorCode, &resp.StatusCode)
+		logrus.WithField("celcoin_error", errResponse.Error).
+			WithFields(fields).WithError(err).
+			Error("celcoin create subscription error")
+		return nil, err
+	}
+
+	return nil, ErrDefaultWebhook
+
+}
+
+// CreateSubscriptionDda faz a chamada à API para cadastrar um webhook dda
+func (s *WebhooksService) CreateSubscriptionDda(ctx context.Context, req WebhookSubscriptionDdaRequest) (*WebhookSubscriptionDdaResponse, error) {
+	fields := logrus.Fields{
+		"request": req,
+	}
+	logrus.
+		WithFields(fields).
+		Info("Create Subscription")
+
+	err := grok.Validator.Struct(req)
+	if err != nil {
+		logrus.
+			WithFields(fields).
+			WithError(err).
+			Error("error validating model")
+		return nil, grok.FromValidationErros(err)
+	}
+	endpoint, err := s.buildEndpoint(WebhookDdaPath, nil, "register")
+	if err != nil {
+		logrus.WithFields(fields).WithError(err).Error("Error building endpoint for CreateSubscriptionDda")
+		return nil, err
+	}
+
+	logrus.WithField("endpoint", *endpoint).Info("Calling CreateSubscriptionDda")
+
+	payload, err := json.Marshal(req)
+	if err != nil {
+		logrus.
+			WithFields(fields).
+			WithError(err).
+			Error("error serializing request")
+
+		return nil, fmt.Errorf("error serializing request: %v", err)
+	}
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", *endpoint, bytes.NewReader(payload))
+	if err != nil {
+		logrus.
+			WithFields(fields).
+			WithError(err).
+			Error("error creating http request")
+		return nil, fmt.Errorf("error creating http request: %v", err)
+	}
+
+	httpReq.Header.Add("Content-Type", "application/json")
+	//httpReq.Header.Add("api-version", s.session.APIVersion)
+
+	resp, err := s.httpClient.Do(httpReq)
+	if err != nil {
+		logrus.
+			WithFields(fields).
+			WithError(err).
+			Error("error http client")
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	respBody, _ := ioutil.ReadAll(resp.Body)
+
+	if resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusAccepted {
+		var response WebhookSubscriptionDdaResponse
 		if err := json.Unmarshal(respBody, &response); err != nil {
 			logrus.WithFields(fields).WithError(err).
 				Error("error decoding json response")
