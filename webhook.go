@@ -221,7 +221,7 @@ func (s *WebhooksService) CreateSubscriptionDda(ctx context.Context, req Webhook
 
 	respBody, _ := ioutil.ReadAll(resp.Body)
 
-	if resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusAccepted {
+	if resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusAccepted || resp.StatusCode == http.StatusCreated {
 		var response WebhookSubscriptionDdaResponse
 		if err := json.Unmarshal(respBody, &response); err != nil {
 			logrus.WithFields(fields).WithError(err).
