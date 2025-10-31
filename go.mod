@@ -15,8 +15,6 @@ require (
 	github.com/tidwall/sjson v1.1.6
 )
 
-require software.sslmate.com/src/go-pkcs12 v0.5.0
-
 require (
 	github.com/KyleBanks/depth v1.2.1 // indirect
 	github.com/Nhanderu/brdoc v1.1.2 // indirect

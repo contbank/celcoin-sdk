@@ -22,6 +22,7 @@ func NewMockServer() *httptest.Server {
 // RegisterWebhookRoutes registra as rotas relacionadas a Webhooks no handler.
 func RegisterWebhookRoutes(handler *http.ServeMux) {
 	handler.HandleFunc("/baas-webhookmanager/v1/webhook/subscription", handleCreateSubscription)
+	handler.HandleFunc("/dda-servicewebhook-webservice/v1/webhook/register", handleCreateSubscriptionDda)
 }
 
 // RegisterAuthRoutes registra as rotas relacionadas a autenticação no handler.
@@ -52,6 +53,36 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 
 // handleCreateSubscription simula o endpoint de criação de Webhook Subscription.
 func handleCreateSubscription(w http.ResponseWriter, r *http.Request) {
+	// Validar método HTTP
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Validar headers
+	if r.Header.Get("Content-Type") != "application/json" {
+		http.Error(w, "Unsupported Media Type", http.StatusUnsupportedMediaType)
+		return
+	}
+
+	// Validar payload
+	var req WebhookSubscriptionRequest
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		http.Error(w, "Bad Request", http.StatusBadRequest)
+		return
+	}
+
+	// Simular resposta de sucesso
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(WebhookSubscriptionResponse{
+		Version: "1.0.0",
+		Status:  "SUCCESS",
+	})
+}
+
+// handleCreateSubscriptionDda simula o endpoint de criação de Webhook Subscription DDA.
+func handleCreateSubscriptionDda(w http.ResponseWriter, r *http.Request) {
 	// Validar método HTTP
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
