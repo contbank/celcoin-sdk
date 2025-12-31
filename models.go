@@ -572,16 +572,17 @@ type BusinessOnboardingResponseBody struct {
 
 // BusinessOnboardingRequest ... representa o payload para o onboarding de uma empresa.
 type BusinessOnboardingRequest struct {
-	ClientCode      string  `json:"clientCode"`
-	ContactNumber   string  `json:"contactNumber"`
-	DocumentNumber  string  `json:"documentNumber"`
-	BusinessEmail   string  `json:"businessEmail"`
-	BusinessName    string  `json:"businessName"`
-	TradingName     string  `json:"tradingName"`
-	CompanyType     string  `json:"companyType"`
-	Owner           []Owner `json:"owner"`
-	BusinessAddress Address `json:"businessAddress"`
-	OnboardingType  string  `json:"onboardingType"`
+	ClientCode              string                   `json:"clientCode"`
+	ContactNumber           string                   `json:"contactNumber"`
+	DocumentNumber          string                   `json:"documentNumber"`
+	BusinessEmail           string                   `json:"businessEmail"`
+	BusinessName            string                   `json:"businessName"`
+	TradingName             string                   `json:"tradingName"`
+	CompanyType             string                   `json:"companyType"`
+	Owner                   []Owner                  `json:"owner"`
+	BusinessAddress         Address                  `json:"businessAddress"`
+	OnboardingType          string                   `json:"onboardingType"`
+	FinancialCompanyDetails *FinancialCompanyDetails `json:"financialCompanyDetails"`
 }
 
 // BusinessOnboardingRequest ... representa o payload para o onboarding de uma empresa na migração.
@@ -601,16 +602,18 @@ type BusinessOnboardingMigrationRequest struct {
 
 // Owner ...
 type Owner struct {
-	OwnerType                  string  `json:"ownerType"`
-	DocumentNumber             string  `json:"documentNumber"`
-	PhoneNumber                string  `json:"phoneNumber"`
-	Email                      string  `json:"email"`
-	FullName                   string  `json:"fullName"`
-	SocialName                 string  `json:"socialName"`
-	BirthDate                  string  `json:"birthDate"`
-	MotherName                 string  `json:"motherName"`
-	Address                    Address `json:"address"`
-	IsPoliticallyExposedPerson bool    `json:"isPoliticallyExposedPerson"`
+	OwnerType                  string                 `json:"ownerType"`
+	DocumentNumber             string                 `json:"documentNumber"`
+	PhoneNumber                string                 `json:"phoneNumber"`
+	Email                      string                 `json:"email"`
+	FullName                   string                 `json:"fullName"`
+	SocialName                 string                 `json:"socialName"`
+	BirthDate                  string                 `json:"birthDate"`
+	MotherName                 string                 `json:"motherName"`
+	Address                    Address                `json:"address"`
+	IsPoliticallyExposedPerson bool                   `json:"isPoliticallyExposedPerson"`
+	FinancialDetails           *FinancialDetails      `json:"financial_details,omitempty"`
+	FinancialOwnerDetails      *FinancialOwnerDetails `json:"financialOwnerDetails,omitempty"`
 }
 
 // BusinessAccount ...
@@ -658,17 +661,18 @@ type CustomerAddress struct {
 
 // Customer ... representa o cliente
 type Customer struct {
-	ClientCode                 string          `json:"clientCode"`
-	DocumentNumber             string          `json:"documentNumber"`
-	PhoneNumber                string          `json:"phoneNumber"`
-	Email                      string          `json:"email"`
-	MotherName                 string          `json:"motherName"`
-	FullName                   string          `json:"fullName"`
-	SocialName                 string          `json:"socialName"`
-	BirthDate                  string          `json:"birthDate"`
-	Address                    CustomerAddress `json:"address"`
-	IsPoliticallyExposedPerson bool            `json:"isPoliticallyExposedPerson"`
-	OnboardingType             string          `json:"onboardingType"`
+	ClientCode                 string            `json:"clientCode"`
+	DocumentNumber             string            `json:"documentNumber"`
+	PhoneNumber                string            `json:"phoneNumber"`
+	Email                      string            `json:"email"`
+	MotherName                 string            `json:"motherName"`
+	FullName                   string            `json:"fullName"`
+	SocialName                 string            `json:"socialName"`
+	BirthDate                  string            `json:"birthDate"`
+	Address                    CustomerAddress   `json:"address"`
+	IsPoliticallyExposedPerson bool              `json:"isPoliticallyExposedPerson"`
+	OnboardingType             string            `json:"onboardingType"`
+	FinancialDetails           *FinancialDetails `json:"financialDetails,omitempty"`
 }
 
 // CustomerMigration ... representa o cliente a ser migrado
@@ -2042,4 +2046,21 @@ type DdaRegisterUserBodyResponse struct {
 	ResponseDate    string `json:"responseDate"`
 	Status          string `json:"status"`
 	SubscriptionId  string `json:"subscriptionId"`
+}
+
+type FinancialDetails struct {
+	DeclaredIncome string `json:"declaredIncome"` // Renda (faixa de valor)
+	Occupation     string `json:"occupation"`     // Profissão (lista padronizada)
+	NetWorth       string `json:"netWorth"`       // Patrimônio (faixa de valor)
+}
+
+// Detalhes financeiros do sócio (PF ou PJ)
+type FinancialOwnerDetails struct {
+	OwnerDeclaredIncome  string `json:"ownerDeclaredIncome,omitempty"`  // Renda do sócio PF (Prefixo ODIB)
+	OwnerDeclaredRevenue string `json:"ownerDeclaredRevenue,omitempty"` // Faturamento do sócio PJ (Prefixo ODRB)
+}
+
+// Detalhes financeiros da própria empresa
+type FinancialCompanyDetails struct {
+	DeclaredCompanyRevenue string `json:"declaredCompanyRevenue"` // Faturamento anual da empresa (Prefixo DCRB)
 }
