@@ -1116,13 +1116,55 @@ type PixHolder struct {
 
 type QRCodeImmediateResponse struct {
 	Status             string           `json:"status"`
-	InfoAdicionais     *string          `json:"infoAdicionais,omitempty"`
+	InfoAdicionais     InfoAdicionais   `json:"infoAdicionais,omitempty"`
 	TxID               string           `json:"txid"`
 	Chave              string           `json:"chave"`
 	SolicitacaoPagador *string          `json:"solicitacaoPagador,omitempty"`
 	Valor              QRCodeValor      `json:"valor"`
 	Calendario         QRCodeCalendario `json:"calendario"`
 	Revisao            int              `json:"revisao"`
+}
+
+// InfoAdicionais aceita string ou array sem quebrar o unmarshal.
+// Quando vier string, normaliza para lista com um item.
+// Quando vier array, converte cada item para string (JSON raw quando necessário).
+type InfoAdicionais []string
+
+func (i *InfoAdicionais) UnmarshalJSON(data []byte) error {
+	if len(data) == 0 || string(data) == "null" {
+		return nil
+	}
+
+	var single string
+	if err := json.Unmarshal(data, &single); err == nil {
+		*i = InfoAdicionais{single}
+		return nil
+	}
+
+	var list []string
+	if err := json.Unmarshal(data, &list); err == nil {
+		*i = InfoAdicionais(list)
+		return nil
+	}
+
+	var rawList []json.RawMessage
+	if err := json.Unmarshal(data, &rawList); err == nil {
+		items := make([]string, 0, len(rawList))
+		for _, raw := range rawList {
+			var item string
+			if err := json.Unmarshal(raw, &item); err == nil {
+				items = append(items, item)
+				continue
+			}
+			items = append(items, string(raw))
+		}
+		*i = InfoAdicionais(items)
+		return nil
+	}
+
+	// Fallback: guarda o JSON bruto como string
+	*i = InfoAdicionais{string(data)}
+	return nil
 }
 
 type QRCodeValor struct {
