@@ -623,7 +623,7 @@ func (s *Pix) PaymentPixCashOut(ctx context.Context, req PixCashOutRequest) (*Pi
 	}
 
 	if errResponse.Error != nil {
-		err := FindPixError(*errResponse.Error.ErrorCode, &resp.StatusCode)
+		err := FindPixErrorWithMessage(*errResponse.Error.ErrorCode, &resp.StatusCode, errResponse.Error.Message)
 		logrus.WithField("celcoin_error", errResponse.Error).
 			WithFields(fields).WithError(err).
 			Error("celcoin get pix error")

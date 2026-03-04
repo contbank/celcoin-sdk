@@ -878,14 +878,24 @@ var PixErrorMappings = map[string]struct {
 	"CBE306":  {"CLAIM_NOT_PENDING", "Não foi possível confirmar essa Claim, pois a mesma não está mais pendente."},
 	"CBE320":  {"CLAIM_NOT_FOUND", "Claim não encontrada."},
 	"CBE348":  {"ACCOUNT_BLOCKED", "Operação não permitida. Conta está bloqueada."},
+	"CBE180":  {"PIX_KEY_NOT_FOUND", "Não encontramos a chave informada."},
 }
 
 // FindPixError ... retorna a mensagem de erro correspondente ao código de erro de Pix
 func FindPixError(code string, responseStatus *int) *grok.Error {
+	return FindPixErrorWithMessage(code, responseStatus, nil)
+}
+
+// FindPixErrorWithMessage ... retorna o erro PIX; se o código não estiver mapeado, usa apiMessage quando informado
+func FindPixErrorWithMessage(code string, responseStatus *int, apiMessage *string) *grok.Error {
 	if mapping, exists := PixErrorMappings[code]; exists {
 		return grok.NewError(*responseStatus, mapping.ContbankCode, mapping.Description)
 	}
-	return grok.NewError(http.StatusInternalServerError, "UNKNOWN_ERROR", "unknown error")
+	msg := "unknown error"
+	if apiMessage != nil && strings.TrimSpace(*apiMessage) != "" {
+		msg = strings.TrimSpace(*apiMessage)
+	}
+	return grok.NewError(http.StatusInternalServerError, "UNKNOWN_ERROR", msg)
 }
 
 // WebhookErrorMappings ... mapeia os códigos de erro do parceiro Celcoin para os códigos de erro do Contbank com descrição
