@@ -2,6 +2,9 @@ package celcoin
 
 import (
 	"encoding/json"
+	"fmt"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -465,10 +468,39 @@ type BankData struct {
 type ErrorResponse struct {
 	Errors    []ErrorModel `json:"errors,omitempty"`
 	Title     string       `json:"title,omitempty"`
-	Status    int32        `json:"status,omitempty"`
+	Status    FlexibleInt32 `json:"status,omitempty"`
 	TraceId   string       `json:"traceId,omitempty"`
 	Reference string       `json:"reference,omitempty"`
 	CodeMessageErrorResponse
+}
+
+// FlexibleInt32 unmarshals JSON numbers or numeric strings into int32.
+type FlexibleInt32 int32
+
+// UnmarshalJSON ...
+func (f *FlexibleInt32) UnmarshalJSON(data []byte) error {
+	if string(data) == "null" {
+		*f = 0
+		return nil
+	}
+
+	var n int32
+	if err := json.Unmarshal(data, &n); err == nil {
+		*f = FlexibleInt32(n)
+		return nil
+	}
+
+	var s string
+	if err := json.Unmarshal(data, &s); err == nil {
+		i, convErr := strconv.ParseInt(strings.TrimSpace(s), 10, 32)
+		if convErr != nil {
+			return convErr
+		}
+		*f = FlexibleInt32(i)
+		return nil
+	}
+
+	return fmt.Errorf("invalid FlexibleInt32 value: %s", string(data))
 }
 
 // ErrorDefaultResponse ...
