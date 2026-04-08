@@ -492,9 +492,13 @@ func (f *FlexibleInt32) UnmarshalJSON(data []byte) error {
 
 	var s string
 	if err := json.Unmarshal(data, &s); err == nil {
-		i, convErr := strconv.ParseInt(strings.TrimSpace(s), 10, 32)
+		normalized := strings.TrimSpace(s)
+		i, convErr := strconv.ParseInt(normalized, 10, 32)
 		if convErr != nil {
-			return convErr
+			// Some partner error payloads send textual status such as "ERROR" or "SUCCESS".
+			// Status is not used by current error-mapping flow, so keep parsing resilient.
+			*f = 0
+			return nil
 		}
 		*f = FlexibleInt32(i)
 		return nil
