@@ -48,12 +48,18 @@ const (
 
 	// Pix ...
 	PixClaimPath string = "/celcoin-baas-pix-dict-webservice/v1/pix/dict/claim"
-	PixDictPath  string = "/celcoin-baas-pix-dict-webservice/v1/pix/dict/entry"
+	// PixDictPath base legada para CRUD/listagem de chaves no dict v1 (não usar para consulta externa).
+	PixDictPath string = "/celcoin-baas-pix-dict-webservice/v1/pix/dict/entry"
+	// PixDictExternalEntryV2Path consulta de entrada DICT no BaaS v2: GET .../external/{account}?key=&ownerTaxId=
+	PixDictExternalEntryV2Path string = "/baas/v2/pix/dict/entry/external"
 	//Deprecated
 	PixDictDueDatePathDeprecated string = "/pix/v1/dict/v2/key"
-	PixDictDueDatePath           string = "/baas/v2/pix/dict/entry/external"
-	PixCashOutPath               string = "/baas-wallet-transactions-webservice/v1/pix/payment"
-	PixCashInPath                string = "/pix/v2/receivement/v2"
+	// PixDictDueDatePath alias do path v2 (COBV / consulta externa).
+	PixDictDueDatePath string = PixDictExternalEntryV2Path
+	// PixPaymentV2Path / PixCashOutPath — POST pagamento Pix Out BaaS v2.
+	PixPaymentV2Path string = "/baas/v2/pix/payment"
+	PixCashOutPath   string = PixPaymentV2Path
+	PixCashInPath    string = "/pix/v2/receivement/v2"
 	PixEmvPath                   string = "/pix/v1/emv"
 	PixStaticPath                string = "/pix/v1/brcode/static"
 	PixCashInStatusPath          string = "/pix/v2/receivement/v2/devolution/status"
@@ -868,17 +874,18 @@ type PixKeyResponseBody struct {
 
 // PixKeyAccount representa os detalhes da conta vinculada a uma Pix Key.
 type PixKeyAccount struct {
-	Participant string    `json:"participant"`
-	Branch      string    `json:"branch"`
-	Account     string    `json:"account"`
-	AccountType string    `json:"accountType"`
-	CreateDate  time.Time `json:"createDate"`
+	Participant   string    `json:"participant"`
+	Branch        string    `json:"branch"`
+	Account       string    `json:"account"`                 // número da conta (pode vir mascarado)
+	AccountNumber string    `json:"accountNumber,omitempty"` // alias BaaS v2 / DICT
+	AccountType   string    `json:"accountType"`
+	CreateDate    time.Time `json:"createDate"`
 }
 type PixExternalKeyAccount struct {
-	Participant string    `json:"participant"`
-	Branch      int       `json:"branch"`
-	Account     string    `json:"accountNumber"`
-	AccountType string    `json:"accountType"`
+	Participant string `json:"participant"`
+	Branch      string `json:"branch"`
+	Account     string `json:"accountNumber"`
+	AccountType string `json:"accountType"`
 	OpeningDate time.Time `json:"openingDate"`
 }
 
@@ -937,6 +944,7 @@ type PixExternalKeyResponseBody struct {
 	Key              string        `json:"key"`
 	Account          PixKeyAccount `json:"account"`
 	Owner            PixKeyOwner   `json:"owner"`
+	// EndToEndId: resposta GET DICT v2 usa endtoEndId (t minúsculo) conforme documentação Celcoin.
 	EndToEndId       string        `json:"endtoEndId"`
 	CreationDate     time.Time     `json:"creationDate"`
 	KeyOwnershipDate time.Time     `json:"keyOwnershipDate"`
@@ -961,7 +969,7 @@ type PixExternalKeyDueDateBody struct {
 	KeyType          string                       `json:"keyType"`
 	Account          PixExternalKeyAccountDueDate `json:"account"`
 	Owner            PixKeyOwner                  `json:"owner"`
-	EndToEndId       string                       `json:"endtoendid"`
+	EndToEndId       string                       `json:"endtoEndId"`
 	CreationDate     time.Time                    `json:"creationDate"`
 	KeyOwnershipDate time.Time                    `json:"keyOwnershipDate"`
 }
@@ -986,28 +994,28 @@ type PixCashOutRequest struct {
 	TransactionType           string      `json:"transactionType" description:"Tipo de transação: TRANSFER (padrão), CHANGE (Pix Troco), WITHDRAWAL (Pix Saque)."`
 }
 
-// DebitParty representa os dados do pagador.
+// DebitParty representa os dados do pagador (BaaS v2). Sandbox Celcoin aceita apenas account; demais omitempty.
 type DebitParty struct {
-	Account     string `json:"account" description:"Conta bancária do pagador"`
-	Bank        string `json:"bank" description:"Banco do pagador"`
-	Branch      string `json:"branch" description:"Agência do pagador"`
-	PersonType  string `json:"personType" description:"Tipo de pessoa do pagador (Física/Jurídica)"`
-	TaxId       string `json:"taxId" description:"CPF/CNPJ do pagador"`
-	AccountType string `json:"accountType" description:"Tipo de conta do pagador CACC, TRAN, SLRY, SVGS"`
-	Key         string `json:"key,omitempty"`
+	Account     string `json:"account"`
+	Bank        string `json:"bank,omitempty"`
+	Branch      string `json:"branch,omitempty"`
+	TaxId       string `json:"taxId,omitempty"`
 	Name        string `json:"name,omitempty"`
+	AccountType string `json:"accountType,omitempty"`
+	PersonType  string `json:"personType,omitempty"`
+	Key         string `json:"key,omitempty"`
 }
 
-// CreditParty representa os dados do recebedor.
+// CreditParty representa os dados do recebedor. Documento do favorecido: JSON documentNumber (campo Go TaxId).
 type CreditParty struct {
-	Account     string `json:"account" description:"Conta bancária do recebedor"`
-	Bank        string `json:"bank" description:"Banco do recebedor"`
-	Branch      string `json:"branch" description:"Agência do recebedor"`
-	PersonType  string `json:"personType" description:"Tipo de pessoa do recebedor (Física/Jurídica)"`
-	TaxId       string `json:"taxId" description:"CPF/CNPJ do recebedor"`
-	AccountType string `json:"accountType" description:"Tipo de conta do recebedor CACC, TRAN, SLRY, SVGS "`
-	Name        string `json:"name" description:"Nome do recebedor"`
-	Key         string `json:"key" description:"Chave Pix do recebedor"`
+	Bank        string `json:"bank,omitempty"`
+	Account     string `json:"account,omitempty"`
+	Branch      string `json:"branch,omitempty"`
+	TaxId       string `json:"documentNumber,omitempty"` // consulta DICT / mascarado (*)
+	Name        string `json:"name,omitempty"`
+	AccountType string `json:"accountType,omitempty"`
+	Key         string `json:"key,omitempty"`
+	PersonType  string `json:"personType,omitempty"`
 }
 
 // PixCashOutResponse ...
@@ -1030,7 +1038,7 @@ type PixCashOutResponseBody struct {
 	Amount                    float64     `json:"amount"`
 	ClientCode                string      `json:"clientCode"` // identificador unico fornecido pelo cliente na requisição de payment.
 	TransactionIdentification *string     `json:"transactionIdentification,omitempty"`
-	EndToEndID                string      `json:"endToEndId"` // identificador ponta-a-ponta da transação. O mesmo retornado na consulta DICT e no retorno do endpoint de pagamento (/baas-wallet-transactions-webservice/v1/pix/payment).
+	EndToEndID                string      `json:"endToEndId"` // mesmo identificador da consulta DICT; retorno do POST /baas/v2/pix/payment.
 	InitiationType            string      `json:"initiationType"`
 	PaymentType               string      `json:"paymentType"`
 	Urgency                   string      `json:"urgency"`
