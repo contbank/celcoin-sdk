@@ -248,18 +248,8 @@ func (s *PixsTestSuite) TestPaymentPixCashOut() {
 			Amount:                    25.55,
 			TransactionIdentification: &transactionIdentification,
 			InitiationType:            "DYNAMIC_QRCODE",
-			DebitParty: celcoin.DebitParty{
-				Account: "444444",
-			},
-			CreditParty: celcoin.CreditParty{
-				Bank:        "30306294",
-				Key:         "5244f4e-15ff-413d-808d-7837652ebdc2",
-				Account:     "10545584",
-				Branch:      "10545584",
-				TaxId:       "11122233344",
-				Name:        "Celcoin",
-				AccountType: "CACC",
-			},
+			DebitParty:                dynamicQRCodeRequest.DebitParty,
+			CreditParty:               dynamicQRCodeRequest.CreditParty,
 			RemittanceInformation: "Texto de mensagem",
 		},
 	}
@@ -355,13 +345,13 @@ func (s *PixsTestSuite) TestPaymentPixCashOut() {
 		Urgency:         "HIGH",
 		TransactionType: "TRANSFER",
 		DebitParty: celcoin.DebitParty{
-			Account: "444444",
+			Account: "99999",
 		},
 		CreditParty: celcoin.CreditParty{
-			Bank:        "30306294",
-			Key:         "5244f4e-15ff-413d-808d-7837652ebdc2",
-			Name:        "Celcoin",
-			AccountType: "CACC",
+			Bank:   "18236120",
+			Key:    "teste@celcoin.com.br",
+			TaxId:  "***778477**",
+			Name:   "teste celcoin",
 		},
 		RemittanceInformation: "Texto de mensagem",
 	}

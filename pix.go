@@ -319,22 +319,27 @@ func (s *Pix) GetExternalPixKey(ctx context.Context, account string, key string,
 	}
 	logrus.WithFields(fields).Info("Get External Pix Key")
 
-	// Parâmetros para a query string
-	params := map[string]string{
-		"key":        key,
-		"ownerTaxId": ownerTaxId,
-	}
-
-	endpoint, err := s.BuildEndpoint(PixDictPath, params, "external", account)
-
+	// BaaS v2: GET {API}/baas/v2/pix/dict/entry/external/{account}?key=&ownerTaxId=
+	u, err := url.Parse(s.session.APIEndpoint)
 	if err != nil {
-		logrus.WithFields(fields).WithError(err).Error("Error building endpoint")
+		logrus.WithFields(fields).WithError(err).Error("Error parsing API endpoint")
 		return nil, err
 	}
+	u.Path = path.Join(u.Path, PixDictExternalEntryV2Path)
+	u.Path = path.Join(u.Path, account)
+	q := u.Query()
+	if key != "" {
+		q.Set("key", key)
+	}
+	if ownerTaxId != "" {
+		q.Set("ownerTaxId", ownerTaxId)
+	}
+	u.RawQuery = q.Encode()
+	endpoint := u.String()
 
-	logrus.WithField("endpoint", *endpoint).Info("Endpoint built successfully")
+	logrus.WithField("endpoint", endpoint).Info("Endpoint built successfully")
 
-	httpReq, err := http.NewRequestWithContext(ctx, "GET", *endpoint, nil)
+	httpReq, err := http.NewRequestWithContext(ctx, "GET", endpoint, nil)
 	if err != nil {
 		logrus.WithFields(fields).WithError(err).Error("Error creating HTTP request")
 		return nil, fmt.Errorf("error creating HTTP request: %v", err)
@@ -401,7 +406,7 @@ func (s *Pix) GetExternalPixKeyDueDate(ctx context.Context,
 		return nil, err
 	}
 
-	u.Path = path.Join(u.Path, PixDictDueDatePath)
+	u.Path = path.Join(u.Path, PixDictExternalEntryV2Path)
 
 	if account != nil {
 		u.Path = path.Join(u.Path, *account)
@@ -556,6 +561,16 @@ func (s *Pix) GetExternalPixKeyDueDateDeprecated(ctx context.Context, documentNu
 	return nil, ErrDefaultPix
 }
 
+// logPixPaymentPayloadIfSandbox registra o JSON do POST Pix Out v2 apenas em sandbox/dev (validação de payload).
+func (s *Pix) logPixPaymentPayloadIfSandbox(payload []byte) {
+	env := strings.ToUpper(strings.TrimSpace(s.session.Environment))
+	ep := strings.ToLower(s.session.APIEndpoint)
+	if env != CelcoinEnvSandbox && !strings.Contains(ep, "sandbox") && !strings.Contains(ep, "openfinance.celcoin.dev") {
+		return
+	}
+	logrus.WithField("celcoin_baas_v2_pix_payment_json", string(payload)).Debug("Pix Out v2 JSON enviado à Celcoin")
+}
+
 // PerformPixCashOut ...
 // Realizar um Pix Cash-Out por Chaves Pix
 // Realizar um Pix Cash-Out por Agência e Conta
@@ -575,7 +590,7 @@ func (s *Pix) PaymentPixCashOut(ctx context.Context, req PixCashOutRequest) (*Pi
 		return nil, err
 	}
 
-	endpoint, err := s.BuildEndpoint(PixCashOutPath, nil)
+	endpoint, err := s.BuildEndpoint(PixPaymentV2Path, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -587,6 +602,7 @@ func (s *Pix) PaymentPixCashOut(ctx context.Context, req PixCashOutRequest) (*Pi
 		logrus.WithFields(fields).WithError(err).Error("Error serializing request")
 		return nil, fmt.Errorf("error serializing request: %v", err)
 	}
+	s.logPixPaymentPayloadIfSandbox(payload)
 
 	httpReq, err := http.NewRequestWithContext(ctx, "POST", *endpoint, bytes.NewReader(payload))
 	if err != nil {
@@ -719,7 +735,7 @@ func (s *Pix) GetPixCashoutStatus(ctx context.Context, id, endtoendId, clientCod
 		"clientCode": clientCode,
 	}
 
-	endpoint, err := s.BuildEndpoint(PixCashOutPath, params, "status")
+	endpoint, err := s.BuildEndpoint(PixPaymentV2Path, params, "status")
 	if err != nil {
 		return nil, err
 	}
@@ -1550,7 +1566,15 @@ func (s *Pix) GetAddressKey(ctx context.Context, key, currentIdentity, account s
 			return nil, fmt.Errorf("failed to get external pix key: %v", err)
 		}
 		holder_type := "CPF"
-		if len(externalPixResponse.Body.Owner.DocumentNumber) > 11 {
+		doc := externalPixResponse.Body.Owner.DocumentNumber
+		if strings.Contains(doc, "*") {
+			switch strings.ToUpper(strings.TrimSpace(externalPixResponse.Body.KeyType)) {
+			case "CNPJ":
+				holder_type = "CNPJ"
+			default:
+				holder_type = "CPF"
+			}
+		} else if len(grok.OnlyDigits(doc)) > 11 {
 			holder_type = "CNPJ"
 		}
 		// Atualizar o response com base na resposta do GetExternalPixKey

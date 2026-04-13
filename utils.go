@@ -7,7 +7,6 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
-	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -276,10 +275,28 @@ func ParseStringToCelcoinTime(value string, layout string) (time.Time, error) {
 /* PIX */
 
 var requiredFieldsForPixCashOut = map[string][]string{
-	"DYNAMIC_QRCODE": {"amount", "clientCode", "transactionIdentification", "endToEndId", "debitParty.account", "creditParty.bank", "creditParty.key", "creditParty.name"},
-	"STATIC_QRCODE":  {"amount", "clientCode", "transactionIdentification", "endToEndId", "debitParty.account", "creditParty.bank", "creditParty.key", "creditParty.name", "creditParty.accountType"},
-	"DICT":           {"amount", "clientCode", "endToEndId", "debitParty.account", "creditParty.bank", "creditParty.key"},
-	"MANUAL":         {"amount", "clientCode", "initiationType", "paymentType", "debitParty.account", "creditParty.bank", "creditParty.account", "creditParty.branch", "creditParty.taxId", "creditParty.accountType"},
+	"DYNAMIC_QRCODE": {
+		"amount", "clientCode", "transactionIdentification", "endToEndId",
+		"debitParty.account",
+		"creditParty.bank", "creditParty.key", "creditParty.name", "creditParty.documentNumber",
+		"creditParty.account", "creditParty.branch",
+	},
+	"STATIC_QRCODE": {
+		"amount", "clientCode", "transactionIdentification", "endToEndId",
+		"debitParty.account",
+		"creditParty.bank", "creditParty.key", "creditParty.name", "creditParty.documentNumber", "creditParty.accountType",
+		"creditParty.account", "creditParty.branch",
+	},
+	"DICT": {
+		"amount", "clientCode", "endToEndId",
+		"debitParty.account",
+		"creditParty.bank", "creditParty.key", "creditParty.documentNumber", "creditParty.name",
+	},
+	"MANUAL": {
+		"amount", "clientCode", "initiationType", "paymentType",
+		"debitParty.account",
+		"creditParty.bank", "creditParty.account", "creditParty.branch", "creditParty.documentNumber", "creditParty.accountType",
+	},
 }
 
 func validatePixCashOut(req PixCashOutRequest) error {
@@ -303,15 +320,19 @@ func validatePixCashOut(req PixCashOutRequest) error {
 			return fmt.Errorf("invalid fields for InitiationType MANUAL")
 		}
 	case "DICT":
-		if req.TransactionIdentification != "" || req.CreditParty.Key == "" || req.EndToEndId == "" {
-			return fmt.Errorf("invalid fields for InitiationType DICT")
+		// DICT: sem transactionIdentification; key + endToEndId obrigatórios; taxId/conta podem vir mascarados (*).
+		if strings.TrimSpace(req.TransactionIdentification) != "" {
+			return fmt.Errorf("invalid fields for InitiationType DICT: transactionIdentification must be empty")
+		}
+		if strings.TrimSpace(req.CreditParty.Key) == "" || strings.TrimSpace(req.EndToEndId) == "" {
+			return fmt.Errorf("invalid fields for InitiationType DICT: key and endToEndId are required")
 		}
 	case "STATIC_QRCODE":
-		if len(req.TransactionIdentification) > 25 || req.CreditParty.Key == "" || req.EndToEndId == "" {
+		if len(req.TransactionIdentification) > 25 || strings.TrimSpace(req.CreditParty.Key) == "" || strings.TrimSpace(req.EndToEndId) == "" {
 			return fmt.Errorf("invalid fields for InitiationType STATIC_QRCODE")
 		}
 	case "DYNAMIC_QRCODE":
-		if len(req.TransactionIdentification) < 26 || len(req.TransactionIdentification) > 35 || req.CreditParty.Key == "" || req.EndToEndId == "" {
+		if len(req.TransactionIdentification) < 26 || len(req.TransactionIdentification) > 35 || strings.TrimSpace(req.CreditParty.Key) == "" || strings.TrimSpace(req.EndToEndId) == "" {
 			return fmt.Errorf("invalid fields for InitiationType DYNAMIC_QRCODE")
 		}
 	case "PAYMENT_INITIATOR":
@@ -361,35 +382,48 @@ func validatePixCashOut(req PixCashOutRequest) error {
 	return nil
 }
 
-// Função auxiliar para verificar se um campo existe no PixCashOutRequest
+// fieldExists valida caminhos do PixCashOutRequest (BaaS v2); strings com '*' contam como preenchidas.
 func fieldExists(req PixCashOutRequest, fieldPath string) bool {
-	// Separar os campos aninhados por "."
-	fields := strings.Split(fieldPath, ".")
-	val := reflect.ValueOf(req)
-
-	for _, field := range fields {
-		if val.Kind() == reflect.Ptr {
-			val = val.Elem()
-		}
-
-		if val.Kind() != reflect.Struct {
-			return false
-		}
-
-		val = val.FieldByName(strings.Title(field))
-		if !val.IsValid() {
-			return false
-		}
+	switch fieldPath {
+	case "amount":
+		return req.Amount != 0
+	case "clientCode":
+		return strings.TrimSpace(req.ClientCode) != ""
+	case "transactionIdentification":
+		return strings.TrimSpace(req.TransactionIdentification) != ""
+	case "endToEndId":
+		return strings.TrimSpace(req.EndToEndId) != ""
+	case "initiationType":
+		return strings.TrimSpace(req.InitiationType) != ""
+	case "paymentType":
+		return strings.TrimSpace(req.PaymentType) != ""
+	case "debitParty.account":
+		return strings.TrimSpace(req.DebitParty.Account) != ""
+	case "debitParty.bank":
+		return strings.TrimSpace(req.DebitParty.Bank) != ""
+	case "debitParty.branch":
+		return strings.TrimSpace(req.DebitParty.Branch) != ""
+	case "debitParty.taxId":
+		return strings.TrimSpace(req.DebitParty.TaxId) != ""
+	case "debitParty.name":
+		return strings.TrimSpace(req.DebitParty.Name) != ""
+	case "debitParty.accountType":
+		return strings.TrimSpace(req.DebitParty.AccountType) != ""
+	case "creditParty.account":
+		return strings.TrimSpace(req.CreditParty.Account) != ""
+	case "creditParty.bank":
+		return strings.TrimSpace(req.CreditParty.Bank) != ""
+	case "creditParty.branch":
+		return strings.TrimSpace(req.CreditParty.Branch) != ""
+	case "creditParty.taxId", "creditParty.documentNumber":
+		return strings.TrimSpace(req.CreditParty.TaxId) != ""
+	case "creditParty.accountType":
+		return strings.TrimSpace(req.CreditParty.AccountType) != ""
+	case "creditParty.name":
+		return strings.TrimSpace(req.CreditParty.Name) != ""
+	case "creditParty.key":
+		return strings.TrimSpace(req.CreditParty.Key) != ""
+	default:
+		return false
 	}
-
-	// Verificar se o valor não é nulo ou zero
-	return !isZeroValue(val)
-}
-
-// Função auxiliar para verificar se o valor é zero
-func isZeroValue(val reflect.Value) bool {
-	return (val.Kind() == reflect.Ptr && val.IsNil()) ||
-		(val.Kind() == reflect.String && val.Len() == 0) ||
-		(val.Kind() == reflect.Slice && val.Len() == 0) ||
-		(val.IsValid() && reflect.DeepEqual(val.Interface(), reflect.Zero(val.Type()).Interface()))
 }
