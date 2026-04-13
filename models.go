@@ -1006,12 +1006,12 @@ type DebitParty struct {
 	Key         string `json:"key,omitempty"`
 }
 
-// CreditParty representa os dados do recebedor. Documento do favorecido: JSON documentNumber (campo Go TaxId).
+// CreditParty representa o recebedor no POST Pix Out. O documento vai em taxId (mesmo valor vindo do GET DICT como owner.documentNumber).
 type CreditParty struct {
 	Bank        string `json:"bank,omitempty"`
 	Account     string `json:"account,omitempty"`
 	Branch      string `json:"branch,omitempty"`
-	TaxId       string `json:"documentNumber,omitempty"` // consulta DICT / mascarado (*)
+	TaxId       string `json:"taxId,omitempty"`
 	Name        string `json:"name,omitempty"`
 	AccountType string `json:"accountType,omitempty"`
 	Key         string `json:"key,omitempty"`

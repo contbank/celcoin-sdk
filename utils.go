@@ -278,24 +278,24 @@ var requiredFieldsForPixCashOut = map[string][]string{
 	"DYNAMIC_QRCODE": {
 		"amount", "clientCode", "transactionIdentification", "endToEndId",
 		"debitParty.account",
-		"creditParty.bank", "creditParty.key", "creditParty.name", "creditParty.documentNumber",
+		"creditParty.bank", "creditParty.key", "creditParty.name", "creditParty.taxId",
 		"creditParty.account", "creditParty.branch",
 	},
 	"STATIC_QRCODE": {
 		"amount", "clientCode", "transactionIdentification", "endToEndId",
 		"debitParty.account",
-		"creditParty.bank", "creditParty.key", "creditParty.name", "creditParty.documentNumber", "creditParty.accountType",
+		"creditParty.bank", "creditParty.key", "creditParty.name", "creditParty.taxId", "creditParty.accountType",
 		"creditParty.account", "creditParty.branch",
 	},
 	"DICT": {
 		"amount", "clientCode", "endToEndId",
 		"debitParty.account",
-		"creditParty.bank", "creditParty.key", "creditParty.documentNumber", "creditParty.name",
+		"creditParty.bank", "creditParty.key", "creditParty.taxId", "creditParty.name",
 	},
 	"MANUAL": {
 		"amount", "clientCode", "initiationType", "paymentType",
 		"debitParty.account",
-		"creditParty.bank", "creditParty.account", "creditParty.branch", "creditParty.documentNumber", "creditParty.accountType",
+		"creditParty.bank", "creditParty.account", "creditParty.branch", "creditParty.taxId", "creditParty.accountType",
 	},
 }
 
@@ -415,7 +415,7 @@ func fieldExists(req PixCashOutRequest, fieldPath string) bool {
 		return strings.TrimSpace(req.CreditParty.Bank) != ""
 	case "creditParty.branch":
 		return strings.TrimSpace(req.CreditParty.Branch) != ""
-	case "creditParty.taxId", "creditParty.documentNumber":
+	case "creditParty.taxId":
 		return strings.TrimSpace(req.CreditParty.TaxId) != ""
 	case "creditParty.accountType":
 		return strings.TrimSpace(req.CreditParty.AccountType) != ""
