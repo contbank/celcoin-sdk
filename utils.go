@@ -279,13 +279,11 @@ var requiredFieldsForPixCashOut = map[string][]string{
 		"amount", "clientCode", "transactionIdentification", "endToEndId",
 		"debitParty.account",
 		"creditParty.bank", "creditParty.key", "creditParty.name", "creditParty.taxId",
-		"creditParty.account", "creditParty.branch",
 	},
 	"STATIC_QRCODE": {
 		"amount", "clientCode", "transactionIdentification", "endToEndId",
 		"debitParty.account",
 		"creditParty.bank", "creditParty.key", "creditParty.name", "creditParty.taxId", "creditParty.accountType",
-		"creditParty.account", "creditParty.branch",
 	},
 	"DICT": {
 		"amount", "clientCode", "endToEndId",
