@@ -815,6 +815,7 @@ var PixErrorMappings = map[string]struct {
 	"CBE236": {"KEY_ALREADY_REGISTERED", "Chave já cadastrada em outro participante."},
 	"CBE410": {"OPERATION_NOT_COMPLETED", "Não foi possível realizar essa operação."},
 	"CBE179": {"MISSING_KEY_FIELD", "É necessário informar o campo: key."},
+	"CBE197": {"KEY_TYPE_NOT_ALLOWED", "Tipo de chave não permitido para esta conta."},
 	"CBE190": {"KEY_NOT_LINKED_TO_ACCOUNT", "Operação não permitida. Chave não está vinculada a essa conta."},
 	// Novos erros
 	"CBE001":  {"MISSING_CLIENT_CODE", "ClientCode é obrigatório."},
@@ -888,16 +889,21 @@ func FindPixError(code string, responseStatus *int) *grok.Error {
 	return FindPixErrorWithMessage(code, responseStatus, nil)
 }
 
-// FindPixErrorWithMessage ... retorna o erro PIX; se o código não estiver mapeado, usa apiMessage quando informado
+// FindPixErrorWithMessage ... retorna o erro PIX. Código não mapeado vira PIX_PARTNER_ERROR com a
+// mensagem da Celcoin (já em português) e o status 4xx dela; sem 4xx, 502 (falha do parceiro).
 func FindPixErrorWithMessage(code string, responseStatus *int, apiMessage *string) *grok.Error {
 	if mapping, exists := PixErrorMappings[code]; exists {
 		return grok.NewError(*responseStatus, mapping.ContbankCode, mapping.Description)
 	}
-	msg := "unknown error"
+	status := http.StatusBadGateway
+	if responseStatus != nil && *responseStatus >= 400 && *responseStatus < 500 {
+		status = *responseStatus
+	}
+	msg := "Não foi possível concluir a operação Pix agora. Tente novamente."
 	if apiMessage != nil && strings.TrimSpace(*apiMessage) != "" {
 		msg = strings.TrimSpace(*apiMessage)
 	}
-	return grok.NewError(http.StatusInternalServerError, "UNKNOWN_ERROR", msg)
+	return grok.NewError(status, "PIX_PARTNER_ERROR", msg)
 }
 
 // WebhookErrorMappings ... mapeia os códigos de erro do parceiro Celcoin para os códigos de erro do Contbank com descrição
