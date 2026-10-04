@@ -1985,10 +1985,10 @@ func (s *Pix) ConfirmPixClaim(ctx context.Context, req PixClaimActionRequest) (*
 	return nil, ErrDefaultPix
 }
 
-// CancelPixClaim Cancelar pedido de portabilidade recebido
+// CancelPixClaim cancela um pedido de portabilidade/reivindicação (enviado ou recebido).
 func (s *Pix) CancelPixClaim(ctx context.Context, req PixClaimActionRequest) (*PixClaimResponse, error) {
 	fields := logrus.Fields{"request": req}
-	logrus.WithFields(fields).Info("Confirm Pix Claim")
+	logrus.WithFields(fields).Info("Cancel Pix Claim")
 
 	err := grok.Validator.Struct(req)
 	if err != nil {
@@ -1998,11 +1998,11 @@ func (s *Pix) CancelPixClaim(ctx context.Context, req PixClaimActionRequest) (*P
 
 	endpoint, err := s.BuildEndpoint(PixClaimPath, nil, "cancel")
 	if err != nil {
-		logrus.WithFields(fields).WithError(err).Error("Error building endpoint for ConfirmPixClaim")
+		logrus.WithFields(fields).WithError(err).Error("Error building endpoint for CancelPixClaim")
 		return nil, err
 	}
 
-	logrus.WithField("endpoint", *endpoint).Info("Calling ConfirmPixClaim")
+	logrus.WithField("endpoint", *endpoint).Info("Calling CancelPixClaim")
 
 	payload, err := json.Marshal(req)
 	if err != nil {
@@ -2062,7 +2062,7 @@ func (s *Pix) CancelPixClaim(ctx context.Context, req PixClaimActionRequest) (*P
 
 // GetPixClaim consulta um pedido de portabilidade de chave Pix.
 func (s *Pix) GetPixClaim(ctx context.Context, claimID string) (*PixClaimResponse, error) {
-	fields := logrus.Fields{"account": claimID}
+	fields := logrus.Fields{"claim_id": claimID}
 	logrus.WithFields(fields).Info("Get Pix Claim")
 
 	endpoint, err := s.BuildEndpoint(PixClaimPath, nil, claimID)
@@ -2135,15 +2135,20 @@ func (s *Pix) GetPixClaimList(ctx context.Context, dateFrom, dateTo string, limi
 	logrus.WithFields(fields).Info("Get Pix Claim List")
 
 	queryParams := map[string]string{
-		"DateFrom":     dateFrom,
-		"DateTo":       dateTo,
-		"LimitPerPage": fmt.Sprintf("%d", limit),
-		"Page":         fmt.Sprintf("%d", page),
-		"Status":       status,
-		"claimType":    claimType,
+		"DateFrom":  dateFrom,
+		"DateTo":    dateTo,
+		"Status":    status,
+		"claimType": claimType,
+	}
+	// zero = default da Celcoin (BuildEndpoint ignora vazios)
+	if limit > 0 {
+		queryParams["LimitPerPage"] = fmt.Sprintf("%d", limit)
+	}
+	if page > 0 {
+		queryParams["Page"] = fmt.Sprintf("%d", page)
 	}
 
-	endpoint, err := s.BuildEndpoint(PixClaimPath, queryParams)
+	endpoint, err := s.BuildEndpoint(PixClaimPath, queryParams, "list")
 	if err != nil {
 		logrus.WithFields(fields).WithError(err).Error("Error building endpoint for GetPixClaimList")
 		return nil, err

@@ -47,7 +47,11 @@ const (
 	InternalTransfersPath string = "/baas-wallet-transactions-webservice/v1/wallet/internal/transfer"
 
 	// Pix ...
-	PixClaimPath string = "/celcoin-baas-pix-dict-webservice/v1/pix/dict/claim"
+	// PixClaimPath portabilidade/reivindicação no BaaS v2: POST (abrir), POST /confirm, POST /cancel,
+	// GET /{id} e GET /list.
+	PixClaimPath string = "/baas/v2/pix/dict/claim"
+	//Deprecated
+	PixClaimPathDeprecated string = "/celcoin-baas-pix-dict-webservice/v1/pix/dict/claim"
 	// PixDictPath base legada para CRUD/listagem de chaves no dict v1 (não usar para consulta externa).
 	PixDictPath string = "/celcoin-baas-pix-dict-webservice/v1/pix/dict/entry"
 	// PixDictExternalEntryV2Path consulta de entrada DICT no BaaS v2: GET .../external/{account}?key=&ownerTaxId=
@@ -207,13 +211,15 @@ const (
 	Open              StatusClaim = "OPEN"
 	WaitingResolution StatusClaim = "WAITING_RESOLUTION"
 	Confirmed         StatusClaim = "CONFIRMED"
-	CanceledClaim     StatusClaim = "CANCELED"
+	CanceledClaim     StatusClaim = "CANCELLED" // a API e os webhooks usam dois L
 	CompletedClaim    StatusClaim = "COMPLETED"
 )
 
 type CancelReason string
 
 const (
+	// Reasons aceitos por /claim/confirm e /claim/cancel (v2): USER_REQUESTED, ACCOUNT_CLOSURE, FRAUD,
+	// DEFAULT_OPERATION. CLAIMER_REQUEST e DONOR_REQUEST não constam da API v2.
 	UserRequested    CancelReason = "USER_REQUESTED"
 	ClaimerRequest   CancelReason = "CLAIMER_REQUEST"
 	DonorRequest     CancelReason = "DONOR_REQUEST"
@@ -1476,12 +1482,13 @@ type PixQrCodeLocationResponse struct {
 	Merchant        PixQrCodeMerchant `json:"merchant"`
 }
 
-// PixClaimRequest representa o payload para requisições de portabilidade de chave Pix.
+// PixClaimRequest representa o payload para abrir portabilidade (PORTABILITY) ou reivindicação de
+// posse (OWNERSHIP). EVP não aceita claim (CBE286).
 type PixClaimRequest struct {
-	Key       string `json:"key" validate:"required"`
-	KeyType   string `json:"keyType" validate:"required,oneof=EMAIL CPF CNPJ PHONE EVP"`
-	Account   string `json:"account" validate:"required"`
-	ClaimType string `json:"claimType" validate:"required,oneof=OWNERSHIP"`
+	Key       string `json:"key" validate:"required,max=77"`
+	KeyType   string `json:"keyType" validate:"required,oneof=EMAIL CPF CNPJ PHONE"`
+	Account   string `json:"account" validate:"required,max=20"`
+	ClaimType string `json:"claimType" validate:"required,oneof=OWNERSHIP PORTABILITY"`
 }
 
 // PixClaimResponse representa a resposta de operações individuais de portabilidade de chave Pix.
@@ -1524,9 +1531,10 @@ type PixClaimListResponseBody struct {
 }
 
 // PixClaimActionRequest representa requisições para confirmação ou cancelamento de portabilidade.
+// Reason é opcional na API (default USER_REQUESTED).
 type PixClaimActionRequest struct {
 	ID     string `json:"id" validate:"required"`
-	Reason string `json:"reason" validate:"required"`
+	Reason string `json:"reason,omitempty" validate:"omitempty,oneof=USER_REQUESTED ACCOUNT_CLOSURE FRAUD DEFAULT_OPERATION"`
 }
 
 // PixKeyAccount representa os detalhes da conta bancária associada a uma chave Pix.
