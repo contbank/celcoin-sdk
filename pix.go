@@ -169,7 +169,7 @@ func (s *Pix) CreatePixKey(ctx context.Context, req PixKeyRequest) (*PixKeyRespo
 	}
 
 	if errResponse.Error != nil {
-		err := FindPixError(*errResponse.Error.ErrorCode, &resp.StatusCode)
+		err := FindPixErrorWithMessage(*errResponse.Error.ErrorCode, &resp.StatusCode, errResponse.Error.Message)
 		logrus.WithField("celcoin_error", errResponse.Error).
 			WithFields(fields).WithError(err).
 			Error("celcoin get pix error")
@@ -231,7 +231,7 @@ func (s *Pix) GetPixKeys(ctx context.Context, account string) (*PixKeyListRespon
 	}
 
 	if errResponse.Error != nil {
-		err := FindPixError(*errResponse.Error.ErrorCode, &resp.StatusCode)
+		err := FindPixErrorWithMessage(*errResponse.Error.ErrorCode, &resp.StatusCode, errResponse.Error.Message)
 		logrus.WithField("celcoin_error", errResponse.Error).
 			WithFields(fields).WithError(err).
 			Error("celcoin get pix error")
@@ -300,7 +300,7 @@ func (s *Pix) DeletePixKey(ctx context.Context, account, key string) error {
 	}
 
 	if errResponse.Error != nil {
-		err := FindPixError(*errResponse.Error.ErrorCode, &resp.StatusCode)
+		err := FindPixErrorWithMessage(*errResponse.Error.ErrorCode, &resp.StatusCode, errResponse.Error.Message)
 		logrus.WithField("celcoin_error", errResponse.Error).
 			WithFields(fields).WithError(err).
 			Error("celcoin get pix error")
@@ -379,7 +379,7 @@ func (s *Pix) GetExternalPixKey(ctx context.Context, account string, key string,
 	}
 
 	if errResponse.Error != nil {
-		err := FindPixError(*errResponse.Error.ErrorCode, &resp.StatusCode)
+		err := FindPixErrorWithMessage(*errResponse.Error.ErrorCode, &resp.StatusCode, errResponse.Error.Message)
 		logrus.WithField("celcoin_error", errResponse.Error).
 			WithFields(fields).WithError(err).
 			Error("celcoin get pix error")
@@ -471,7 +471,7 @@ func (s *Pix) GetExternalPixKeyDueDate(ctx context.Context,
 	}
 
 	if errResponse.Error != nil {
-		err := FindPixError(*errResponse.Error.ErrorCode, &resp.StatusCode)
+		err := FindPixErrorWithMessage(*errResponse.Error.ErrorCode, &resp.StatusCode, errResponse.Error.Message)
 		logrus.WithField("celcoin_error", errResponse.Error).
 			WithFields(fields).WithError(err).
 			Error("celcoin get pix error")
@@ -551,7 +551,7 @@ func (s *Pix) GetExternalPixKeyDueDateDeprecated(ctx context.Context, documentNu
 	}
 
 	if errResponse.Error != nil {
-		err := FindPixError(*errResponse.Error.ErrorCode, &resp.StatusCode)
+		err := FindPixErrorWithMessage(*errResponse.Error.ErrorCode, &resp.StatusCode, errResponse.Error.Message)
 		logrus.WithField("celcoin_error", errResponse.Error).
 			WithFields(fields).WithError(err).
 			Error("celcoin get pix error")
@@ -709,7 +709,7 @@ func (s *Pix) DecodeEmvQRCode(ctx context.Context, emv string) (*QRCodeResponse,
 	}
 
 	if errResponse.Error != nil {
-		err := FindPixError(*errResponse.Error.ErrorCode, &resp.StatusCode)
+		err := FindPixErrorWithMessage(*errResponse.Error.ErrorCode, &resp.StatusCode, errResponse.Error.Message)
 		logrus.WithField("celcoin_error", errResponse.Error).
 			WithFields(fields).WithError(err).
 			Error("celcoin get pix error")
@@ -785,7 +785,7 @@ func (s *Pix) GetPixCashoutStatus(ctx context.Context, id, endtoendId, clientCod
 	}
 
 	if errResponse.Error != nil {
-		err := FindPixError(*errResponse.Error.ErrorCode, &resp.StatusCode)
+		err := FindPixErrorWithMessage(*errResponse.Error.ErrorCode, &resp.StatusCode, errResponse.Error.Message)
 		logrus.WithField("celcoin_error", errResponse.Error).
 			WithFields(fields).WithError(err).
 			Error("celcoin get pix error")
@@ -865,7 +865,7 @@ func (s *Pix) GetPixCashinStatus(ctx context.Context, returnIdentification, tran
 	}
 
 	if errResponse.Error != nil {
-		err := FindPixError(*errResponse.Error.ErrorCode, &resp.StatusCode)
+		err := FindPixErrorWithMessage(*errResponse.Error.ErrorCode, &resp.StatusCode, errResponse.Error.Message)
 		logrus.WithField("celcoin_error", errResponse.Error).
 			WithFields(fields).WithError(err).
 			Error("erro no serviço Pix")
@@ -942,7 +942,7 @@ func (s *Pix) PixCashInStatic(ctx context.Context, req PixCashInStaticRequest) (
 	}
 
 	if errResponse.Error != nil {
-		err := FindPixError(*errResponse.Error.ErrorCode, &resp.StatusCode)
+		err := FindPixErrorWithMessage(*errResponse.Error.ErrorCode, &resp.StatusCode, errResponse.Error.Message)
 		logrus.WithField("celcoin_error", errResponse.Error).
 			WithFields(fields).WithError(err).
 			Error("erro no serviço Pix")
@@ -1020,7 +1020,7 @@ func (s *Pix) CreatePixCashInDueDate(ctx context.Context, req PixCashInDueDateRe
 	}
 
 	if errResponse.Error != nil {
-		err := FindPixError(*errResponse.Error.ErrorCode, &resp.StatusCode)
+		err := FindPixErrorWithMessage(*errResponse.Error.ErrorCode, &resp.StatusCode, errResponse.Error.Message)
 		logrus.WithField("celcoin_error", errResponse.Error).
 			WithFields(fields).WithError(err).
 			Error("erro no serviço Pix")
@@ -1091,7 +1091,7 @@ func (s *Pix) GetPixCashInDueDate(ctx context.Context, transactionId *string) (*
 	}
 
 	if errResponse.Error != nil {
-		err := FindPixError(*errResponse.Error.ErrorCode, &resp.StatusCode)
+		err := FindPixErrorWithMessage(*errResponse.Error.ErrorCode, &resp.StatusCode, errResponse.Error.Message)
 		logrus.WithField("celcoin_error", errResponse.Error).
 			WithFields(fields).WithError(err).
 			Error("erro no serviço Pix")
@@ -1174,7 +1174,7 @@ func (s *Pix) PutPixCashInDueDate(ctx context.Context, transactionId string, req
 	}
 
 	if errResponse.Error != nil {
-		err := FindPixError(*errResponse.Error.ErrorCode, &resp.StatusCode)
+		err := FindPixErrorWithMessage(*errResponse.Error.ErrorCode, &resp.StatusCode, errResponse.Error.Message)
 		logrus.WithField("celcoin_error", errResponse.Error).
 			WithFields(fields).WithError(err).
 			Error("Erro no serviço Pix")
@@ -1241,7 +1241,7 @@ func (s *Pix) DeletePixCashInDueDate(ctx context.Context, transactionId *string)
 	}
 
 	if errResponse.Error != nil {
-		err := FindPixError(*errResponse.Error.ErrorCode, &resp.StatusCode)
+		err := FindPixErrorWithMessage(*errResponse.Error.ErrorCode, &resp.StatusCode, errResponse.Error.Message)
 		logrus.WithField("celcoin_error", errResponse.Error).WithFields(fields).WithError(err).Error("Pix service error")
 		return nil, err
 	}
@@ -1317,7 +1317,7 @@ func (s *Pix) CreatePixCashInImmediate(ctx context.Context, req PixCashInImmedia
 	}
 
 	if errResponse.Error != nil {
-		err := FindPixError(*errResponse.Error.ErrorCode, &resp.StatusCode)
+		err := FindPixErrorWithMessage(*errResponse.Error.ErrorCode, &resp.StatusCode, errResponse.Error.Message)
 		logrus.WithField("celcoin_error", errResponse.Error).
 			WithFields(fields).WithError(err).
 			Error("erro no serviço Pix")
@@ -1388,7 +1388,7 @@ func (s *Pix) GetPixCashInImmediate(ctx context.Context, transactionId *string) 
 	}
 
 	if errResponse.Error != nil {
-		err := FindPixError(*errResponse.Error.ErrorCode, &resp.StatusCode)
+		err := FindPixErrorWithMessage(*errResponse.Error.ErrorCode, &resp.StatusCode, errResponse.Error.Message)
 		logrus.WithField("celcoin_error", errResponse.Error).
 			WithFields(fields).WithError(err).
 			Error("erro no serviço Pix")
@@ -1471,7 +1471,7 @@ func (s *Pix) PutPixCashInImmediate(ctx context.Context, transactionId string, r
 	}
 
 	if errResponse.Error != nil {
-		err := FindPixError(*errResponse.Error.ErrorCode, &resp.StatusCode)
+		err := FindPixErrorWithMessage(*errResponse.Error.ErrorCode, &resp.StatusCode, errResponse.Error.Message)
 		logrus.WithField("celcoin_error", errResponse.Error).
 			WithFields(fields).WithError(err).
 			Error("Erro no serviço Pix")
@@ -1538,7 +1538,7 @@ func (s *Pix) DeletePixCashInImmediate(ctx context.Context, transactionId *strin
 	}
 
 	if errResponse.Error != nil {
-		err := FindPixError(*errResponse.Error.ErrorCode, &resp.StatusCode)
+		err := FindPixErrorWithMessage(*errResponse.Error.ErrorCode, &resp.StatusCode, errResponse.Error.Message)
 		logrus.WithField("celcoin_error", errResponse.Error).WithFields(fields).WithError(err).Error("Pix service error")
 		return nil, err
 	}
@@ -1670,7 +1670,7 @@ func (s *Pix) GetEmvQRCodeImmediate(ctx context.Context, merchanturl *string) (*
 	}
 
 	if errResponse.Error != nil {
-		err := FindPixError(*errResponse.Error.ErrorCode, &resp.StatusCode)
+		err := FindPixErrorWithMessage(*errResponse.Error.ErrorCode, &resp.StatusCode, errResponse.Error.Message)
 		logrus.WithField("celcoin_error", errResponse.Error).
 			WithFields(fields).WithError(err).
 			Error("erro no serviço Pix")
@@ -1755,7 +1755,7 @@ func (s *Pix) GetEmvQRCodeDueDate(ctx context.Context, merchanturl *string) (*QR
 	}
 
 	if errResponse.Error != nil {
-		err := FindPixError(*errResponse.Error.ErrorCode, &resp.StatusCode)
+		err := FindPixErrorWithMessage(*errResponse.Error.ErrorCode, &resp.StatusCode, errResponse.Error.Message)
 		logrus.WithField("celcoin_error", errResponse.Error).
 			WithFields(fields).WithError(err).
 			Error("erro no serviço Pix")
@@ -1833,7 +1833,7 @@ func (s *Pix) CreateQrCodeLocation(ctx context.Context, req PixQrCodeLocationReq
 	}
 
 	if errResponse.Error != nil {
-		err := FindPixError(*errResponse.Error.ErrorCode, &resp.StatusCode)
+		err := FindPixErrorWithMessage(*errResponse.Error.ErrorCode, &resp.StatusCode, errResponse.Error.Message)
 		logrus.WithField("celcoin_error", errResponse.Error).WithFields(fields).WithError(err).Error("Pix service error")
 		return nil, err
 	}
@@ -1903,7 +1903,7 @@ func (s *Pix) CreatePixClaim(ctx context.Context, req PixClaimRequest) (*PixClai
 	}
 
 	if errResponse.Error != nil {
-		err := FindPixError(*errResponse.Error.ErrorCode, &resp.StatusCode)
+		err := FindPixErrorWithMessage(*errResponse.Error.ErrorCode, &resp.StatusCode, errResponse.Error.Message)
 		logrus.WithField("celcoin_error", errResponse.Error).WithFields(fields).WithError(err).Error("Celcoin get pix error")
 		return nil, err
 	}
@@ -1975,7 +1975,7 @@ func (s *Pix) ConfirmPixClaim(ctx context.Context, req PixClaimActionRequest) (*
 	}
 
 	if errResponse.Error != nil {
-		err := FindPixError(*errResponse.Error.ErrorCode, &resp.StatusCode)
+		err := FindPixErrorWithMessage(*errResponse.Error.ErrorCode, &resp.StatusCode, errResponse.Error.Message)
 		logrus.WithField("celcoin_error", errResponse.Error).
 			WithFields(fields).WithError(err).
 			Error("celcoin get pix error")
@@ -2050,7 +2050,7 @@ func (s *Pix) CancelPixClaim(ctx context.Context, req PixClaimActionRequest) (*P
 	}
 
 	if errResponse.Error != nil {
-		err := FindPixError(*errResponse.Error.ErrorCode, &resp.StatusCode)
+		err := FindPixErrorWithMessage(*errResponse.Error.ErrorCode, &resp.StatusCode, errResponse.Error.Message)
 		logrus.WithField("celcoin_error", errResponse.Error).
 			WithFields(fields).WithError(err).
 			Error("celcoin get pix error")
@@ -2111,7 +2111,7 @@ func (s *Pix) GetPixClaim(ctx context.Context, claimID string) (*PixClaimRespons
 	}
 
 	if errResponse.Error != nil {
-		err := FindPixError(*errResponse.Error.ErrorCode, &resp.StatusCode)
+		err := FindPixErrorWithMessage(*errResponse.Error.ErrorCode, &resp.StatusCode, errResponse.Error.Message)
 		logrus.WithField("celcoin_error", errResponse.Error).
 			WithFields(fields).WithError(err).
 			Error("celcoin get pix error")
@@ -2191,7 +2191,7 @@ func (s *Pix) GetPixClaimList(ctx context.Context, dateFrom, dateTo string, limi
 	}
 
 	if errResponse.Error != nil {
-		err := FindPixError(*errResponse.Error.ErrorCode, &resp.StatusCode)
+		err := FindPixErrorWithMessage(*errResponse.Error.ErrorCode, &resp.StatusCode, errResponse.Error.Message)
 		logrus.WithField("celcoin_error", errResponse.Error).WithFields(fields).WithError(err).Error("celcoin get pix error")
 		return nil, err
 	}
