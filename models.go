@@ -52,8 +52,10 @@ const (
 	PixClaimPath string = "/baas/v2/pix/dict/claim"
 	//Deprecated
 	PixClaimPathDeprecated string = "/celcoin-baas-pix-dict-webservice/v1/pix/dict/claim"
-	// PixDictPath base legada para CRUD/listagem de chaves no dict v1 (não usar para consulta externa).
-	PixDictPath string = "/celcoin-baas-pix-dict-webservice/v1/pix/dict/entry"
+	// PixDictPath chaves Pix da conta no BaaS v2: POST (criar), GET /{account} (listar), DELETE /{key} (excluir).
+	PixDictPath string = "/baas/v2/pix/dict/entry"
+	//Deprecated
+	PixDictPathDeprecated string = "/celcoin-baas-pix-dict-webservice/v1/pix/dict/entry"
 	// PixDictExternalEntryV2Path consulta de entrada DICT no BaaS v2: GET .../external/{account}?key=&ownerTaxId=
 	PixDictExternalEntryV2Path string = "/baas/v2/pix/dict/entry/external"
 	//Deprecated
