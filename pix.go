@@ -38,6 +38,8 @@ type PixInterface interface {
 	PaymentPixCashOut(ctx context.Context, req PixCashOutRequest) (*PixCashOutResponse, error)
 	GetPixCashoutStatus(ctx context.Context, id, endtoendId, clientCode string) (*PixCashoutStatusTransactionResponse, error)
 	GetPixCashinStatus(ctx context.Context, returnIdentification, transactionId, clientCode string) (*PixCashinStatusTransactionResponse, error)
+	ReversePixCashIn(ctx context.Context, req PixReversalRequest) (*PixReversalResponse, error)
+	GetPixReversalStatus(ctx context.Context, id, clientCode, returnIdentification string) (*PixReversalResponse, error)
 	PixCashInStatic(ctx context.Context, req PixCashInStaticRequest) (*PixCashInStaticResponse, error)
 
 	// CASH IN - DUE DATE - EMITINDO COBRANÇA COM VENCIMENTO
