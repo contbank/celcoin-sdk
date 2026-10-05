@@ -62,6 +62,8 @@ const (
 	PixDictDueDatePathDeprecated string = "/pix/v1/dict/v2/key"
 	// PixDictDueDatePath alias do path v2 (COBV / consulta externa).
 	PixDictDueDatePath string = PixDictExternalEntryV2Path
+	// PixReversalPath devolução de Pix recebido (BaaS v2): POST e GET /status.
+	PixReversalPath string = "/baas/v2/pix/reverse"
 	// PixPaymentV2Path / PixCashOutPath — POST pagamento Pix Out BaaS v2.
 	PixPaymentV2Path string = "/baas/v2/pix/payment"
 	PixCashOutPath   string = PixPaymentV2Path
@@ -2159,4 +2161,48 @@ type FinancialOwnerDetails struct {
 // Detalhes financeiros da própria empresa
 type FinancialCompanyDetails struct {
 	DeclaredCompanyRevenue string `json:"declaredCompanyRevenue"` // Faturamento anual da empresa (Prefixo DCRB)
+}
+
+// PixReversalReason motivo da devolução de um Pix recebido.
+type PixReversalReason string
+
+const (
+	// ReversalBankError devolvido como resultado de um erro bancário.
+	ReversalBankError PixReversalReason = "BE08"
+	// ReversalFraud devolução por suspeita de fraude.
+	ReversalFraud PixReversalReason = "FR01"
+	// ReversalRequestedByCustomer devolução solicitada pelo cliente final.
+	ReversalRequestedByCustomer PixReversalReason = "MD06"
+	// ReversalCashError erro relacionado a Pix Saque ou Pix Troco.
+	ReversalCashError PixReversalReason = "SL02"
+)
+
+// PixReversalRequest devolução de um Pix recebido: id e/ou endToEndId do recebimento (pix-payment-in).
+// clientCode é nosso e único por devolução (a Celcoin recusa repetido com CBE101).
+type PixReversalRequest struct {
+	ID                  string  `json:"id,omitempty" validate:"required_without=EndToEndID"`
+	EndToEndID          string  `json:"endToEndId,omitempty" validate:"required_without=ID"`
+	ClientCode          string  `json:"clientCode" validate:"required,max=200"`
+	Amount              float64 `json:"amount" validate:"required,gt=0"`
+	Reason              string  `json:"reason" validate:"required,oneof=BE08 FR01 MD06 SL02"`
+	ReversalDescription string  `json:"reversalDescription,omitempty" validate:"omitempty,max=140"`
+}
+
+// PixReversalResponse resposta da devolução e da consulta de status.
+type PixReversalResponse struct {
+	Version string          `json:"version"`
+	Status  string          `json:"status"`
+	Body    PixReversalBody `json:"body"`
+}
+
+// PixReversalBody returnIdentification é o E2E da devolução (D...); originalPaymentId é o id do recebimento.
+type PixReversalBody struct {
+	ID                   string  `json:"id"`
+	Amount               float64 `json:"amount"`
+	ClientCode           string  `json:"clientCode"`
+	OriginalPaymentID    string  `json:"originalPaymentId"`
+	EndToEndID           string  `json:"endToEndId"`
+	ReturnIdentification string  `json:"returnIdentification"`
+	Reason               string  `json:"reason"`
+	ReversalDescription  string  `json:"reversalDescription"`
 }
