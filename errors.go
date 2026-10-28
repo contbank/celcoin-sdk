@@ -940,6 +940,11 @@ func FindWebhookError(code string, responseStatus *int) *grok.Error {
 	return grok.NewError(http.StatusInternalServerError, "UNKNOWN_ERROR", "unknown error")
 }
 
+// UnexpectedWebhookResponseError resposta de webhook fora do formato de erro da Celcoin (ex.: 415 do gateway)
+func UnexpectedWebhookResponseError(status int) *grok.Error {
+	return grok.NewError(status, "WEBHOOK_UNEXPECTED_RESPONSE", fmt.Sprintf("celcoin webhook returned status %d", status))
+}
+
 // StatementErrorMappings ... mapeia os códigos de erro do parceiro Celcoin para os códigos de erro do Contbank com descrição
 var StatementErrorMappings = map[string]struct {
 	ContbankCode string
