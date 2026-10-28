@@ -371,11 +371,12 @@ func (s *WebhooksService) UpdateSubscription(ctx context.Context, entity string,
 		return nil, fmt.Errorf("error serializing request: %v", err)
 	}
 
-	httpReq, err := http.NewRequest("PUT", *endpoint, bytes.NewBuffer(payload))
+	httpReq, err := http.NewRequestWithContext(ctx, "PUT", *endpoint, bytes.NewBuffer(payload))
 	if err != nil {
 		return nil, fmt.Errorf("erro ao criar a requisição HTTP: %v", err)
 	}
 
+	httpReq.Header.Add("Content-Type", "application/json")
 	httpReq.Header.Add("api-version", s.session.APIVersion)
 
 	resp, err := s.httpClient.Do(httpReq)
@@ -405,20 +406,20 @@ func (s *WebhooksService) UpdateSubscription(ctx context.Context, entity string,
 
 	var errResponse *ErrorDefaultResponse
 	if err := json.Unmarshal(respBody, &errResponse); err != nil {
-		logrus.WithFields(fields).WithError(err).
+		logrus.WithFields(fields).WithError(err).WithField("status_code", resp.StatusCode).
 			Error("error decoding json response")
-		return nil, ErrDefaultWebhook
+		return nil, UnexpectedWebhookResponseError(resp.StatusCode)
 	}
 
-	if errResponse.Error != nil {
+	if errResponse != nil && errResponse.Error != nil && errResponse.Error.ErrorCode != nil {
 		err := FindWebhookError(*errResponse.Error.ErrorCode, &resp.StatusCode)
 		logrus.WithField("celcoin_error", errResponse.Error).
 			WithFields(fields).WithError(err).
-			Error("celcoin create subscription error")
+			Error("celcoin update subscription error")
 		return nil, err
 	}
 
-	return nil, ErrDefaultWebhook
+	return nil, UnexpectedWebhookResponseError(resp.StatusCode)
 }
 
 // DeleteSubscription faz a chamada à API para excluir um webhook existente

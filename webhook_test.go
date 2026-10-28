@@ -176,3 +176,59 @@ func (s *WebhookTestSuite) TestCreateSubscriptionInvalidRequest() {
 	s.assert.Error(err, "validation failed for entity")
 	s.assert.Nil(response, "esperava uma resposta nula em caso de erro")
 }
+
+// unsupportedMediaTypeBody é o 415 que o gateway da Celcoin devolve (formato do gateway, status numérico).
+const unsupportedMediaTypeBody = `{"type":"https://tools.ietf.org/html/rfc9110#section-15.5.16","title":"Unsupported Media Type","status":415}`
+
+func (s *WebhookTestSuite) updateSubscriptionRequest() celcoin.WebhookUpdateRequest {
+	return celcoin.WebhookUpdateRequest{
+		WebhookURL:     "http://example.com/webhook",
+		SubscriptionID: "6877c519dc29a33a43fc3dd0",
+		Active:         true,
+		Auth: celcoin.WebhookAuth{
+			Login:    "test-user",
+			Password: "test-pass",
+			Type:     "basic",
+		},
+	}
+}
+
+// TestUpdateSubscriptionSendsJSONContentType o PUT de edição vai com Content-Type JSON, como pede a Celcoin.
+func (s *WebhookTestSuite) TestUpdateSubscriptionSendsJSONContentType() {
+	url := fmt.Sprintf("%s/baas-webhookmanager/v1/webhook/subscription/account-status", s.mockServer.URL)
+	httpmock.RegisterResponder("PUT", url, func(r *http.Request) (*http.Response, error) {
+		if r.Header.Get("Content-Type") != "application/json" {
+			return httpmock.NewStringResponse(http.StatusUnsupportedMediaType, unsupportedMediaTypeBody), nil
+		}
+		body, _ := io.ReadAll(r.Body)
+		var req map[string]interface{}
+		if err := json.Unmarshal(body, &req); err != nil || req["subscriptionId"] != "6877c519dc29a33a43fc3dd0" {
+			return httpmock.NewStringResponse(http.StatusBadRequest, `{"status":"ERROR"}`), nil
+		}
+		auth, _ := req["auth"].(map[string]interface{})
+		if auth["pwd"] != "test-pass" {
+			return httpmock.NewStringResponse(http.StatusBadRequest, `{"status":"ERROR"}`), nil
+		}
+		return httpmock.NewStringResponse(http.StatusOK, `{"version":"1.0.0","status":"SUCCESS"}`), nil
+	})
+
+	response, err := s.webhooks.UpdateSubscription(s.ctx, "account-status", s.updateSubscriptionRequest())
+
+	s.assert.NoError(err)
+	s.assert.NotNil(response)
+	s.assert.Equal("SUCCESS", response.Status)
+}
+
+// TestUpdateSubscriptionUnexpectedResponse resposta fora do formato de erro da Celcoin devolve o status real.
+func (s *WebhookTestSuite) TestUpdateSubscriptionUnexpectedResponse() {
+	url := fmt.Sprintf("%s/baas-webhookmanager/v1/webhook/subscription/account-status", s.mockServer.URL)
+	httpmock.RegisterResponder("PUT", url,
+		httpmock.NewStringResponder(http.StatusUnsupportedMediaType, unsupportedMediaTypeBody))
+
+	response, err := s.webhooks.UpdateSubscription(s.ctx, "account-status", s.updateSubscriptionRequest())
+
+	s.assert.Nil(response)
+	s.assert.Error(err)
+	s.assert.Contains(err.Error(), "415")
+	s.assert.NotContains(err.Error(), "error balance")
+}
